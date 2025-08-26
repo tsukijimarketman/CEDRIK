@@ -1,48 +1,50 @@
-import { useState } from "react"
-import { ChatSidebar } from "./ChatSidebar"
-import { ChatMessage } from "./ChatMessage"
-import { ChatInput } from "./ChatInput"
-import { ThemeToggle } from "./ThemeToggle"
+import { useState } from "react";
+import { ChatSidebar } from "./ChatSidebar";
+import { ChatMessage } from "./ChatMessage";
+import { ChatInput } from "./ChatInput";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface Message {
-  id: string
-  role: "user" | "assistant"
-  content: string
-  timestamp: string
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
 }
 
 export function ChatInterface() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       role: "assistant",
-      content: "Hello! I'm cyberSync, your AI assistant. How can I help you today?",
-      timestamp: new Date().toLocaleTimeString()
-    }
-  ])
+      content:
+        "Hello! I'm cyberSync, your AI assistant. How can I help you today?",
+      timestamp: new Date().toLocaleTimeString(),
+    },
+  ]);
 
   const handleSendMessage = (content: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content,
-      timestamp: new Date().toLocaleTimeString()
-    }
+      timestamp: new Date().toLocaleTimeString(),
+    };
 
-    setMessages(prev => [...prev, userMessage])
+    setMessages((prev) => [...prev, userMessage]);
 
     // Simulate assistant response
     setTimeout(() => {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: "assistant", 
-        content: "Thank you for your message! This is a demo response. In a real implementation, this would be connected to your AI backend.",
-        timestamp: new Date().toLocaleTimeString()
-      }
-      setMessages(prev => [...prev, assistantMessage])
-    }, 1000)
-  }
+        role: "assistant",
+        content:
+          "Thank you for your message! This is a demo response. In a real implementation, this would be connected to your AI backend.",
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    }, 1000);
+  };
 
   return (
     <div className="flex h-screen bg-chat-background">
@@ -50,7 +52,7 @@ export function ChatInterface() {
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
-      
+
       <div className="flex flex-col flex-1">
         {/* Header */}
         <div className="border-b border-border bg-background">
@@ -99,5 +101,5 @@ export function ChatInterface() {
         <ChatInput onSendMessage={handleSendMessage} />
       </div>
     </div>
-  )
+  );
 }
