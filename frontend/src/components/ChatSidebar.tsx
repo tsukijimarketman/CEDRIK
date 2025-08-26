@@ -6,6 +6,9 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  LogIn,
+  ChevronLeft,
+  Menu,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -27,78 +30,91 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
+  // Chat data
   const [chats] = useState<Chat[]>([
-    {
-      id: "1",
-      title: "Getting started with cyberSync",
-      timestamp: "Today",
-    },
-    {
-      id: "2",
-      title: "React best practices",
-      timestamp: "Yesterday",
-    },
-    {
-      id: "3",
-      title: "TypeScript configuration",
-      timestamp: "2 days ago",
-    },
+    { id: "1", title: "Getting started with cyberSync", timestamp: "Today" },
+    { id: "2", title: "React best practices", timestamp: "Yesterday" },
+    { id: "3", title: "TypeScript configuration", timestamp: "2 days ago" },
   ]);
 
+  // UI State
   const [activeChat, setActiveChat] = useState("1");
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Toggle this to false for no user
-
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [currentDialog, setCurrentDialog] = useState<{
-    type: "login" | "signup" | "settings" | "help" | "logout" | null;
-    data?: any;
-  }>({ type: null });
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // User data - in a real app, this would come from a context or state management
+  // User data
   const [userData, setUserData] = useState({
     username: "user123",
     email: "user@example.com",
   });
 
-  // Close dropdown when clicking outside
+  // Dialog state
+  const [currentDialog, setCurrentDialog] = useState<{
+    type: "login" | "signup" | "settings" | "help" | "logout" | null;
+  }>({ type: null });
+
+  // Responsive state
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+  const isMobile = windowWidth < 768;
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Handle window resize
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Handle click outside for mobile menu and profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Close mobile menu when clicking outside on mobile
+      if (isMobileMenuOpen && isMobile) {
+        const sidebar = document.querySelector(".sidebar-container");
+        const menuButton = document.querySelector(".mobile-menu-button");
+
+        if (
+          sidebar &&
+          !sidebar.contains(target) &&
+          menuButton &&
+          !menuButton.contains(target)
+        ) {
+          setIsMobileMenuOpen(false);
+        }
+      }
+
+      // Close profile dropdown when clicking outside
       if (
+        isProfileOpen &&
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(target)
       ) {
         setIsProfileOpen(false);
       }
-    }
+    };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMobileMenuOpen, isMobile, isProfileOpen]);
 
   const toggleProfile = () => {
     setIsProfileOpen(!isProfileOpen);
   };
 
-  const handleLogout = () => {
-    // Add your logout logic here
-    console.log("Logging out...");
-    setIsLoggedIn(false);
-    // Clear any auth state or tokens here
-  };
-
+  // Auth handlers
   const handleLogin = (email: string, password: string) => {
     console.log("Logging in with:", { email, password });
-    // In a real app, you would make an API call here
     setIsLoggedIn(true);
     setCurrentDialog({ type: null });
   };
 
   const handleSignUp = (username: string, email: string, password: string) => {
     console.log("Signing up with:", { username, email, password });
-    // In a real app, you would make an API call here
     setUserData({ username, email });
     setIsLoggedIn(true);
     setCurrentDialog({ type: null });
@@ -106,16 +122,21 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
 
   const handleSaveSettings = (username: string, password: string) => {
     console.log("Saving settings:", { username, password });
-    // In a real app, you would make an API call here
     setUserData((prev) => ({ ...prev, username }));
     setCurrentDialog({ type: null });
   };
 
+  const handleLogout = () => {
+    console.log("Logging out...");
+    setIsLoggedIn(false);
+    setIsProfileOpen(false);
+  };
+
+  // Dialog helpers
   const openDialog = (
-    type: "login" | "signup" | "settings" | "help" | "logout",
-    data?: any
+    type: "login" | "signup" | "settings" | "help" | "logout"
   ) => {
-    setCurrentDialog({ type, data });
+    setCurrentDialog({ type });
     setIsProfileOpen(false);
   };
 
@@ -124,171 +145,164 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
   };
 
   return (
-    <div
-      className={cn(
-        "bg-chat-sidebar border-r border-border transition-all duration-300 flex flex-col h-screen justify-between",
-        isCollapsed ? "w-0 overflow-hidden" : "w-64"
-      )}
-    >
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <h2
-              className={cn("font-semibold text-lg", isCollapsed && "hidden")}
-            >
-              cyberSync
-            </h2>
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="fixed top-4 left-4 z-30 p-2 bg-red rounded-md shadow-md hover:bg-gray-100 transition-colors md:hidden flex items-center space-x-2"
+        aria-label="Toggle menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {/* Sidebar */}
+      <div
+        ref={dropdownRef}
+        className={cn(
+          "bg-chat-sidebar border-r border-border transition-all duration-300 flex flex-col fixed md:relative z-20 sidebar-container",
+          "transform transition-transform duration-300 ease-in-out",
+          isMobileMenuOpen
+            ? "translate-x-0"
+            : "-translate-x-full md:translate-x-0",
+          isCollapsed ? "w-0 overflow-hidden" : "w-64"
+        )}
+        style={{
+          width: isCollapsed ? "0" : "16rem",
+          minWidth: isCollapsed ? "0" : "16rem",
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
+            <h1 className="font-bold text-lg">cyberSync</h1>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={onToggle}
-              className="rounded-md p-2"
+              className="hidden md:flex h-8 w-8"
+              aria-label="Toggle sidebar"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className={cn(
-                  "w-4 h-4 transition-transform",
-                  isCollapsed && "rotate-180"
-                )}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 19.5L8.25 12l7.5-7.5"
-                />
-              </svg>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
           </div>
-        </div>
 
-        <div className={cn("p-4", isCollapsed && "hidden")}>
-          <Button className="w-full justify-start mb-4" variant="outline">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-4 h-4 mr-2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-            New Chat
-          </Button>
-
-          <div className="space-y-2">
-            {chats.map((chat) => (
-              <button
-                key={chat.id}
-                onClick={() => setActiveChat(chat.id)}
-                className={cn(
-                  "w-full text-left p-3 rounded-lg transition-colors",
-                  "hover:bg-muted/50 group",
-                  activeChat === chat.id && "bg-muted"
-                )}
-              >
-                <div className="font-medium text-sm truncate">{chat.title}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {chat.timestamp}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Auth Section */}
-      <div className="p-4 border-t border-border">
-        {isLoggedIn ? (
-          <div className="relative" ref={dropdownRef}>
-            <div
-              className={cn(
-                "flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors",
-                isProfileOpen && "bg-muted/50"
-              )}
-              onClick={toggleProfile}
-            >
-              <div className="flex items-center space-x-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                  <AvatarFallback>U</AvatarFallback>
-                </Avatar>
-                <div className="text-sm font-medium">user@example.com</div>
-              </div>
-              {isProfileOpen ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              )}
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Chat List */}
+            <div className="p-2">
+              {chats.map((chat) => (
+                <button
+                  key={chat.id}
+                  onClick={() => setActiveChat(chat.id)}
+                  className={cn(
+                    "w-full text-left p-3 rounded-lg transition-colors mb-1",
+                    "hover:bg-muted/50",
+                    activeChat === chat.id ? "bg-muted" : ""
+                  )}
+                >
+                  <p className="font-medium text-sm">{chat.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {chat.timestamp}
+                  </p>
+                </button>
+              ))}
             </div>
+          </div>
 
-            {isProfileOpen && (
-              <div className="absolute bottom-full left-0 right-0 mx-4 mb-2 bg-popover rounded-md shadow-lg border border-border overflow-hidden">
-                <div className="px-4 py-2 text-sm text-muted-foreground border-b border-border">
-                  user@example.com
+          {/* User Profile & Auth Section - Fixed at bottom */}
+          <div className="mt-auto border-t border-border bg-muted/30">
+            {!isLoggedIn ? (
+              <div className="p-4">
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-center gap-2"
+                    onClick={() => openDialog("login")}
+                  >
+                    <span>Login</span>
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => openDialog("signup")}
+                  >
+                    Sign Up
+                  </Button>
                 </div>
-                <div className="py-1">
+              </div>
+            ) : (
+              <div className="p-4">
+                <div className="relative">
                   <button
-                    className="w-full flex items-center px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openDialog("settings");
-                    }}
+                    onClick={toggleProfile}
+                    className="w-full flex items-center space-x-2 p-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors text-left"
                   >
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarImage
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
+                        alt={userData.username}
+                      />
+                      <AvatarFallback>
+                        {userData.username.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {userData.username}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {userData.email}
+                      </p>
+                    </div>
+                    {isProfileOpen ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    )}
                   </button>
-                  <button
-                    className="w-full flex items-center px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openDialog("help");
-                    }}
-                  >
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>Help</span>
-                  </button>
-                  <div className="border-t border-border my-1"></div>
-                  <button
-                    className="w-full flex items-center px-4 py-2 text-sm text-destructive hover:bg-muted/50 transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openDialog("logout");
-                    }}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isProfileOpen && (
+                    <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover rounded-md shadow-lg border border-border overflow-hidden z-10">
+                      <div className="px-4 py-2 text-sm text-muted-foreground border-b border-border">
+                        {userData.email}
+                      </div>
+                      <div className="py-1">
+                        <button
+                          onClick={() => openDialog("settings")}
+                          className="w-full flex items-center px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
+                        >
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Settings</span>
+                        </button>
+                        <button
+                          onClick={() => openDialog("help")}
+                          className="w-full flex items-center px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
+                        >
+                          <HelpCircle className="mr-2 h-4 w-4" />
+                          <span>Help</span>
+                        </button>
+                        <div className="border-t border-border my-1"></div>
+                        <button
+                          onClick={() => openDialog("logout")}
+                          className="w-full flex items-center px-4 py-2 text-sm text-red-500 hover:bg-muted/50 transition-colors"
+                        >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Log out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
-        ) : (
-          <div className="flex flex-col space-y-2">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => openDialog("login")}
-            >
-              Sign In
-            </Button>
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => openDialog("signup")}
-            >
-              Create Account
-            </Button>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Dialog Components */}
@@ -319,8 +333,19 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
       <LogoutDialog
         open={currentDialog.type === "logout"}
         onClose={closeDialog}
-        onConfirm={handleLogout}
+        onConfirm={() => {
+          handleLogout();
+          closeDialog();
+        }}
       />
-    </div>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && isMobile && (
+        <div
+          className="fixed inset-0 bg-black/50 z-10 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+    </>
   );
 }
