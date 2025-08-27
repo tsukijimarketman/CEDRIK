@@ -15,7 +15,7 @@ CONSOLE_HANDLER.setLevel(logging.DEBUG)
 CONSOLE_HANDLER.setFormatter(FORMATTER)
 
 class Logger:
-    log = logging.getLogger(f"{__name__}.logger")
+    log = logging.getLogger(f"{__name__}")
     log.setLevel(logging.DEBUG)
 
     log.addHandler(FILE_HANDLER)
