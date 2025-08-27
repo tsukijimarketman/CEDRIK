@@ -176,8 +176,8 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
-            <h1 className="font-bold text-lg">cyberSync</h1>
+          <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0 h-[69px]">
+            <h1 className="font-bold text-lg pl-[50px]">cyberSync</h1>
             <Button
               variant="ghost"
               size="icon"
@@ -213,7 +213,7 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
           </div>
 
           {/* User Profile & Auth Section - Fixed at bottom */}
-          <div className="mt-auto border-t border-border bg-muted/30">
+          <div className="mt-auto border-t border-border bg-muted/30 h-[117px]">
             {!isLoggedIn ? (
               <div className="p-4">
                 <div className="space-y-2">

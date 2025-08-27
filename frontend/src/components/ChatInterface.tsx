@@ -79,7 +79,7 @@ export function ChatInterface() {
                   </svg>
                 </button>
               )}
-              <h1 className="text-xl font-semibold">cyberSync</h1>
+              <h1 className="text-xl font-semibold pl-[50px]">cyberSync</h1>
             </div>
             <ThemeToggle />
           </div>
