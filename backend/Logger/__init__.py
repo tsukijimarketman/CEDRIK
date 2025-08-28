@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 import os
 
@@ -6,7 +7,13 @@ os.makedirs("log", exist_ok=True)
 TODAY = datetime.now().strftime("%Y-%m-%d")
 FORMATTER = logging.Formatter("%(levelname)s %(asctime)s - %(message)s")
 
-FILE_HANDLER = logging.FileHandler(os.path.join("log", f"{TODAY}.log"))
+FILE_HANDLER = TimedRotatingFileHandler(
+    filename=os.path.join("log", "app.log"),
+    when="midnight",
+    interval=1,
+    encoding="utf-8",
+    utc=False
+)
 FILE_HANDLER.setFormatter(FORMATTER)
 FILE_HANDLER.setLevel(logging.DEBUG)
 

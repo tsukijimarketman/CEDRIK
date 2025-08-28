@@ -1,7 +1,7 @@
 import bcrypt
 
 def hash(raw: str):
-    hashed = bcrypt.hashpw(raw.encode(encoding="utf-8"), bcrypt.gensalt())
+    hashed = bcrypt.hashpw(raw.encode(encoding="utf-8"), bcrypt.gensalt(rounds=10))
     return hashed.decode("utf-8")
 
 def verify_password(hashed: str, raw: str):
