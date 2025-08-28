@@ -3,13 +3,20 @@ from backend.Database.Models import User, Conversation
 from datetime import datetime
 
 
-class Message(Document):
-    sender = ReferenceField(User, default=None) # None for AI
-    conversation = ReferenceField(Conversation)
-    text = StringField()
-    bin = FileField()
+class Memory(Document):
+    title = StringField()
+    type = StringField()
+
+    status = StringField()
+    content = FileField()
+    permission = ListField(StringField())
+
+    tags = ListField(StringField())
+
     values = ListField(FloatField())
+
     metadata = DictField()
+
     created_at = DateTimeField(default=datetime.now)
     updated_at = DateTimeField(default=datetime.now)
 

@@ -12,6 +12,3 @@ class Conversation(Document):
     @classmethod
     def pre_save(cls, sender, document, **kwargs):
         document.updated_at = datetime.now()
-
-    # def __str__(self):
-    #     return f"Message(email='{self.email}', username='{self.username}', password='{self.password}', role='{self.role}')"
