@@ -91,7 +91,8 @@ def register():
 
     u = None
     try:
-        u = User(email=req_register.email, username=req_register.username, password=req_register.password)
+        u = User(email=req_register.email, username=req_register.username)
+        u.set_password(req_register.password)
         u.save()
     except NotUniqueError as e:
         Logger.log.error(str(e))
