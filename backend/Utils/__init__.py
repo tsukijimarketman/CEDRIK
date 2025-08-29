@@ -1,4 +1,6 @@
 from mongoengine import ValidationError
+from .UserToken import UserToken
+import json
 
 def validate_password(password: str):
     upperCount = 0
@@ -42,3 +44,11 @@ def validate_password(password: str):
         return
 
     raise ValidationError('\n'.join(errors))
+
+def load_json(filename):
+    if (len(filename) == 0):
+        raise FileNotFoundError()
+
+    with open(filename, "r") as f:
+        data = json.load(f)
+        return data

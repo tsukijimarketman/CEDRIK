@@ -1,0 +1,12 @@
+{
+    "add_generation_prompt": true,
+    "tokenize": true,
+    "return_dict": true,
+    "return_tensors": "pt",
+    "max_new_tokens": 120,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "repetition_penalty": 1.1,
+    "pad_token_id": 50256
+}
