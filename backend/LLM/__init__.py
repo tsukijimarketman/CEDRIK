@@ -5,7 +5,8 @@ from backend.Utils import load_json
 from typing import Tuple, Any
 import os
 
-CONFIG = load_json(os.getenv("PIPE_CONFIG"))
+CONFIG_PIPE = os.getenv("PIPE_CONFIG")
+CONFIG_TOKENIZER = os.getenv("TOKENIZER_CONFIG")
 MODEL = os.getenv("TEST_MODEL")
 if MODEL == None:
     raise Exception("AI Model is Empty")
@@ -15,7 +16,6 @@ CHAT_TEMPLATE = {}
 #     case "distilbert/distilgpt2":
 #         CHAT_TEMPLATE["chat_template"] ="{{content}}"
 
-Logger.log.info(f"CONFIG={CONFIG}")
 Logger.log.info(f"MODEL={MODEL}")
 Logger.log.info(f"CHAT_TEMPLATE={CHAT_TEMPLATE}")
 
@@ -30,17 +30,24 @@ class ModelPipe:
 
     Use class `IModel` to interact with this class
     """
-    __tokenizer = AutoTokenizer.from_pretrained(MODEL, trust_remote_code=True)
-    __model = AutoModelForCausalLM.from_pretrained(MODEL,
-        device_map="auto",
-        load_in_8bit=True,
-        trust_remote_code=True
-    )
-    __pipe = pipeline(
-        "text-generation",
-        model=MODEL,
-        trust_remote_code=True
-    )
+    __tokenizer = None
+    __model = None
+    __pipe = None
+
+    if MODEL == "distilbert/distilgpt2":
+        __pipe = pipeline(
+            "text-generation",
+            model=MODEL,
+            trust_remote_code=True
+        )
+        set_seed(42)
+    else:
+        __tokenizer = AutoTokenizer.from_pretrained(MODEL, trust_remote_code=True)
+        __model = AutoModelForCausalLM.from_pretrained(MODEL,
+            device_map="auto",
+            load_in_8bit=True,
+            trust_remote_code=True
+        )
 
     def __new__(cls, *args, **kwargs):
         raise Exception("Do not Instantiate ModelPipe")
@@ -54,35 +61,22 @@ class ModelPipe:
         """
         For testing purposes only
         """
-        set_seed(42)
-        inputs = cls.__pipe(
+
+        config = load_json(CONFIG_PIPE)
+        outputs = cls.__pipe(
             "\n".join(p.content for p in prompts),
-            max_new_tokens=120,
-            do_sample=True,
-            temperature=0.7,
-            top_p=0.9,
-            repetition_penalty=1.1,
-            pad_token_id=50256
+            **config
         )
 
-        return inputs, inputs
+        return None, outputs
 
     @classmethod
-    def generate(cls, prompts: list[Prompt]):
-        if MODEL ==  "distilbert/distilgpt2":
-            return ModelPipe.__generate_with_pipeline(prompts)
-        inputs = None
-        # if MODEL ==  "distilbert/distilgpt2":
-        #     # distilgpt2 doesn't have
-        #     inputs = cls.__tokenizer(
-        #         "\n".join(p.content for p in prompts),
-        #         return_tensors="pt"
-        #     )
-        # else:
+    def __generate_with_tokenizer(cls, prompts: list[Prompt]):
+        config = load_json(CONFIG_PIPE)
         inputs = cls.__tokenizer.apply_chat_template(
             [asdict(i) for i in prompts],
             **CHAT_TEMPLATE,
-            **CONFIG
+            **config
         ).to(cls.__model.device)
 
         Logger.log.info(str(inputs))
@@ -91,10 +85,15 @@ class ModelPipe:
         return inputs, outputs
     
     @classmethod
+    def generate(cls, prompts: list[Prompt]):
+        if MODEL ==  "distilbert/distilgpt2":
+            return ModelPipe.__generate_with_pipeline(prompts)
+        return ModelPipe.__generate_with_tokenizer(prompts)
+    
+    @classmethod
     def decode(cls, inputs, outputs):
         if MODEL ==  "distilbert/distilgpt2":
             return outputs[0]["generated_text"]
-
         return cls.__tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:])
 
     @classmethod

@@ -42,5 +42,4 @@ def tchat():
 
     return jsonify({
         "output": decoded.strip(),
-        "original": decoded
     }), 200

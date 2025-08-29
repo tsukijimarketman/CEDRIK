@@ -1,4 +1,8 @@
 {
+    "add_generation_prompt": true,
+    "tokenize": true,
+    "return_dict": true,
+    "return_tensors": "pt",
     "max_new_tokens": 120,
     "do_sample": true,
     "temperature": 0.7,
