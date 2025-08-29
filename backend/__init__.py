@@ -2,6 +2,7 @@ from werkzeug.exceptions import HTTPException, InternalServerError
 import os
 from backend.Error import ErrHTTPExceptionHandler
 from flask import Flask, jsonify
+from flask_cors import CORS
 from .Database import db_connection_init
 from dotenv import load_dotenv
 
@@ -21,6 +22,8 @@ app.config["TRAP_HTTP_EXCEPTIONS"]=True
 app.config["JWT_SECRET_KEY"] = JWT_SECRET
 app.config["JWT_TOKEN_LOCATION"] = "cookies"
 # app.debug = False
+
+CORS(app, origins=["http://localhost:5173"])
 
 _JWT = JWTManager(app)
 app.register_error_handler(HTTPException, ErrHTTPExceptionHandler)
