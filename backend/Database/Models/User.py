@@ -4,7 +4,7 @@ from backend.Hasher import hash
 from backend.Utils import validate_password
 from datetime import datetime
 
-class ROLE(Enum):
+class Role(Enum):
     USER = "user"
     ADMIN = "admin"
     SUPERADMIN = "superadmin"
@@ -13,7 +13,7 @@ class User(Document):
     email = EmailField(required=True, unique=True)
     username = StringField(required=True, unique=True)
     password = StringField(required=True, validation=validate_password)
-    role = EnumField(ROLE, default=ROLE.USER)
+    role = EnumField(Role, default=Role.USER)
     metadata = DictField()
     created_at = DateTimeField(default=datetime.now)
     updated_at = DateTimeField(default=datetime.now)

@@ -2,7 +2,6 @@ from datetime import timedelta
 from flask import Response, jsonify, make_response, request
 from flask.blueprints import Blueprint
 from dataclasses import dataclass
-from enum import Enum
 
 from mongoengine import NotUniqueError
 from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
@@ -12,9 +11,9 @@ from backend.Hasher import verify_password
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt, set_access_cookies, unset_jwt_cookies
 
 from ..Logger import Logger
-from ..Database.Models.User import ROLE, User
+from ..Database.Models.User import Role, User
 
-auth = Blueprint("auth", __name__)
+auth = Blueprint("Auth", __name__)
 
 @dataclass
 class ReqLogin:
@@ -50,7 +49,7 @@ def login():
             identity=str(user.id), # type: ignore
             expires_delta=timedelta(days=5),
             additional_claims={
-                "aud": ROLE(user.role).value,
+                "aud": Role(user.role).value,
                 "id": str(user.id), # type: ignore
                 "email": user.email,
                 "username": user.username
