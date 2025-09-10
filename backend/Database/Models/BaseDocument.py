@@ -5,6 +5,7 @@ class BaseDocument(Document):
     metadata = DictField()
     created_at = DateTimeField(default=datetime.now)
     updated_at = DateTimeField(default=datetime.now)
+    deleted_at = DateTimeField(default=None)
 
     # Allow inheritance of Document
     meta = {"abstract": True}
