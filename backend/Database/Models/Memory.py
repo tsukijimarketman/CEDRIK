@@ -1,9 +1,7 @@
-from mongoengine import DictField, Document, FileField, FloatField, ListField, ReferenceField, StringField, DateTimeField
-from backend.Database.Models import User, Conversation
-from datetime import datetime
+from mongoengine import DictField, Document, FileField, FloatField, ListField, StringField, DateTimeField
+from .BaseDocument import BaseDocument
 
-
-class Memory(Document):
+class Memory(BaseDocument):
     title = StringField()
     type = StringField()
 
@@ -14,12 +12,3 @@ class Memory(Document):
     tags = ListField(StringField())
 
     values = ListField(FloatField())
-
-    metadata = DictField()
-
-    created_at = DateTimeField(default=datetime.now)
-    updated_at = DateTimeField(default=datetime.now)
-
-    @classmethod
-    def pre_save(cls, sender, document, **kwargs):
-        document.updated_at = datetime.now()

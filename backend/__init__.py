@@ -15,6 +15,7 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 
 db_connection_init()
 
+JWT_SECRET = os.getenv("JWT_SECRET")
 app = Flask(__name__)
 # So the GlobalErrHandler Works
 # app.config["PROPAGATE_EXCEPTIONS"] = False
@@ -35,10 +36,18 @@ def Root():
 
 @app.route("/health")
 def Health():
+    endpoints = {}
+    for rule in app.url_map.iter_rules():
+        endpoints[rule.rule] = {
+            "endpoint": rule.endpoint,
+            "methods": list(rule.methods) # type: ignore
+        }
+
     return jsonify({
         "type": "ok",
         "message": "No problems",
-        "map": str(app.url_map)
+        "api_map": endpoints
     }), 200
 
 app.register_blueprint(routeAuth, url_prefix="/api/auth")
+app.register_blueprint(routeAi, url_prefix="/api/ai")

@@ -3,8 +3,7 @@ from flask import Response, jsonify, make_response, request
 from flask.blueprints import Blueprint
 from dataclasses import dataclass
 
-from mongoengine import NotUniqueError, OperationError
-from mongoengine.errors import MongoEngineException
+from mongoengine import NotUniqueError, ValidationError
 from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 
 from backend.Error import BadBody, UserDoesNotExist
@@ -12,9 +11,10 @@ from backend.Hasher import verify_password
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt, set_access_cookies, unset_jwt_cookies
 
 from ..Logger import Logger
-from ..Database.Models.User import User
+from ..Database.Models.User import Role, User
+from ..Error import HttpValidationError
 
-auth = Blueprint("auth", __name__)
+auth = Blueprint("Auth", __name__)
 
 @dataclass
 class ReqLogin:
@@ -50,7 +50,7 @@ def login():
             identity=str(user.id), # type: ignore
             expires_delta=timedelta(days=5),
             additional_claims={
-                "aud": user.role,
+                "aud": Role(user.role).value,
                 "id": str(user.id), # type: ignore
                 "email": user.email,
                 "username": user.username
@@ -66,14 +66,8 @@ def login():
         Logger.log.error(str(e))
         raise InternalServerError()
 
-@auth.route("/verify")
-@jwt_required()
-def verify():
-    token = get_jwt()
-    return jsonify(token), 200
-
 @auth.route("/logout")
-@jwt_required()
+@jwt_required(optional=True)
 def logout():
     resp = make_response("", 200)
     unset_jwt_cookies(resp)
@@ -91,16 +85,18 @@ def register():
 
     u = None
     try:
-        u = User(email=req_register.email, username=req_register.username)
-        u.set_password(req_register.password)
+        u = User(email=req_register.email, username=req_register.username, password=req_register.password)
+        u.validate()
+        u.hash_password()
         u.save()
     except NotUniqueError as e:
         Logger.log.error(str(e))
         raise Unauthorized(description="User already exists")
+    except ValidationError as e:
+        raise HttpValidationError(e.to_dict());
     except Exception as e:
-        Logger.log.error(str(e));
+        Logger.log.error(str(e))
         raise HTTPException(f"Failed to Register User {str(req_register)}", Response(status=400))
 
     Logger.log.info(f"Registered {str(u)}")
     return "", 200
-

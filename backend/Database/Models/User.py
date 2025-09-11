@@ -1,29 +1,26 @@
 from enum import Enum
-from mongoengine import DictField, Document, EmailField, StringField, DateTimeField
+from mongoengine import EmailField, EnumField, StringField
 from backend.Hasher import hash
-from backend.Utils import validate_password
-from datetime import datetime
+from backend.Validation import validate_password, validate_username
+from backend.Utils import CustomEmail
+from .BaseDocument import BaseDocument
 
-class ROLE(Enum):
+class Role(Enum):
     USER = "user"
     ADMIN = "admin"
     SUPERADMIN = "superadmin"
 
-class User(Document):
-    email = EmailField(required=True, unique=True)
-    username = StringField(required=True, unique=True)
+class User(BaseDocument):
+    email = CustomEmail(required=True, unique=True)
+    username = StringField(required=True, unique=True,validation=validate_username)
     password = StringField(required=True, validation=validate_password)
-    role = StringField(choices=[e.value for e in ROLE], default=ROLE.USER.value)
-    metadata = DictField()
-    created_at = DateTimeField(default=datetime.now)
-    updated_at = DateTimeField(default=datetime.now)
+    role = EnumField(Role, default=Role.USER)
 
-    def set_password(self, raw):
-        self.password = hash(raw)
-
-    @classmethod
-    def pre_save(cls, sender, document, **kwargs):
-        document.updated_at = datetime.now()
+    """
+    Call after `validate`
+    """
+    def hash_password(self):
+        self.password = hash(self.password)
 
     def __str__(self):
         return f"User(email='{self.email}', username='{self.username}', password='{self.password}', role='{self.role}')"
