@@ -1,3 +1,0 @@
-CyberSync_DatabaseUri=mongodb+srv://admin:9VuE3WgSKCf9XGYD@cluster0.j9iqy9g.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-CyberSync_OrigUri=mongodb+srv://admin:9VuE3WgSKCf9XGYD@cluster0.j9iqy9g.mongodb.net/CyberSync?retryWrites=true&w=majority&appName=Cluster0
-JWT_SECRET=c717e20711186f6217813251a3db975f29e021344e64979e6f14dd0728c65896

@@ -18,13 +18,13 @@ export const authApi = {
     return api.post("/auth/register", userData);
   },
   login: async (credentials: { email: string; password: string }) => {
-    return api.post("auth/login", credentials);
+    return api.post("/auth/login", credentials);
   },
   logout: async () => {
-    return api.post("auth/logout");
+    return api.post("/auth/logout");
   },
   verify: async () => {
-    return api.get("auth/verify");
+    return api.get("/auth/verify");
   },
 };
 
