@@ -33,7 +33,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Send a message to cyberSync..."
+            placeholder="Send a message to CEDRIK..."
             disabled={disabled}
             className="min-h-[60px] max-h-[200px] resize-none pr-12 bg-background border-input"
             rows={1}
@@ -61,7 +61,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
           </Button>
         </form>
         <div className="text-xs text-muted-foreground mt-2 text-center">
-          cyberSync can make mistakes. Consider checking important information.
+          CEDRIK can make mistakes. Consider checking important information.
         </div>
       </div>
     </div>

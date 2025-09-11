@@ -32,7 +32,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
   // Chat data
   const [chats] = useState<Chat[]>([
-    { id: "1", title: "Getting started with cyberSync", timestamp: "Today" },
+    { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },
     { id: "2", title: "React best practices", timestamp: "Yesterday" },
     { id: "3", title: "TypeScript configuration", timestamp: "2 days ago" },
   ]);
@@ -177,7 +177,7 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0 h-[69px]">
-            <h1 className="font-bold text-lg pl-[50px]">cyberSync</h1>
+            <h1 className="font-bold text-lg pl-[50px]">CEDRIK</h1>
             <Button
               variant="ghost"
               size="icon"
