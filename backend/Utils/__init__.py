@@ -1,5 +1,6 @@
 from .UserToken import UserToken
 from .CustomField import CustomEmail
+from .Decorator import set_token
 import json
 
 def load_json(filename):

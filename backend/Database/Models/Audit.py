@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from mongoengine import DictField, EnumField, ReferenceField
 from backend.Database.Models import User
 from enum import Enum
@@ -10,5 +11,5 @@ class AuditAction(Enum):
 
 class Audit(BaseDocument):
     action = EnumField(AuditAction, required=True)
-    modified_by = ReferenceField(User, required=True)
+    modified_by = ReferenceField(User, default=None, required=False)
     data = DictField()

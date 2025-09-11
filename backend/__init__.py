@@ -1,8 +1,8 @@
 from werkzeug.exceptions import HTTPException, InternalServerError
 import os
 from backend.Error import ErrHTTPExceptionHandler
-from flask import Flask, jsonify
-from .Database import db_connection_init
+from flask import Flask, jsonify, redirect
+from .Database import db_connection_init, init_indexes
 from dotenv import load_dotenv
 
 from flask_jwt_extended import JWTManager
@@ -27,7 +27,7 @@ app.register_error_handler(InternalServerError, ErrHTTPExceptionHandler)
 
 @app.route("/")
 def Root():
-    return "<p>Hello, World!</p>"
+    return redirect("/health")
 
 @app.route("/health")
 def Health():
