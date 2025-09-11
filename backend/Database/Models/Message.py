@@ -4,8 +4,8 @@ from datetime import datetime
 from .BaseDocument import BaseDocument
 
 class Message(BaseDocument):
-    sender = ReferenceField(User, default=None) # None for AI
+    sender = ReferenceField(User, default=None) # None for AI Model
     conversation = ReferenceField(Conversation)
     text = StringField()
-    bin = FileField()
+    m_file = FileField()
     values = ListField(FloatField())
