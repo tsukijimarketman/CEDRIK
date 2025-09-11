@@ -3,14 +3,17 @@ from flask import Response, jsonify, make_response, request
 from flask.blueprints import Blueprint
 from dataclasses import dataclass
 
-from mongoengine import NotUniqueError, ValidationError
+from mongoengine import ValidationError, get_connection, get_db
+from pymongo.errors import DuplicateKeyError
 from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 
 from backend.Error import BadBody, UserDoesNotExist
 from backend.Hasher import verify_password
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import create_access_token, jwt_required, set_access_cookies, unset_jwt_cookies
 
 from ..Logger import Logger
+from ..Database.Models.Audit import Audit, AuditAction
+from ..Database import Collections, Transaction
 from ..Database.Models.User import Role, User
 from ..Error import HttpValidationError
 
@@ -73,6 +76,22 @@ def logout():
     unset_jwt_cookies(resp)
     return resp
 
+def insert_user(session, user: User):
+    col_user = session.client.db.get_collection(Collections.USER.value)
+    col_audit = session.client.db.get_collection(Collections.AUDIT.value)
+
+    user.validate()
+    user.hash_password()
+    res_insert = col_user.insert_one(user.to_mongo(), session=session)
+    audit = Audit(
+        action=AuditAction.ADD,
+        modified_by=None,
+        data={
+            "id": res_insert.inserted_id
+        }
+    )
+    col_audit.insert_one(audit.to_mongo(), session=session)
+
 @auth.route("/register", methods=["POST"])
 def register():
     try:
@@ -83,20 +102,32 @@ def register():
 
     Logger.log.info(f"RegisterBody\n\t{str(req_register)}")
 
-    u = None
     try:
-        u = User(email=req_register.email, username=req_register.username, password=req_register.password)
-        u.validate()
-        u.hash_password()
-        u.save()
-    except NotUniqueError as e:
+        with Transaction() as (session, db):
+                user = User(email=req_register.email, username=req_register.username, password=req_register.password)
+
+                col_user = db.get_collection(Collections.USER.value)
+                col_audit = db.get_collection(Collections.AUDIT.value)
+
+                user.validate()
+                user.hash_password()
+                res_insert = col_user.insert_one(user.to_mongo(), session=session)
+                audit = Audit(
+                    action=AuditAction.ADD,
+                    modified_by=None,
+                    data={
+                        "id": res_insert.inserted_id
+                    }
+                )
+                col_audit.insert_one(audit.to_mongo(), session=session)
+    except ValidationError as e:
+        raise HttpValidationError(e.to_dict())
+    except DuplicateKeyError as e:
+        print("Duplicate")
         Logger.log.error(str(e))
         raise Unauthorized(description="User already exists")
-    except ValidationError as e:
-        raise HttpValidationError(e.to_dict());
     except Exception as e:
         Logger.log.error(str(e))
         raise HTTPException(f"Failed to Register User {str(req_register)}", Response(status=400))
 
-    Logger.log.info(f"Registered {str(u)}")
     return "", 200
