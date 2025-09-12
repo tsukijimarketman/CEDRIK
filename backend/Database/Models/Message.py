@@ -8,4 +8,4 @@ class Message(BaseDocument):
     conversation = ReferenceField(Conversation)
     text = StringField()
     m_file = FileField()
-    values = ListField(FloatField())
+    embeddings = ListField(FloatField())

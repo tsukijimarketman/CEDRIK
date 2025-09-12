@@ -1,5 +1,6 @@
 from datetime import timedelta
-from flask import Response, jsonify, make_response, request
+import json
+from flask import Response, jsonify, make_response, request, g as flaskg
 from flask.blueprints import Blueprint
 from dataclasses import dataclass
 
@@ -11,11 +12,15 @@ from backend.Error import BadBody, UserDoesNotExist
 from backend.Hasher import verify_password
 from flask_jwt_extended import create_access_token, jwt_required, set_access_cookies, unset_jwt_cookies
 
+from backend.Utils import UserToken
+
 from ..Logger import Logger
 from ..Database.Models.Audit import Audit, AuditAction
 from ..Database import Collections, Transaction
 from ..Database.Models.User import Role, User
-from ..Error import HttpValidationError
+from ..Error import CUnauthorized, HttpValidationError
+from ..Utils.Decorator import set_token
+from ..Utils.UserToken import get_token_from
 
 auth = Blueprint("Auth", __name__)
 
@@ -76,21 +81,15 @@ def logout():
     unset_jwt_cookies(resp)
     return resp
 
-def insert_user(session, user: User):
-    col_user = session.client.db.get_collection(Collections.USER.value)
-    col_audit = session.client.db.get_collection(Collections.AUDIT.value)
+@auth.route("/me")
+@jwt_required(optional=False)
+@set_token
+def me():
+    payload = get_token_from(flaskg)
+    if (payload == None):
+        return CUnauthorized()
+    return jsonify(payload.__dict__), 200
 
-    user.validate()
-    user.hash_password()
-    res_insert = col_user.insert_one(user.to_mongo(), session=session)
-    audit = Audit(
-        action=AuditAction.ADD,
-        modified_by=None,
-        data={
-            "id": res_insert.inserted_id
-        }
-    )
-    col_audit.insert_one(audit.to_mongo(), session=session)
 
 @auth.route("/register", methods=["POST"])
 def register():
