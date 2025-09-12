@@ -1,11 +1,13 @@
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
+from .ColorFormatter import ColorFormatter
 import os
 
 os.makedirs("log", exist_ok=True)
 TODAY = datetime.now().strftime("%Y-%m-%d")
-FORMATTER = logging.Formatter("%(levelname)s %(asctime)s - %(message)s")
+FORMAT_STR = "%(levelname)s %(asctime)s [%(filename)s:%(lineno)d] - %(message)s"
+FORMATTER = logging.Formatter(FORMAT_STR)
 
 FILE_HANDLER = TimedRotatingFileHandler(
     filename=os.path.join("log", "app.log"),
@@ -19,7 +21,7 @@ FILE_HANDLER.setLevel(logging.DEBUG)
 
 CONSOLE_HANDLER = logging.StreamHandler()
 CONSOLE_HANDLER.setLevel(logging.DEBUG)
-CONSOLE_HANDLER.setFormatter(FORMATTER)
+CONSOLE_HANDLER.setFormatter(ColorFormatter(FORMAT_STR))
 
 class Logger:
     log = logging.getLogger(f"{__name__}")

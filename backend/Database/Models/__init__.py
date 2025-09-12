@@ -3,7 +3,7 @@ from .User import User, Role
 from .Conversation import Conversation
 from .Message import Message
 from .Memory import Memory
-from .Audit import Audit
+from .Audit import Audit, AuditAction, AuditData
 
 def init_indexes():
   User.ensure_indexes()

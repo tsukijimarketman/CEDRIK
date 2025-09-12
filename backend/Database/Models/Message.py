@@ -8,4 +8,4 @@ class Message(BaseDocument):
     conversation = ReferenceField(Conversation)
     text = StringField()
     m_file = FileField()
-    embeddings = ListField(FloatField())
+    embeddings = ListField(FloatField()) # No Embeddings for AI Model
