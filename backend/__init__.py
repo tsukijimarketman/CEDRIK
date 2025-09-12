@@ -19,6 +19,9 @@ app = Flask(__name__)
 app.config["TRAP_HTTP_EXCEPTIONS"]=True
 app.config["JWT_SECRET_KEY"] = JWT_SECRET
 app.config["JWT_TOKEN_LOCATION"] = "cookies"
+if app.debug:
+    app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+
 # app.debug = False
 
 _JWT = JWTManager(app)
