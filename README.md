@@ -10,7 +10,13 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 ## Run
+Before running activate venv
 ```
-flask --app backend run
+.\.venv\Scripts\Activate.ps1 
+# or if in bash
+source .\.venv\Scripts\activate
 ```
-
+then
+```
+flask --app backend run --debug
+```

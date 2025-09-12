@@ -1,4 +1,4 @@
-from .UserToken import UserToken, get_token_from
+from .UserToken import *
 from .CustomField import CustomEmail
 from .Decorator import set_token
 import json
