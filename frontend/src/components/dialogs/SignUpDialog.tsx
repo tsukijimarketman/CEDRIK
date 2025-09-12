@@ -49,7 +49,7 @@ export function SignUpDialog({
     try {
       setIsLoading(true);
 
-      const response = await authApi.register({
+      await authApi.register({
         username: formData.username,
         email: formData.email,
         password: formData.password,

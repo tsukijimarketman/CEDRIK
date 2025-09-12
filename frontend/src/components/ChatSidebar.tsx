@@ -18,6 +18,12 @@ import { SettingsDialog } from "./dialogs/SettingsDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
 import { LogoutDialog } from "./dialogs/LogoutDialog";
 
+interface User {
+  username: string;
+  email: string;
+  // Add other user fields as needed
+}
+
 interface Chat {
   id: string;
   title: string;
@@ -27,12 +33,19 @@ interface Chat {
 interface ChatSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
+  userData?: User;
+  onLoginSuccess?: (userData: User) => void;
 }
 
-export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
+export function ChatSidebar({
+  isCollapsed,
+  onToggle,
+  userData: propUserData,
+  onLoginSuccess,
+}: ChatSidebarProps) {
   // Chat data
   const [chats] = useState<Chat[]>([
-    { id: "1", title: "Getting started with cyberSync", timestamp: "Today" },
+    { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },
     { id: "2", title: "React best practices", timestamp: "Yesterday" },
     { id: "3", title: "TypeScript configuration", timestamp: "2 days ago" },
   ]);
@@ -41,13 +54,32 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
   const [activeChat, setActiveChat] = useState("1");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // User data
-  const [userData, setUserData] = useState({
-    username: "user123",
-    email: "user@example.com",
+  // User state
+  const [userData, setUserData] = useState<User>(() => {
+    if (propUserData) return propUserData;
+    try {
+      const savedUser = localStorage.getItem("user");
+      return savedUser
+        ? JSON.parse(savedUser)
+        : { username: "Guest", email: "" };
+    } catch (error) {
+      console.error("Error loading user data:", error);
+      return { username: "Guest", email: "" };
+    }
   });
+
+  // Auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return !!localStorage.getItem("token");
+  });
+
+  // Update user data when prop changes
+  useEffect(() => {
+    if (propUserData) {
+      setUserData(propUserData);
+    }
+  }, [propUserData, setUserData]);
 
   // Dialog state
   const [currentDialog, setCurrentDialog] = useState<{
@@ -113,6 +145,21 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
     setCurrentDialog({ type: null });
   };
 
+  // Handle login success
+  const handleLoginSuccess = () => {
+    try {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        setUserData(user);
+        setIsLoggedIn(true);
+        onLoginSuccess?.(user);
+      }
+    } catch (error) {
+      console.error("Failed to handle login success", error);
+    }
+  };
+
   const handleSignUp = (username: string, email: string, password: string) => {
     console.log("Signing up with:", { username, email, password });
     setUserData({ username, email });
@@ -148,36 +195,25 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
     <>
       {/* Mobile Menu Button */}
       <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="fixed top-4 left-4 z-30 p-2 bg-red rounded-md shadow-md hover:bg-gray-100 transition-colors md:hidden flex items-center space-x-2"
+        onClick={onToggle}
+        className="fixed top-4 left-4 z-30 p-2 bg-background rounded-md shadow-md hover:bg-accent transition-colors md:hidden"
         aria-label="Toggle menu"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-5 w-5 text-foreground" />
       </button>
 
       {/* Sidebar */}
       <div
-        ref={dropdownRef}
         className={cn(
-          "bg-chat-sidebar border-r border-border transition-all duration-300 flex flex-col fixed md:relative z-20 sidebar-container",
-          "transform transition-transform duration-300 ease-in-out",
-          isMobileMenuOpen
-            ? "translate-x-0"
-            : "-translate-x-full md:translate-x-0",
-          isCollapsed ? "w-0 overflow-hidden" : "w-64"
+          "fixed inset-y-0 left-0 z-30 flex h-full flex-col border-r bg-background transition-all duration-300",
+          isCollapsed ? "-translate-x-full md:translate-x-0 md:w-16" : "w-64"
         )}
-        style={{
-          width: isCollapsed ? "0" : "16rem",
-          minWidth: isCollapsed ? "0" : "16rem",
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-        }}
+        ref={dropdownRef}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0 h-[69px]">
-            <h1 className="font-bold text-lg pl-[50px]">cyberSync</h1>
+            <h1 className="font-bold text-lg pl-[50px] text-foreground">CEDRIK</h1>
             <Button
               variant="ghost"
               size="icon"
@@ -198,9 +234,9 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   key={chat.id}
                   onClick={() => setActiveChat(chat.id)}
                   className={cn(
-                    "w-full text-left p-3 rounded-lg transition-colors mb-1",
-                    "hover:bg-muted/50",
-                    activeChat === chat.id ? "bg-muted" : ""
+                    "w-full text-left p-3 rounded-lg transition-colors mb-1 text-foreground",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    activeChat === chat.id ? "bg-accent text-accent-foreground" : ""
                   )}
                 >
                   <p className="font-medium text-sm">{chat.title}</p>
@@ -307,10 +343,11 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
 
       {/* Dialog Components */}
       <LoginDialog
-        open={currentDialog.type === "login"}
-        onClose={closeDialog}
         onLogin={handleLogin}
-        onSwitchToSignUp={() => openDialog("signup")}
+        open={currentDialog.type === "login"}
+        onClose={() => setCurrentDialog({ type: null })}
+        onLoginSuccess={handleLoginSuccess}
+        onSwitchToSignUp={() => setCurrentDialog({ type: "signup" })}
       />
 
       <SignUpDialog
