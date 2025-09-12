@@ -1,8 +1,8 @@
-import { useTheme } from "./ThemeProvider"
-import { Button } from "@/components/ui/button"
+import { useTheme } from "./ThemeProvider";
+import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   return (
     <Button
@@ -44,5 +44,5 @@ export function ThemeToggle() {
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>
-  )
+  );
 }
