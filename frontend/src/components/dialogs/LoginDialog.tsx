@@ -51,32 +51,61 @@ export function LoginDialog({
 
     try {
       setIsLoading(true);
-      const response = await authApi.login({
+
+      // Make login request
+      const loginResponse = await authApi.login({
         email: formData.email,
         password: formData.password,
       });
 
-      // Store the token in local storage or context
-      if (response.data?.token) {
-        localStorage.setItem("token", response.data.token);
+      // Store user data from login response
+      const userData = loginResponse.data;
+      if (userData) {
+        localStorage.setItem("user", JSON.stringify(userData));
+
+        // Call the login handler with user data
+        if (onLogin) {
+          onLogin(formData.email, formData.password);
+        }
+
+        // Verify the session by making a me request
+        try {
+          const meResponse = await authApi.me();
+          if (meResponse.data) {
+            // Update user data with any additional info from /me
+            localStorage.setItem("user", JSON.stringify(meResponse.data));
+          }
+        } catch (meError) {
+          console.warn("Could not fetch user details:", meError);
+          // Continue with the login even if /me fails, as login was successful
+        }
+
+        toast({
+          title: "Success",
+          description: "Login successful!",
+        });
+
+        // Call the success handler if provided
+        onLoginSuccess?.();
+        // Close the dialog
+        onClose();
+      }
+    } catch (error: unknown) {
+      console.error("Login error:", error);
+
+      let errorMessage = "Failed to login. Please check your credentials.";
+      if (
+        error instanceof Error &&
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message
+      ) {
+        errorMessage = (error as { response?: { data?: { message?: string } } })
+          .response.data.message;
       }
 
       toast({
-        title: "Success",
-        description: "Login successful!",
-      });
-
-      // Call the success handler if provided
-      onLoginSuccess?.();
-      // Close the dialog
-      onClose();
-    } catch (error) {
-      console.error("Login error:", error);
-      toast({
         title: "Error",
-        description:
-          error.response?.data?.message ||
-          "Failed to login. Please check your credentials.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

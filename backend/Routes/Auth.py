@@ -64,8 +64,26 @@ def login():
                 "username": user.username
             },
         )
-        resp = make_response("", 200)
+        
+        # Create response with user data
+        resp = make_response(jsonify({
+            "id": str(user.id),
+            "email": user.email,
+            "username": user.username
+        }), 200)
+        
+        # Set the access token in a cookie
         set_access_cookies(resp, access_token)
+        
+        # Make sure the cookie is set with proper attributes
+        resp.set_cookie(
+            'access_token_cookie',
+            value=access_token,
+            httponly=True,
+            samesite='Lax',
+            secure=False  # Set to True in production with HTTPS
+        )
+        
         return resp
 
     except HTTPException as e:

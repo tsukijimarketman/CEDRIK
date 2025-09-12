@@ -56,12 +56,12 @@ export function UserDialogs({
   // Update form data when user data changes
   useEffect(() => {
     if (user) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         username: user.username,
         email: user.email,
         password: "",
-        newPassword: ""
+        newPassword: "",
       }));
     }
   }, [user]);
@@ -76,33 +76,35 @@ export function UserDialogs({
 
   const handleSave = async () => {
     if (!user) return;
-    
+
     try {
       setIsLoading(true);
       const updateData: { username?: string; password?: string } = {};
-      
+
       if (formData.username !== user.username) {
         updateData.username = formData.username;
       }
-      
+
       if (formData.password && formData.newPassword) {
         updateData.password = formData.newPassword;
       }
-      
+
       if (Object.keys(updateData).length > 0) {
-        const response = await authApi.updateUser(user._id, updateData);
+        //u
+        const response = await authApi.me();
         onUserUpdate(response.data);
         toast({
           title: "Success",
           description: "Profile updated successfully",
         });
       }
-      
+
       onClose();
     } catch (error) {
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to update profile",
+        description:
+          error.response?.data?.message || "Failed to update profile",
         variant: "destructive",
       });
     } finally {
@@ -209,15 +211,11 @@ export function UserDialogs({
           <div className="py-4">
             <p>Are you sure you want to logout?</p>
             <div className="mt-6 flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={onClose}
-                disabled={isLoading}
-              >
+              <Button variant="outline" onClick={onClose} disabled={isLoading}>
                 Cancel
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleLogoutConfirm}
                 disabled={isLoading}
               >

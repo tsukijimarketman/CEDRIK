@@ -3,15 +3,19 @@ from sentence_transformers import SentenceTransformer
 from backend.Logger import Logger
 from dataclasses import dataclass, asdict
 from backend.Utils import load_json
+from backend.config import (
+    CURRENT_MODEL_KEY, CURRENT_SENTENCE_TRANSFORMER_MODEL_KEY,
+    DEFAULT_MODEL, DEFAULT_SENTENCE_TRANSFORMER,
+    PIPE_CONFIG, TOKENIZER_CONFIG
+)
 from typing import Tuple, Any, List
 import os
 
-CONFIG_PIPE = os.getenv("PIPE_CONFIG")
-CONFIG_TOKENIZER = os.getenv("TOKENIZER_CONFIG")
-MODEL = os.getenv(os.getenv("CURRENT_MODEL_KEY"))
-SENTENCE_TRANSFORMER_MODEL = os.getenv(os.getenv("CURRENT_SENTENCE_TRANSFORMER_MODEL_KEY"))
-if MODEL == None:
-    raise Exception("AI Model is Empty")
+# Set model configurations
+MODEL = DEFAULT_MODEL
+SENTENCE_TRANSFORMER_MODEL = DEFAULT_SENTENCE_TRANSFORMER
+CONFIG_PIPE = PIPE_CONFIG
+CONFIG_TOKENIZER = TOKENIZER_CONFIG
 
 CHAT_TEMPLATE = {}
 # match MODEL:
