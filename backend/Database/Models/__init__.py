@@ -2,7 +2,7 @@ from .BaseDocument import BaseDocument
 from .User import User, Role
 from .Conversation import Conversation
 from .Message import Message
-from .Memory import Memory
+from .Memory import *
 from .Audit import Audit, AuditAction, AuditData
 
 def init_indexes():

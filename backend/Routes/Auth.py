@@ -11,7 +11,7 @@ from backend.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidati
 from backend.Hasher import verify_password
 from backend.Logger import Logger
 from backend.Database import Collections, Transaction, Audit, AuditAction, AuditData, Role, User
-from backend.Utils import set_token, get_token_from
+from backend.Utils import set_token, get_token
 
 auth = Blueprint("Auth", __name__)
 
@@ -74,9 +74,8 @@ def logout():
 
 @auth.route("/me")
 @jwt_required(optional=False)
-@set_token
 def me():
-    payload = get_token_from(flaskg)
+    payload = get_token()
     if (payload == None):
         return CUnauthorized()
     return jsonify(payload.__dict__), 200

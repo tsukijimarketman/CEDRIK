@@ -46,7 +46,6 @@ class Transaction:
     def __enter__(self) -> Tuple [ ClientSession, Database ]:
         connection = get_connection()
         self.session: ClientSession = connection.start_session()
-        print(connection, self.session)
         self.session.start_transaction()
         return self.session, get_db()
     
