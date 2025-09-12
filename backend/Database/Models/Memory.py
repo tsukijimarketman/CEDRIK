@@ -8,4 +8,4 @@ class Memory(BaseDocument):
     content = FileField()
     permission = ListField(StringField())
     tags = ListField(StringField())
-    values = ListField(FloatField())
+    embeddings = ListField(FloatField())

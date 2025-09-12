@@ -1,5 +1,5 @@
 from .BaseDocument import BaseDocument
-from .User import User
+from .User import User, Role
 from .Conversation import Conversation
 from .Message import Message
 from .Memory import Memory
