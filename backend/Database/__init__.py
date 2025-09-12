@@ -38,6 +38,8 @@ def db_connection_init():
 class Collections(Enum):
     USER = "user"
     AUDIT = "audit"
+    MESSAGE = "message"
+    CONVERSATION = "conversation"
 
 class Transaction:
     session: ClientSession = None

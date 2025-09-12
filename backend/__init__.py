@@ -9,14 +9,15 @@ from flask_jwt_extended import JWTManager
 
 from .Routes.Auth import auth as routeAuth
 from .Routes.AI import ai as routeAi
+from .Routes.AI import ai as routeAi
 
+app = Flask(__name__)
 load_dotenv()
-
-JWT_SECRET = os.getenv("JWT_SECRET")
-
 db_connection_init()
-
 JWT_SECRET = os.getenv("JWT_SECRET")
+
+# app.config["PROPAGATE_EXCEPTIONS"] = False
+app.config["TRAP_HTTP_EXCEPTIONS"]=True
 app = Flask(__name__)
 
 # JWT Configuration

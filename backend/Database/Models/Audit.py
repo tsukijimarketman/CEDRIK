@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from mongoengine import DictField, EnumField, ReferenceField
-from backend.Database.Models import User
+from mongoengine import DictField, EnumField
 from enum import Enum
 from .BaseDocument import BaseDocument
 
@@ -9,7 +8,13 @@ class AuditAction(Enum):
     EDIT = "edit"
     DELETE = "delete"
 
+@dataclass
+class AuditData:
+    collection: str = ""
+    ad_id: str | None = None
+    ad_from: dict | None = None
+    ad_to: dict | None = None
+
 class Audit(BaseDocument):
     action = EnumField(AuditAction, required=True)
-    modified_by = ReferenceField(User, default=None, required=False)
     data = DictField()

@@ -1,26 +1,17 @@
 from datetime import timedelta
-import json
 from flask import Response, jsonify, make_response, request, g as flaskg
 from flask.blueprints import Blueprint
+from flask_jwt_extended import create_access_token, jwt_required, set_access_cookies, unset_jwt_cookies
 from dataclasses import dataclass
-
-from mongoengine import ValidationError, get_connection, get_db
+from mongoengine import ValidationError
 from pymongo.errors import DuplicateKeyError
 from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 
-from backend.Error import BadBody, UserDoesNotExist
+from backend.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidationError
 from backend.Hasher import verify_password
-from flask_jwt_extended import create_access_token, jwt_required, set_access_cookies, unset_jwt_cookies
-
-from backend.Utils import UserToken
-
-from ..Logger import Logger
-from ..Database.Models.Audit import Audit, AuditAction
-from ..Database import Collections, Transaction
-from ..Database.Models.User import Role, User
-from ..Error import CUnauthorized, HttpValidationError
-from ..Utils.Decorator import set_token
-from ..Utils.UserToken import get_token_from
+from backend.Logger import Logger
+from backend.Database import Collections, Transaction, Audit, AuditAction, AuditData, Role, User
+from backend.Utils import set_token, get_token_from
 
 auth = Blueprint("Auth", __name__)
 
@@ -131,10 +122,10 @@ def register():
                 res_insert = col_user.insert_one(user.to_mongo(), session=session)
                 audit = Audit(
                     action=AuditAction.ADD,
-                    modified_by=None,
-                    data={
-                        "id": res_insert.inserted_id
-                    }
+                    data=AuditData(
+                        collection=Collections.USER.value,
+                        ad_id=res_insert.inserted_id
+                    ).__dict__
                 )
                 col_audit.insert_one(audit.to_mongo(), session=session)
     except ValidationError as e:
