@@ -30,6 +30,8 @@ export function UserDialogs({
   onLogout,
 }: UserDialogsProps) {
   const [formData, setFormData] = useState({
+    //mock data palang to pre
+
     username: "user123",
     email: "user@example.com",
     password: "",
@@ -44,7 +46,7 @@ export function UserDialogs({
   };
 
   const handleSave = () => {
-    // Add your save logic here
+    // pre add mo dito yung save settings mo from backend to frontend
     console.log("Saving settings:", formData);
     onClose();
   };
@@ -54,28 +56,32 @@ export function UserDialogs({
     onClose();
   };
 
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [signupData, setSignupData] = useState({ username: '', email: '', password: '' });
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [signupData, setSignupData] = useState({
+    username: "",
+    email: "",
+    password: "",
+  });
 
   const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setLoginData(prev => ({ ...prev, [name]: value }));
+    setLoginData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSignUpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setSignupData(prev => ({ ...prev, [name]: value }));
+    setSignupData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login data:', loginData);
+    console.log("Login data:", loginData);
     onLogin();
   };
 
   const handleSignUpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Signup data:', signupData);
+    console.log("Signup data:", signupData);
     onSignUp();
   };
 
@@ -136,9 +142,12 @@ export function UserDialogs({
       case "help":
         return (
           <div className="py-4">
+            <p>In case of emergency and concern, contact</p>
+            <br />
             <p>
-              In case of emergency and concern, contact sir Mark (chatgpt)
-              Asuncion
+              <strong>
+                Sir Mark <span className="text-red-500">(chatgpt)</span>Asuncion
+              </strong>
             </p>
             <div className="mt-6 flex justify-end">
               <Button onClick={onClose}>Close</Button>
