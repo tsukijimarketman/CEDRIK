@@ -6,8 +6,8 @@ from typing import List
 
 from backend.Error import BadBody
 from backend.Logger import Logger
-from backend.Database import MemoryType
 from backend.Utils import set_token
+from backend.Utils.Enum import MemoryType
 
 memory = Blueprint("Memory", __name__)
 

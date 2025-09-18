@@ -1,10 +1,9 @@
 from enum import Enum
 from mongoengine import FileField, FloatField, ListField, StringField, EnumField
+
+from backend.Utils.Enum import MemoryType
 from .BaseDocument import BaseDocument
 
-class MemoryType(Enum):
-    TEXT = "text"
-    FILE = "file" # use metadata for filetype
 
 class Memory(BaseDocument):
     title = StringField()

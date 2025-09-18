@@ -1,10 +1,8 @@
-from enum import Enum
 import mongoengine
 from mongoengine import get_connection, get_db
 from pymongo.database import Database
 from pymongo.client_session import ClientSession
 from typing import Tuple
-from contextlib import contextmanager
 from .Models import *
 import os
 from dotenv import load_dotenv
@@ -33,13 +31,6 @@ def db_connection_init():
     # sslAllowInvalidCertificates=True
     # tls=True,
     # ssl=True
-
-
-class Collections(Enum):
-    USER = "user"
-    AUDIT = "audit"
-    MESSAGE = "message"
-    CONVERSATION = "conversation"
 
 class Transaction:
     session: ClientSession = None

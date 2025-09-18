@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 from mongoengine import ValidationError
-from backend.Database import Collections, Transaction
-from backend.Logger import Logger
 from flask import request, jsonify, g as flaskg
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
@@ -9,7 +7,9 @@ from werkzeug.exceptions import InternalServerError
 
 from backend.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId
 from backend.LLM import Prompt, IModel
-from backend.Utils import get_token
+from backend.Database import Transaction
+from backend.Logger import Logger
+from backend.Utils import get_token, Collections
 from backend.Service import create_chat
 
 ai = Blueprint("Ai", __name__)
@@ -74,5 +74,5 @@ def chat():
         raise InternalServerError()
 
     return jsonify({
-        "output": model_reply
+        "reply": model_reply.decoded
     }), 200

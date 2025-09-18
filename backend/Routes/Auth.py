@@ -10,8 +10,8 @@ from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 from backend.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidationError
 from backend.Hasher import verify_password
 from backend.Logger import Logger
-from backend.Database import Collections, Transaction, Audit, AuditAction, AuditData, Role, User
-from backend.Utils import set_token, get_token
+from backend.Database import Transaction, Audit, AuditData, User
+from backend.Utils import get_token, Role, AuditAction, Collections
 
 auth = Blueprint("Auth", __name__)
 

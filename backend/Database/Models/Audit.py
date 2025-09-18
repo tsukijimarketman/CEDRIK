@@ -1,12 +1,8 @@
 from dataclasses import dataclass
 from mongoengine import DictField, EnumField
-from enum import Enum
-from .BaseDocument import BaseDocument
 
-class AuditAction(Enum):
-    ADD = "add"
-    EDIT = "edit"
-    DELETE = "delete"
+from backend.Utils.Enum import AuditAction
+from .BaseDocument import BaseDocument
 
 @dataclass
 class AuditData:

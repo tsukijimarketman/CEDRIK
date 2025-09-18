@@ -3,8 +3,8 @@ from pymongo.client_session import ClientSession
 from bson.objectid import ObjectId
 
 from backend.LLM import ModelReply, Prompt
-from backend.Database import Conversation, Message, Audit, AuditAction, AuditData, Collections
-from backend.Utils import UserToken, get_object_id
+from backend.Database import Conversation, Message, Audit, AuditData
+from backend.Utils import UserToken, get_object_id, Collections, AuditAction
 
 def __create_conversation(owner: ObjectId, title: str):
     return Conversation(

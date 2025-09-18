@@ -1,9 +1,8 @@
-from .BaseDocument import BaseDocument
-from .User import User, Role
+from .User import User
 from .Conversation import Conversation
 from .Message import Message
 from .Memory import *
-from .Audit import Audit, AuditAction, AuditData
+from .Audit import Audit, AuditData
 
 def init_indexes():
   User.ensure_indexes()
