@@ -1,5 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface HelpDialogProps {
   open: boolean;
@@ -15,7 +20,8 @@ export function HelpDialog({ open, onClose }: HelpDialogProps) {
         </DialogHeader>
         <div className="py-4">
           <p className="mb-4">
-            In case of emergency and concern, contact sir Mark (chatgpt) Asuncion
+            In case of emergency and concern, contact Ma'am Flordeliza{" "}
+            <span className="text-red-500">(Thonie)</span> Fernandez
           </p>
           <div className="mt-6 flex justify-end">
             <Button onClick={onClose}>Close</Button>

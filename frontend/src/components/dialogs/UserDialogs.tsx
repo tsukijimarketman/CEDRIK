@@ -197,7 +197,8 @@ export function UserDialogs({
             <br />
             <p>
               <strong>
-                Sir Mark <span className="text-red-500">(chatgpt)</span>Asuncion
+                Ma'am Flordeliza <span className="text-red-500">(Thonie)</span>{" "}
+                Fernandez
               </strong>
             </p>
             <div className="mt-6 flex justify-end">

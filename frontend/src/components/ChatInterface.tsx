@@ -46,14 +46,20 @@ export function ChatInterface() {
     }, 1000);
   };
 
+  // Compute responsive left margin for the fixed sidebar on desktop sizes
+  // When collapsed on desktop, hide the sidebar entirely and remove left margin
+  const contentMarginClass = isSidebarCollapsed ? "md:ml-0" : "md:ml-64";
+
   return (
-    <div className="flex h-screen bg-chat-background">
+    <div className="relative h-screen bg-chat-background">
       <ChatSidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      <div className="flex flex-col flex-1">
+      <div
+        className={`flex flex-col h-full ${contentMarginClass} transition-all duration-300 min-w-0`}
+      >
         {/* Header */}
         <div className="border-b border-border bg-background">
           <div className="flex items-center justify-between p-4">
@@ -79,7 +85,11 @@ export function ChatInterface() {
                   </svg>
                 </button>
               )}
-              <h1 className="text-xl font-semibold pl-[50px]">CEDRIK</h1>
+              <img
+                src="/cedrikFD.png"
+                alt="CEDRIK"
+                className="w-8 h-8 rounded-full"
+              />
             </div>
             <ThemeToggle />
           </div>
