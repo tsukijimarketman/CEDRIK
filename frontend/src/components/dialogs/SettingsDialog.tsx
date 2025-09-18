@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,12 @@ export function SettingsDialog({
     username: currentUsername,
     password: ''
   });
+
+  useEffect(() => {
+    if (open) {
+      setFormData({ username: currentUsername, password: '' });
+    }
+  }, [open, currentUsername]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
