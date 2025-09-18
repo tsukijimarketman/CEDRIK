@@ -1,5 +1,5 @@
 from datetime import timedelta
-from flask import Response, jsonify, make_response, request, g as flaskg
+from flask import Response, jsonify, make_response, request
 from flask.blueprints import Blueprint
 from flask_jwt_extended import create_access_token, jwt_required, set_access_cookies, unset_jwt_cookies
 from dataclasses import dataclass
@@ -11,7 +11,8 @@ from backend.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidati
 from backend.Hasher import verify_password, hash as hash_password
 from backend.Logger import Logger
 from backend.Database import Transaction, Audit, AuditData, User
-from backend.Utils import get_token, set_token, Role, AuditAction, Collections
+from backend.Utils import get_token, Role, AuditAction, Collections, get_object_id
+from backend.Validation import validate_username, validate_password
 
 auth = Blueprint("Auth", __name__)
 
@@ -105,7 +106,6 @@ def me():
 
 @auth.route("/me", methods=["PUT"])
 @jwt_required(optional=False)
-@set_token
 def update_me():
     try:
         json = request.get_json() or {}
@@ -113,7 +113,7 @@ def update_me():
     except Exception as _:
         raise BadBody()
 
-    payload = get_token_from(flaskg)
+    payload = get_token()
     if payload is None:
         return CUnauthorized()
 

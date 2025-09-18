@@ -4,15 +4,8 @@ from pymongo.database import Database
 from pymongo.client_session import ClientSession
 from typing import Tuple
 from .Models import *
-import os
-from dotenv import load_dotenv
-from pathlib import Path
-
 from ..Logger import Logger
-
-# Load environment variables from .env file
-env_path = Path(__file__).parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+import os
 
 URI = os.getenv("CyberSync_DatabaseUri")
 
