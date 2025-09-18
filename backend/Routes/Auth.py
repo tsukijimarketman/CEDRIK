@@ -69,18 +69,8 @@ def login():
             "username": user.username
         }), 200)
         
-        # Set the access token in a cookie
+        # handles Set-Cookie and other params based on app.config
         set_access_cookies(resp, access_token)
-        
-        # Make sure the cookie is set with proper attributes
-        resp.set_cookie(
-            'access_token_cookie',
-            value=access_token,
-            httponly=True,
-            samesite='Lax',
-            secure=False  # Set to True in production with HTTPS
-        )
-        
         return resp
 
     except HTTPException as e:
@@ -200,13 +190,6 @@ def update_me():
             }), 200)
 
             set_access_cookies(resp, access_token)
-            resp.set_cookie(
-                'access_token_cookie',
-                value=access_token,
-                httponly=True,
-                samesite='Lax',
-                secure=False
-            )
 
             return resp
 
