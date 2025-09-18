@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, set_seed
 from sentence_transformers import SentenceTransformer
 from backend.Logger import Logger
 from dataclasses import dataclass, asdict
-from numpy import ndarray
+from numpy import ndarray, array as nparray
 from backend.Utils import load_json
 from backend.config import (
     DEFAULT_MODEL, DEFAULT_SENTENCE_TRANSFORMER,
@@ -112,13 +112,21 @@ class ModelPipe:
         return cls.__tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:])
 
     @classmethod
-    def get_embeddings(cls, prompt: Prompt) -> List[float]:
+    def get_embeddings_from(cls, buffer: ndarray) -> List[float]:
         try:
-            embeddings = cls.__sentence_transformer.encode([prompt.content]) # numpy ndarray
+            embeddings = cls.__sentence_transformer.encode(buffer)
             return embeddings.tolist()
         except Exception as e:
             Logger.log.error(e)
-        return None
+        return []
+
+    @classmethod
+    def get_embeddings(cls, prompt: Prompt) -> List[float]:
+        try:
+            return ModelPipe.get_embeddings_from(nparray([prompt.content]))
+        except Exception as e:
+            Logger.log.error(e)
+        return []
 
 class IModel:
     def __init__(self, prompt):
@@ -152,4 +160,8 @@ class IModel:
         )
 
 def generate_embeddings(buffer: ndarray):
-    raise NotImplementedError()
+    embeddings = ModelPipe.get_embeddings_from(buffer)
+    if len(embeddings) > 0:
+        embeddings = embeddings[0]
+    
+    return embeddings

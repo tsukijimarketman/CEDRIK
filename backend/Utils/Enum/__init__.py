@@ -15,7 +15,14 @@ class Collections(Enum):
   AUDIT = "audit"
   MESSAGE = "message"
   CONVERSATION = "conversation"
+  MEMORY = "memory"
 
 class MemoryType(Enum):
   TEXT = "text"
   FILE = "file" # use metadata for filetype
+
+class Permission(Enum):
+  USER = "user"
+  ADMIN = "admin"
+  SUPERADMIN = "superadmin"
+  ALL = "all"
