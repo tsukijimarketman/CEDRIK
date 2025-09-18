@@ -18,7 +18,7 @@ export function ChatInterface() {
       id: "1",
       role: "assistant",
       content:
-        "Hello! I'm cyberSync, your AI assistant. How can I help you today?",
+        "Hello! I'm CEDRIK, your AI assistant. How can I help you today?",
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);
@@ -79,7 +79,7 @@ export function ChatInterface() {
                   </svg>
                 </button>
               )}
-              <h1 className="text-xl font-semibold pl-[50px]">cyberSync</h1>
+              <h1 className="text-xl font-semibold pl-[50px]">CEDRIK</h1>
             </div>
             <ThemeToggle />
           </div>
