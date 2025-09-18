@@ -1,14 +1,10 @@
-from enum import Enum
-from mongoengine import EmailField, EnumField, StringField
+from mongoengine import EnumField, StringField
 from backend.Hasher import hash
+from backend.Utils.Enum import Role
 from backend.Validation import validate_password, validate_username
 from backend.Utils import CustomEmail
 from .BaseDocument import BaseDocument
 
-class Role(Enum):
-    USER = "user"
-    ADMIN = "admin"
-    SUPERADMIN = "superadmin"
 
 class User(BaseDocument):
     email = CustomEmail(required=True, unique=True)

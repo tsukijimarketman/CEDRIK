@@ -1,4 +1,5 @@
 from bson.objectid import ObjectId
+from flask_jwt_extended import get_jwt
 
 from backend.Error import InvalidId
 from backend.Logger import Logger
@@ -25,10 +26,11 @@ class UserToken:
         self.username = token["username"]
         self.email = token["email"]
 
-def get_token_from(flask_global):
-    if hasattr(flask_global, "user_token"):
-        return UserToken(flask_global.user_token)
-    return None
+def get_token():
+    token = get_jwt()
+    if len(token) == 0:
+        return None
+    return UserToken(token)
 
 def get_object_id(id: str):
     try:

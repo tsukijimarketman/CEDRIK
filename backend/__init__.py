@@ -7,9 +7,7 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
-from .Routes.Auth import auth as routeAuth
-from .Routes.AI import ai as routeAi
-from .Routes.AI import ai as routeAi
+from .Routes import ROUTES
 
 app = Flask(__name__)
 load_dotenv()
@@ -72,7 +70,5 @@ def Health():
         "api_map": endpoints
     }), 200
 
-# Removed duplicate CORS configuration - now handled by flask-cors
-
-app.register_blueprint(routeAuth, url_prefix="/api/auth")
-app.register_blueprint(routeAi, url_prefix="/api/ai")
+for route in ROUTES:
+    app.register_blueprint(route.blueprint, url_prefix=f"/api/{route.path}")

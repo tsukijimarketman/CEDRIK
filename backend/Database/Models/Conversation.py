@@ -3,5 +3,5 @@ from backend.Database.Models import User
 from .BaseDocument import BaseDocument
 
 class Conversation(BaseDocument):
-    owner = ReferenceField(User, default=None) # None for AI
+    owner = ReferenceField(User, default=None)
     title = StringField(required=True)

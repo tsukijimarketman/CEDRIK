@@ -1,6 +1,7 @@
 from .UserToken import *
 from .CustomField import CustomEmail
-from .Decorator import set_token
+from .Decorator import *
+from .Enum import *
 import json
 
 def load_json(filename):

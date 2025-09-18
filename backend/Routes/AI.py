@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 from mongoengine import ValidationError
-from backend.Database import Collections, Transaction
-from backend.Logger import Logger
 from flask import request, jsonify, g as flaskg
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
@@ -9,7 +7,9 @@ from werkzeug.exceptions import InternalServerError
 
 from backend.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId
 from backend.LLM import Prompt, IModel
-from backend.Utils import set_token, get_token_from
+from backend.Database import Transaction
+from backend.Logger import Logger
+from backend.Utils import get_token, Collections
 from backend.Service import create_chat
 
 ai = Blueprint("Ai", __name__)
@@ -23,7 +23,6 @@ class ChatBody:
 
 @ai.route("/chat", methods=["POST"])
 @jwt_required(optional=True)
-@set_token
 def chat():
     body = None
     try:
@@ -32,13 +31,13 @@ def chat():
         body.prompt.role = "user" # force user role for testing
     except Exception as _:
         raise BadBody()
-    user_token = get_token_from(flaskg)
+    user_token = get_token()
 
     Logger.log.info(f"chat::prompt {body}")
 
     try:
-        Logger.log.info(f"Do Filter(Not Implemented Yet)...")
-        Logger.log.info(f"Do Find Related Context(Not Implemented Yet)...")
+        Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
+        Logger.log.warning(f"Do Find Related Context(Not Implemented Yet)...")
 
         interface = IModel(body.prompt)
         model_reply = interface.generate_reply()
@@ -75,5 +74,5 @@ def chat():
         raise InternalServerError()
 
     return jsonify({
-        "output": model_reply
+        "reply": model_reply.decoded
     }), 200

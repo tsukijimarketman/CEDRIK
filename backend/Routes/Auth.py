@@ -10,9 +10,8 @@ from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 from backend.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidationError
 from backend.Hasher import verify_password, hash as hash_password
 from backend.Logger import Logger
-from backend.Database import Collections, Transaction, Audit, AuditAction, AuditData, Role, User
-from backend.Utils import set_token, get_token_from, get_object_id
-from backend.Validation import validate_password, validate_username
+from backend.Database import Transaction, Audit, AuditData, User
+from backend.Utils import get_token, Role, AuditAction, Collections
 
 auth = Blueprint("Auth", __name__)
 
@@ -98,9 +97,8 @@ def logout():
 
 @auth.route("/me")
 @jwt_required(optional=False)
-@set_token
 def me():
-    payload = get_token_from(flaskg)
+    payload = get_token()
     if (payload == None):
         return CUnauthorized()
     return jsonify(payload.__dict__), 200
