@@ -1,13 +1,9 @@
 import os
 
-# Model Configuration
-CURRENT_MODEL_KEY = "DEFAULT_MODEL"
-CURRENT_SENTENCE_TRANSFORMER_MODEL_KEY = "DEFAULT_SENTENCE_TRANSFORMER"
-
-# Model Paths
-DEFAULT_MODEL = "distilbert/distilgpt2"
-DEFAULT_SENTENCE_TRANSFORMER = "all-MiniLM-L6-v2"
+# Model
+DEFAULT_MODEL = os.getenv(os.getenv("CURRENT_MODEL_KEY"))
+DEFAULT_SENTENCE_TRANSFORMER = os.getenv(os.getenv("CURRENT_SENTENCE_TRANSFORMER_MODEL_KEY"))
 
 # Pipeline Configuration
-PIPE_CONFIG = "pipe_config.json"
-TOKENIZER_CONFIG = "tokenizer_config.json"
+PIPE_CONFIG = os.getenv("PIPE_CONFIG")
+TOKENIZER_CONFIG = os.getenv("TOKENIZER_CONFIG")

@@ -2,13 +2,13 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, set_seed
 from sentence_transformers import SentenceTransformer
 from backend.Logger import Logger
 from dataclasses import dataclass, asdict
+from numpy import ndarray
 from backend.Utils import load_json
 from backend.config import (
-    CURRENT_MODEL_KEY, CURRENT_SENTENCE_TRANSFORMER_MODEL_KEY,
     DEFAULT_MODEL, DEFAULT_SENTENCE_TRANSFORMER,
     PIPE_CONFIG, TOKENIZER_CONFIG
 )
-from typing import Tuple, Any, List
+from typing import Any, List
 import os
 
 # Set model configurations
@@ -150,3 +150,6 @@ class IModel:
             out = out,
             embeddings = embeddings
         )
+
+def generate_embeddings(buffer: ndarray):
+    raise NotImplementedError()
