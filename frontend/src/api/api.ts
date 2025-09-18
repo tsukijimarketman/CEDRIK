@@ -7,12 +7,12 @@ const api = axios.create({
   withCredentials: true, // Required for cookies
   headers: {
     "Content-Type": "application/json",
-    "Accept": "application/json",
+    Accept: "application/json",
   },
   // Ensure credentials are sent with every request
-  xsrfCookieName: 'csrftoken',
-  xsrfHeaderName: 'X-CSRFToken',
-  withXSRFToken: true
+  xsrfCookieName: "csrftoken",
+  xsrfHeaderName: "X-CSRFToken",
+  withXSRFToken: true,
 });
 
 // Add a response interceptor to handle errors
@@ -21,7 +21,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Handle unauthorized access
-      console.error('Authentication error:', error.response?.data?.msg || 'Not authenticated');
+      console.error(
+        "Authentication error:",
+        error.response?.data?.msg || "Not authenticated"
+      );
       // You might want to redirect to login or refresh the token here
     }
     return Promise.reject(error);
@@ -40,10 +43,13 @@ export const authApi = {
     return api.post("/auth/login", credentials);
   },
   logout: async () => {
-    return api.post("/auth/logout");
+    return api.get("/auth/logout");
   },
   me: async () => {
     return api.get("/auth/me");
+  },
+  updateMe: async (data: { username?: string; password?: string }) => {
+    return api.put("/auth/me", data);
   },
 };
 
