@@ -15,4 +15,5 @@ ROUTES = [
   Route(path="auth", blueprint=auth),
   Route(path="ai", blueprint=ai),
   Route(path="conversation", blueprint=conversation),
+  Route(path="memory", blueprint=memory),
 ]
