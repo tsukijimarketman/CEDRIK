@@ -11,7 +11,7 @@ from backend.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidati
 from backend.Hasher import verify_password, hash as hash_password
 from backend.Logger import Logger
 from backend.Database import Transaction, Audit, AuditData, User
-from backend.Utils import get_token, Role, AuditAction, Collections
+from backend.Utils import get_token, set_token, Role, AuditAction, Collections
 
 auth = Blueprint("Auth", __name__)
 
