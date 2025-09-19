@@ -9,11 +9,7 @@ from backend.Utils import UserToken, get_object_id, Collections, AuditAction, Ob
 from backend.Utils.Enum import VectorIndex
 from backend.config import MAX_CONTEXT_SIZE
 
-def __search_similarity_from_memory(
-  query_embeddings: List[float],
-  session: ClientSession,
-  col_memory: Collection
-):
+def __search_similarity_from_memory(query_embeddings: List[float]):
   # Text only vector search
   pipeline = [
     {
@@ -32,14 +28,12 @@ def __search_similarity_from_memory(
         }
     }
   ]
-  return list(col_memory.aggregate(pipeline=pipeline, session=session))
+  return list(Memory.objects.aggregate(*pipeline))
 
 def __search_similarity_from_message(
   query_embeddings: List[float],
   conversation_id: ObjectId,
   sender_id: ObjectId,
-  session: ClientSession,
-  col_message: Collection,
 ):
   # Text only vector search
   pipeline = [
@@ -63,28 +57,21 @@ def __search_similarity_from_message(
         }
     }
   ]
-  return list(col_message.aggregate(pipeline=pipeline, session=session))
+  return list(Message.objects.aggregate(*pipeline))
 
 def generate_reply(
-  session: ClientSession,
-  col_memory: Collection,
-  col_message: Collection,
   user: UserToken,
   prompt: Prompt
 ):
   query_embeddings = generate_embeddings([prompt.content])
   sim_results = __search_similarity_from_memory(
     query_embeddings=query_embeddings,
-    session=session,
-    col_memory=col_memory
   )
   sim_results.append(
     __search_similarity_from_message(
       query_embeddings=query_embeddings,
       conversation_id=get_object_id(prompt.conversation),
       sender_id=get_object_id(user.id),
-      session=session,
-      col_message=col_message,
     )
   )
   context = [ i.text for i in sim_results ]

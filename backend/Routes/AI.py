@@ -36,25 +36,22 @@ def chat():
     Logger.log.info(f"chat::prompt {body}")
 
     try:
+        Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
+
+        # Generate Reply
+        # !!! Do not run inside transaction
+        Logger.log.warning(f"Finding Related Context...")
+        model_reply = generate_reply(
+            user=user_token,
+            prompt=body.prompt
+        )
+        Logger.log.info(f"ModelReply {model_reply.decoded} {model_reply.embeddings[:5]}")
+        # ==============
+
         with Transaction() as (session, db):
             col_conversation = db.get_collection(Collections.CONVERSATION.value)
             col_message = db.get_collection(Collections.MESSAGE.value)
-            col_memory = db.get_collection(Collections.MEMORY.value)
             col_audit = db.get_collection(Collections.AUDIT.value)
-
-            Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
-
-            # Generate Reply
-            Logger.log.warning(f"Finding Related Context...")
-            model_reply = generate_reply(
-                session=session,
-                col_memory=col_memory,
-                col_message=col_message,
-                user=user_token,
-                prompt=body.prompt
-            )
-            Logger.log.info(f"ModelReply {model_reply.decoded} {model_reply.embeddings[:5]}")
-            # ==============
 
             default_title = body.prompt.content
             if len(default_title) > 10:
