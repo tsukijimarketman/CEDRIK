@@ -85,11 +85,6 @@ export function ChatInterface() {
                   </svg>
                 </button>
               )}
-              <img
-                src="/cedrikFD.png"
-                alt="CEDRIK"
-                className="w-8 h-8 rounded-full"
-              />
             </div>
             <ThemeToggle />
           </div>
