@@ -1,16 +1,95 @@
 from pymongo.collection import Collection
 from pymongo.client_session import ClientSession
-from bson.objectid import ObjectId
+from numpy import ndarray
+from typing import List
 
-from backend.LLM import ModelReply, Prompt
-from backend.Database import Conversation, Message, Audit, AuditData
-from backend.Utils import UserToken, get_object_id, Collections, AuditAction
+from backend.LLM import IModel, ModelReply, Prompt, generate_embeddings
+from backend.Database import Conversation, Message, Audit, AuditData, Memory
+from backend.Utils import UserToken, get_object_id, Collections, AuditAction, ObjectId
+from backend.Utils.Enum import VectorIndex
+from backend.config import MAX_CONTEXT_SIZE
 
-def __create_conversation(owner: ObjectId, title: str):
-    return Conversation(
-      owner=owner,
-      title=title
+def __search_similarity_from_memory(
+  query_embeddings: List[float],
+  session: ClientSession,
+  col_memory: Collection
+):
+  # Text only vector search
+  pipeline = [
+    {
+        "$vectorSearch": {
+            "index": VectorIndex.MEMORY.value,
+            "path": "embeddings",
+            "queryVector": query_embeddings,
+            "numCandidates": 100,
+            "limit": MAX_CONTEXT_SIZE
+        }
+    },
+    {
+        "$project": {
+            "text": 1,
+            "score": {"$meta": "vectorSearchScore"}  # include similarity score
+        }
+    }
+  ]
+  return list(col_memory.aggregate(pipeline=pipeline, session=session))
+
+def __search_similarity_from_message(
+  query_embeddings: List[float],
+  conversation_id: ObjectId,
+  sender_id: ObjectId,
+  session: ClientSession,
+  col_message: Collection,
+):
+  # Text only vector search
+  pipeline = [
+    {
+        "$vectorSearch": {
+            "index": VectorIndex.MESSAGE.value,
+            "path": "embeddings",
+            "queryVector": query_embeddings.tolist(),
+            "numCandidates": 100,
+            "limit": MAX_CONTEXT_SIZE,
+            "filter": {
+                "conversation": conversation_id,
+                "sender": sender_id
+            }
+        }
+    },
+    {
+        "$project": {
+            "text": 1,
+            "score": {"$meta": "vectorSearchScore"}  # include similarity score
+        }
+    }
+  ]
+  return list(col_message.aggregate(pipeline=pipeline, session=session))
+
+def generate_reply(
+  session: ClientSession,
+  col_memory: Collection,
+  col_message: Collection,
+  user: UserToken,
+  prompt: Prompt
+):
+  query_embeddings = generate_embeddings([prompt.content])
+  sim_results = __search_similarity_from_memory(
+    query_embeddings=query_embeddings,
+    session=session,
+    col_memory=col_memory
+  )
+  sim_results.append(
+    __search_similarity_from_message(
+      query_embeddings=query_embeddings,
+      conversation_id=get_object_id(prompt.conversation),
+      sender_id=get_object_id(user.id),
+      session=session,
+      col_message=col_message,
     )
+  )
+  context = [ i.text for i in sim_results ]
+  interface = IModel(prompt, context)
+  return interface.generate_reply()
 
 def create_chat(
   session: ClientSession,
@@ -40,7 +119,10 @@ def create_chat(
 
   # Conversation
   if conversation_id == None or len(conversation_id) == 0:
-    conv = __create_conversation(user_id, title)
+    conv = Conversation(
+      owner=user_id,
+      title=title
+    )
     conv.validate()
     conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
@@ -56,7 +138,7 @@ def create_chat(
       conv_id = get_object_id(conversation_id)
       conv = Conversation.objects.with_id(conv_id)
       if (conv == None):
-        conv = __create_conversation(user_token.id, title)
+        conv = Conversation(owner=user_token.id, title=title)
         conv.validate()
         conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 

@@ -26,3 +26,8 @@ class Permission(Enum):
   ADMIN = "admin"
   SUPERADMIN = "superadmin"
   ALL = "all"
+
+# Vector Index name is defined in mongodb atlas vector search
+class VectorIndex(Enum):
+  MEMORY = "MemoryVector"
+  MESSAGE = "MessageVector"

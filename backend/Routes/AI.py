@@ -1,14 +1,15 @@
 from dataclasses import dataclass
 from mongoengine import ValidationError
-from flask import request, jsonify, g as flaskg
+from flask import request, jsonify
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
 from werkzeug.exceptions import InternalServerError
 
 from backend.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId
-from backend.LLM import Prompt, IModel
+from backend.LLM import Prompt
 from backend.Database import Transaction
 from backend.Logger import Logger
+from backend.Service.Chat.CreateChat import generate_reply
 from backend.Utils import get_token, Collections
 from backend.Service import create_chat
 
@@ -22,7 +23,7 @@ class ChatBody:
         self.prompt = Prompt(**self.prompt)
 
 @ai.route("/chat", methods=["POST"])
-@jwt_required(optional=True)
+@jwt_required(optional=False)
 def chat():
     body = None
     try:
@@ -32,22 +33,28 @@ def chat():
     except Exception as _:
         raise BadBody()
     user_token = get_token()
-
     Logger.log.info(f"chat::prompt {body}")
 
     try:
-        Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
-        Logger.log.warning(f"Do Find Related Context(Not Implemented Yet)...")
-
-        interface = IModel(body.prompt)
-        model_reply = interface.generate_reply()
-        model_reply.decoded = model_reply.decoded.replace(body.prompt.content, "", 1).strip()
-        Logger.log.info(f"ModelReply {model_reply.decoded} {model_reply.embeddings[:5]}")
-
         with Transaction() as (session, db):
             col_conversation = db.get_collection(Collections.CONVERSATION.value)
             col_message = db.get_collection(Collections.MESSAGE.value)
+            col_memory = db.get_collection(Collections.MEMORY.value)
             col_audit = db.get_collection(Collections.AUDIT.value)
+
+            Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
+
+            # Generate Reply
+            Logger.log.warning(f"Finding Related Context...")
+            model_reply = generate_reply(
+                session=session,
+                col_memory=col_memory,
+                col_message=col_message,
+                user=user_token,
+                prompt=body.prompt
+            )
+            Logger.log.info(f"ModelReply {model_reply.decoded} {model_reply.embeddings[:5]}")
+            # ==============
 
             default_title = body.prompt.content
             if len(default_title) > 10:

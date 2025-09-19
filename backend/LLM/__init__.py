@@ -1,5 +1,5 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, set_seed
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, util
 from backend.Logger import Logger
 from dataclasses import dataclass, asdict
 from numpy import ndarray, array as nparray
@@ -9,7 +9,6 @@ from backend.config import (
     PIPE_CONFIG, TOKENIZER_CONFIG
 )
 from typing import Any, List
-import os
 
 # Set model configurations
 MODEL = DEFAULT_MODEL
@@ -129,12 +128,9 @@ class ModelPipe:
         return []
 
 class IModel:
-    def __init__(self, prompt):
-        if isinstance(prompt, IModel):
-            self.__prompt = prompt.__prompt
-            return
-
+    def __init__(self, prompt: Prompt, context: List[str] = []):
         self.__prompt = prompt
+        self.__context = context
 
     def generate_reply(self):
         """
@@ -149,9 +145,11 @@ class IModel:
         embeddings = ModelPipe.get_embeddings(self.__prompt)
         if len(embeddings) > 0:
             embeddings = embeddings[0]
-        inp, out = ModelPipe.generate([self.__prompt])
+        query = [Prompt(role="context", content=i) for i in self.__context]
+        query.append(self.__prompt)
+        inp, out = ModelPipe.generate(query)
         decoded = ModelPipe.decode(inp, out)
-
+        decoded = decoded.replace(self.__prompt.content, "", 1).strip()
         return ModelReply(
             decoded=decoded,
             inp = inp,
@@ -165,3 +163,8 @@ def generate_embeddings(buffer: ndarray):
         embeddings = embeddings[0]
     
     return embeddings
+
+# unused use vector search of mongodb
+# def similarity(embedding_1: ndarray, embedding_2: ndarray):
+#     similarity = util.cos_sim(embedding_1, embedding_2)
+#     return similarity
