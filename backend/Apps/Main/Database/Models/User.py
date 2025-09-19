@@ -1,8 +1,8 @@
 from mongoengine import EnumField, StringField
-from backend.Hasher import hash
-from backend.Utils.Enum import Role
-from backend.Validation import validate_password, validate_username
-from backend.Utils import CustomEmail
+from backend.Apps.Main.Hasher import hash
+from backend.Apps.Main.Utils.Enum import Role
+from backend.Apps.Main.Validation import validate_password, validate_username
+from backend.Apps.Main.Utils import CustomEmail
 from .BaseDocument import BaseDocument
 
 

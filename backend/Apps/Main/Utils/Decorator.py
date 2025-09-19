@@ -1,8 +1,8 @@
 from functools import wraps
 import flask
 from flask_jwt_extended import get_jwt
-from backend.Utils.Enum import Role
-from backend.Error import CUnauthorized
+from backend.Apps.Main.Utils.Enum import Role
+from backend.Lib.Error import CUnauthorized
 from .UserToken import UserToken
 
 def set_token(f):

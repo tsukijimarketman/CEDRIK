@@ -1,5 +1,5 @@
 from mongoengine import DictField, Document, FileField, FloatField, ListField, ReferenceField, StringField, DateTimeField
-from backend.Database.Models import User, Conversation
+from backend.Apps.Main.Database.Models import User, Conversation
 from datetime import datetime
 from .BaseDocument import BaseDocument
 

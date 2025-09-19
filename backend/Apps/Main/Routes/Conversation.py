@@ -2,10 +2,10 @@ from flask import jsonify
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
 
-from backend.Error import CUnauthorized, InvalidId
-from backend.Database import Conversation
-from backend.Utils.Decorator import protect
-from backend.Utils.UserToken import get_object_id, get_token
+from backend.Lib.Error import CUnauthorized, InvalidId
+from backend.Apps.Main.Database import Conversation
+from backend.Apps.Main.Utils.Decorator import protect
+from backend.Apps.Main.Utils.UserToken import get_object_id, get_token
 
 conversation = Blueprint("Conversation", __name__)
 

@@ -3,20 +3,18 @@ from mongoengine import get_connection, get_db
 from pymongo.database import Database
 from pymongo.client_session import ClientSession
 from typing import Tuple
-from .Models import *
-from ..Logger import Logger
-import os
-
-URI = os.getenv("CyberSync_DatabaseUri")
+from backend.Apps.Main.Database.Models import *
+from backend.Lib.Logger import Logger
+from backend.Lib.Config import DATABASE_URI
 
 def db_connection_init():
-    if not URI:
+    if not DATABASE_URI:
         raise ValueError("CyberSync_DatabaseUri is not set in the environment variables")
         
     Logger.log.info(f"Starting connection to database")
     mongoengine.connect(
         db="CyberSync",
-        host=URI,
+        host=DATABASE_URI,
         tls=True,
         tlsAllowInvalidCertificates=True
     )

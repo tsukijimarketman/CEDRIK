@@ -1,10 +1,9 @@
 from pymongo.collection import Collection
 from pymongo.client_session import ClientSession
 
-from backend.LLM import generate_embeddings
-from backend.Database import Audit, AuditData, Memory
-from backend.Utils import Collections, AuditAction
-from backend.Utils.Enum import MemoryType, Permission
+from backend.Apps.Main.Database import Audit, AuditData, Memory
+from backend.Apps.Main.Utils import Collections, AuditAction, generate_embeddings
+from backend.Apps.Main.Utils.Enum import MemoryType, Permission
 
 def create_text_memory(
   session: ClientSession,

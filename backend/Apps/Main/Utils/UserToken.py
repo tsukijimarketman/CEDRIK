@@ -1,8 +1,8 @@
 from bson.objectid import ObjectId
 from flask_jwt_extended import get_jwt
 
-from backend.Error import InvalidId
-from backend.Logger import Logger
+from backend.Lib.Error import InvalidId
+from backend.Lib.Logger import Logger
 
 class UserToken:
     id = None

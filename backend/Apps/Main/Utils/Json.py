@@ -1,8 +1,3 @@
-from .UserToken import *
-from .CustomField import CustomEmail
-from .Decorator import *
-from .Enum import *
-from .Schema import *
 import json
 
 def load_json(filename):

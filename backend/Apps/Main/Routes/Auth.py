@@ -7,12 +7,12 @@ from mongoengine import ValidationError
 from pymongo.errors import DuplicateKeyError
 from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 
-from backend.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidationError
-from backend.Hasher import verify_password, hash as hash_password
-from backend.Logger import Logger
-from backend.Database import Transaction, Audit, AuditData, User
-from backend.Utils import get_token, Role, AuditAction, Collections, get_object_id
-from backend.Validation import validate_username, validate_password
+from backend.Lib.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidationError
+from backend.Apps.Main.Hasher import verify_password, hash as hash_password
+from backend.Lib.Logger import Logger
+from backend.Apps.Main.Database import Transaction, Audit, AuditData, User
+from backend.Apps.Main.Utils import get_token, Role, AuditAction, Collections, get_object_id
+from backend.Apps.Main.Validation import validate_username, validate_password
 
 auth = Blueprint("Auth", __name__)
 

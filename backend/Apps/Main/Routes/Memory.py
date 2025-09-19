@@ -2,18 +2,14 @@ from dataclasses import dataclass
 from http.client import HTTPException
 from flask import request
 from flask.blueprints import Blueprint
-from flask_jwt_extended import jwt_required
 from typing import List
 from mongoengine import ValidationError
 
-from backend.Database import Transaction, Memory, Audit
-from backend.Database.Models.Audit import AuditData
-from backend.Error import BadBody, HttpValidationError
-from backend.LLM import generate_embeddings
-from backend.Logger import Logger
-from backend.Service.Memory import create_text_memory
-from backend.Utils import get_schema_of_dataclass, Collections, MemoryType, Role
-from backend.Utils.Enum import AuditAction, Permission
+from backend.Apps.Main.Database import Transaction
+from backend.Lib.Error import BadBody, HttpValidationError
+from backend.Lib.Logger import Logger
+from backend.Apps.Main.Service.Memory import create_text_memory
+from backend.Apps.Main.Utils import get_schema_of_dataclass, Collections
 
 memory = Blueprint("Memory", __name__)
 

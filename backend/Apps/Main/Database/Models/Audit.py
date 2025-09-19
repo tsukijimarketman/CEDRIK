@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from mongoengine import DictField, EnumField
 
-from backend.Utils.Enum import AuditAction
+from backend.Apps.Main.Utils.Enum import AuditAction
 from .BaseDocument import BaseDocument
 
 @dataclass

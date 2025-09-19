@@ -1,16 +1,14 @@
+from backend.Lib.Config import JWT_SECRET
 from werkzeug.exceptions import HTTPException, InternalServerError
-import os
-from backend.Error import ErrHTTPExceptionHandler
+from backend.Lib.Error import ErrHTTPExceptionHandler
 from flask import Flask, jsonify, redirect
-from backend.Database import db_connection_init
+from backend.Apps.Main.Database import db_connection_init
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-
-from backend.Routes import ROUTES
+from backend.Apps.Main.Routes import ROUTES
 
 app = Flask(__name__)
 db_connection_init()
-JWT_SECRET = os.getenv("JWT_SECRET")
 
 app.config["TRAP_HTTP_EXCEPTIONS"]=True
 # JWT Configuration

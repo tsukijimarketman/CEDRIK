@@ -1,6 +1,6 @@
 from mongoengine import FileField, FloatField, ListField, StringField, EnumField
 
-from backend.Utils.Enum import MemoryType
+from backend.Apps.Main.Utils.Enum import MemoryType
 from .BaseDocument import BaseDocument
 
 class Memory(BaseDocument):

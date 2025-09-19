@@ -5,13 +5,13 @@ from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
 from werkzeug.exceptions import InternalServerError
 
-from backend.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId
-from backend.LLM import Prompt
-from backend.Database import Transaction
-from backend.Logger import Logger
-from backend.Service.Chat.CreateChat import generate_reply
-from backend.Utils import get_token, Collections
-from backend.Service import create_chat
+from backend.Lib.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId
+from backend.Apps.Main.Database import Transaction
+from backend.Lib.Logger import Logger
+from backend.Apps.Main.Service.Chat.CreateChat import generate_reply
+from backend.Apps.Main.Utils import get_token, Collections
+from backend.Apps.Main.Service import create_chat
+from backend.Apps.Main.Utils.LLM import Prompt
 
 ai = Blueprint("Ai", __name__)
 

@@ -1,14 +1,13 @@
 from pymongo.collection import Collection
 from pymongo.client_session import ClientSession
-from numpy import ndarray
 from typing import List
 
-from backend.LLM import IModel, ModelReply, Prompt, generate_embeddings
-from backend.Database import Conversation, Message, Audit, AuditData, Memory
-from backend.Logger import Logger
-from backend.Utils import UserToken, get_object_id, Collections, AuditAction, ObjectId
-from backend.Utils.Enum import VectorIndex
-from backend.config import MAX_CONTEXT_SIZE
+from backend.Apps.Main.Database import Conversation, Message, Audit, AuditData, Memory
+from backend.Lib.Logger import Logger
+from backend.Apps.Main.Utils import UserToken, get_object_id, Collections, AuditAction, ObjectId
+from backend.Apps.Main.Utils.Enum import VectorIndex
+from backend.Lib.Config import MAX_CONTEXT_SIZE
+from backend.Apps.Main.Utils.LLM import ModelReply, Prompt, generate_embeddings, generate_reply
 
 def __search_similarity_from_memory(query_embeddings: List[float]):
   # Text only vector search
@@ -80,8 +79,7 @@ def generate_reply(
     )
   )
   context = [ i.text for i in sim_results ]
-  interface = IModel(prompt, context)
-  return interface.generate_reply()
+  return generate_reply(prompt=prompt, context=context)
 
 def create_chat(
   session: ClientSession,

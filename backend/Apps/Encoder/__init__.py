@@ -1,15 +1,13 @@
-from numpy import ndarray
 from sentence_transformers import SentenceTransformer
-from numpy import ndarray
 from flask import Flask, request, jsonify
-from backend.Logger import Logger
-from backend.config import DEFAULT_SENTENCE_TRANSFORMER
+from backend.Lib.Logger import Logger
+from backend.Lib.Config import SENTENCE_TRANSFORMER_MODEL
 from typing import List, Any
 
-app = Flask("Encoder")
+app = Flask(__name__)
 
 class Encoder:
-  __sentence_transformer = SentenceTransformer(DEFAULT_SENTENCE_TRANSFORMER)
+  __sentence_transformer = SentenceTransformer(SENTENCE_TRANSFORMER_MODEL)
 
   @classmethod
   def encode(cls, data: List[Any]):
