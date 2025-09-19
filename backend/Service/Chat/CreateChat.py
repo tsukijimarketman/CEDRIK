@@ -5,6 +5,7 @@ from typing import List
 
 from backend.LLM import IModel, ModelReply, Prompt, generate_embeddings
 from backend.Database import Conversation, Message, Audit, AuditData, Memory
+from backend.Logger import Logger
 from backend.Utils import UserToken, get_object_id, Collections, AuditAction, ObjectId
 from backend.Utils.Enum import VectorIndex
 from backend.config import MAX_CONTEXT_SIZE
@@ -64,6 +65,10 @@ def generate_reply(
   prompt: Prompt
 ):
   query_embeddings = generate_embeddings([prompt.content])
+  Logger.log.info(f"embeddings {query_embeddings}")
+  if len(query_embeddings) == 0:
+    raise Exception(f"Embeddings is len 0")
+
   sim_results = __search_similarity_from_memory(
     query_embeddings=query_embeddings,
   )

@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Model
 DEFAULT_MODEL = os.getenv(os.getenv("CURRENT_MODEL_KEY"))
@@ -37,3 +39,6 @@ if max_context_size != None and len(max_context_size) > 0:
     MAX_CONTEXT_SIZE = int(max_context_size)
   except Exception as _:
     pass
+
+MAIN_PORT = os.getenv("SERVER_MAIN_PORT")
+ENCODER_PORT = os.getenv("SERVER_ENCODER_PORT")

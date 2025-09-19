@@ -5,7 +5,11 @@ This is a sample chatgpt clone llm to used in accordance on the task given
 # Run Backend
 
 ## Install Dependencies
-
+On Windows
+```
+winget install llama.cpp
+```
+<br/>
 ```
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -19,7 +23,10 @@ Before running activate venv
 # or if in bash
 source .\.venv\Scripts\activate
 ```
-then
+then run backend
+> match the ports to the one defined in .env
 ```
-flask --app backend run --debug
+flask --app backend.Server.Main run --debug --port 5000
+flask --app backend.Server.Encoder run --debug --port 5001
+flask --app backend.Server.Model run --debug --port 5002
 ```
