@@ -13,6 +13,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { LoginDialog } from "./dialogs/LoginDialog";
+import { ForgotPasswordDialog } from "./dialogs/ForgotPassword";
 import { SignUpDialog } from "./dialogs/SignUpDialog";
 import { SettingsDialog } from "./dialogs/SettingsDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
@@ -85,7 +86,7 @@ export function ChatSidebar({
 
   // Dialog state
   const [currentDialog, setCurrentDialog] = useState<{
-    type: "login" | "signup" | "settings" | "help" | "logout" | null;
+    type: "login" | "signup" | "settings" | "help" | "logout" | "forgot" | null;
   }>({ type: null });
 
   // Responsive state
@@ -173,7 +174,8 @@ export function ChatSidebar({
   const handleSaveSettings = async (username: string, password: string) => {
     try {
       const payload: { username?: string; password?: string } = {};
-      if (username && username !== userData.username) payload.username = username;
+      if (username && username !== userData.username)
+        payload.username = username;
       if (password && password.trim() !== "") payload.password = password;
 
       if (Object.keys(payload).length === 0) {
@@ -182,7 +184,11 @@ export function ChatSidebar({
       }
 
       const res = await authApi.updateMe(payload);
-      const updated = res.data as { id: string; email: string; username: string };
+      const updated = res.data as {
+        id: string;
+        email: string;
+        username: string;
+      };
       setUserData({ username: updated.username, email: updated.email });
       try {
         localStorage.setItem("user", JSON.stringify(updated));
@@ -190,7 +196,10 @@ export function ChatSidebar({
         // ignore storage quota/access issues
         void 0;
       }
-      toast({ title: "Profile updated", description: "Your changes have been saved." });
+      toast({
+        title: "Profile updated",
+        description: "Your changes have been saved.",
+      });
       setCurrentDialog({ type: null });
     } catch (err: unknown) {
       let message = "Failed to update settings";
@@ -200,7 +209,11 @@ export function ChatSidebar({
       } else if (err instanceof Error) {
         message = err.message;
       }
-      toast({ title: "Update failed", description: String(message), variant: "destructive" });
+      toast({
+        title: "Update failed",
+        description: String(message),
+        variant: "destructive",
+      });
     }
   };
 
@@ -276,7 +289,14 @@ export function ChatSidebar({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <h1 className={cn("font-bold text-lg text-foreground", isCollapsed ? "md:hidden" : "")}>CEDRIK</h1>
+              <h1
+                className={cn(
+                  "font-bold text-lg text-foreground",
+                  isCollapsed ? "md:hidden" : ""
+                )}
+              >
+                CEDRIK
+              </h1>
             </div>
             <Button
               variant="ghost"
@@ -417,6 +437,13 @@ export function ChatSidebar({
         onClose={() => setCurrentDialog({ type: null })}
         onLoginSuccess={handleLoginSuccess}
         onSwitchToSignUp={() => setCurrentDialog({ type: "signup" })}
+        onSwitchToForgot={() => setCurrentDialog({ type: "forgot" })}
+      />
+
+      <ForgotPasswordDialog
+        open={currentDialog.type === "forgot"}
+        onClose={closeDialog}
+        onSwitchToSignIn={() => openDialog("login")}
       />
 
       <SignUpDialog
