@@ -30,7 +30,7 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
             )}
           >
             <img
-              src={role === "user" ? "/nguso.png" : "/cedrikFD.png"}
+              src={role === "user" ? "/defaultpicture.jpg" : "/cedrikFD.png"}
               alt={role === "user" ? "USER" : "CEDRIK"}
               className="w-10 h-10 rounded-full"
             />
@@ -44,7 +44,7 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
             role === "user",
             // ? "bg-blue-500 text-white mr-5"
             // : "bg-gray-200 text-black",
-            "max-w-[70%] mr-3 "
+            "max-w-[70%] mr-5 "
           )}
         >
           <div className="prose prose-sm max-w-none">
