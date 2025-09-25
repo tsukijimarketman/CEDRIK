@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useEffect, useRef } from "react";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -7,8 +8,16 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
+  const messageRef = useRef<HTMLDivElement>(null);
+
+  // Scroll into view whenever content changes
+  useEffect(() => {
+    messageRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [content]);
+
   return (
     <div
+      ref={messageRef}
       className={cn(
         "flex w-full py-6 px-4",
         role === "user"
@@ -37,16 +46,7 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
           </div>
         </div>
 
-        <div
-          className={cn(
-            // "flex-1 min-w-0",
-            "inline-block rounded-lg p-3",
-            role === "user",
-            // ? "bg-blue-500 text-white mr-5"
-            // : "bg-gray-200 text-black",
-            "max-w-[70%] mr-5 "
-          )}
-        >
+        <div className={cn("inline-block rounded-lg p-3", "max-w-[70%] mr-5")}>
           <div className="prose prose-sm max-w-none">
             <p className="text-foreground whitespace-pre-wrap break-words">
               {content}
