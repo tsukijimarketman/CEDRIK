@@ -13,20 +13,24 @@ class Reply:
     reply: str
 
 def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
-    query = [Prompt(role="context", content=i) for i in context]
+    try:
+        query = [Prompt(role="context", content=i) for i in context]
 
-    response = requests.post(
-        url=f"http://localhost:{MODEL_PORT}/generate-reply",
-        data=json.dumps({
-            "context": query,
-            "prompt": asdict(prompt)
-        }),
-        headers={ "Content-Type": "application/json" }
-    )
-    response.raise_for_status()
-    d = response.json()
+        response = requests.post(
+            url=f"http://localhost:{MODEL_PORT}/generate-reply",
+            data=json.dumps({
+                "context": query,
+                "prompt": asdict(prompt)
+            }),
+            headers={ "Content-Type": "application/json" }
+        )
+        response.raise_for_status()
+        d = response.json()
 
-    return d["reply"]
+        return d["reply"]
+    except Exception as e:
+        Logger.log.error(str(e))
+        return ""
 
 def generate_embeddings(buffer: List[Any]):
     try:
