@@ -1,7 +1,27 @@
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 export function WelcomeMessage() {
-  const content = `Hello and welcome! I’m CEDRIK your AI companion, here to assist, explore ideas, and make your tasks easier.`;
+  const messages = [
+    "Hey there! I’m CEDRIK, your AI buddy—let’s tackle your tasks and explore ideas together!",
+    "Hi! I’m CEDRIK. Need answers, tips, or just someone to brainstorm with? I got you!",
+    "Hello! I’m CEDRIK, ready to help you out and make things a little easier and fun today.",
+    "Hey! I’m CEDRIK, your friendly AI assistant. Let’s make your day smoother and more productive!",
+    "Welcome! I’m CEDRIK, here to help you figure things out and spark some creative ideas.",
+    "Hiya! I’m CEDRIK, ready to guide you, answer questions, or just chat whenever you want.",
+    "Hey! I’m CEDRIK, your AI companion, here to make work simpler and brainstorming a breeze.",
+    "Hello there! I’m CEDRIK, ready to help you solve problems, learn new things, or just hang out.",
+    "Hi! I’m CEDRIK, excited to chat, share ideas, and help make your day a little easier.",
+    "Hey there! I’m CEDRIK, your AI friend—here for answers, tips, or just a friendly chat anytime!",
+  ];
+
+  // Pick a random message only once when component mounts
+  const [content, setContent] = useState("");
+
+  useEffect(() => {
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+    setContent(randomMessage);
+  }, []); // empty dependency array = runs only once per page load
 
   return (
     <div className="flex w-full py-6 px-4 bg-chat-message-assistant">
