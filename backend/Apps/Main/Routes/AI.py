@@ -11,7 +11,7 @@ from backend.Lib.Logger import Logger
 from backend.Apps.Main.Service.Chat.CreateChat import generate_reply
 from backend.Apps.Main.Utils import get_token, Collections
 from backend.Apps.Main.Service import create_chat
-from backend.Apps.Main.Utils.LLM import Prompt
+from backend.Lib.Common import Prompt
 
 ai = Blueprint("Ai", __name__)
 
