@@ -6,15 +6,14 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  LogIn,
   ChevronLeft,
   Menu,
   ChevronDown,
   ChevronUp,
+  Users,
+  FileText,
+  Database,
 } from "lucide-react";
-import { LoginDialog } from "./dialogs/LoginDialog";
-import { ForgotPasswordDialog } from "./dialogs/ForgotPassword";
-import { SignUpDialog } from "./dialogs/SignUpDialog";
 import { SettingsDialog } from "./dialogs/SettingsDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
 import { LogoutDialog } from "./dialogs/LogoutDialog";
@@ -22,38 +21,21 @@ import { authApi } from "@/api/api";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 
-interface Chat {
-  id: string;
-  title: string;
-  timestamp: string;
+interface SuperAdminSidebarProps {
+  activeSection: "user-management" | "audit-logs" | "knowledge-base";
+  onSectionChange: (section: "user-management" | "audit-logs" | "knowledge-base") => void;
 }
 
-interface ChatSidebarProps {
-  isCollapsed: boolean;
-  onToggle: () => void;
-}
-
-export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
-  const { user, loading, login, logout } = useUser();
-
-  // Chat data
-  const [chats] = useState<Chat[]>([
-    { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },
-    { id: "2", title: "React best practices", timestamp: "Yesterday" },
-    { id: "3", title: "TypeScript configuration", timestamp: "2 days ago" },
-  ]);
-
-  // UI State
-  const [activeChat, setActiveChat] = useState("1");
+export function SuperAdminSidebar({
+  activeSection,
+  onSectionChange,
+}: SuperAdminSidebarProps) {
+  const { user, loading, logout } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  // Dialog state
   const [currentDialog, setCurrentDialog] = useState<{
-    type: "login" | "signup" | "settings" | "help" | "logout" | "forgot" | null;
+    type: "settings" | "help" | "logout" | null;
   }>({ type: null });
-
-  // Responsive state
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1024
   );
@@ -106,43 +88,31 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
     setIsProfileOpen(!isProfileOpen);
   };
 
-  // Auth handlers
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogout = async () => {
     try {
-      await login(email, password);
-      setCurrentDialog({ type: null });
+      await logout();
+      setIsProfileOpen(false);
       toast({
-        title: "Login successful",
-        description: "Welcome back!",
+        title: "Logged out",
+        description: "You have been logged out successfully.",
       });
     } catch (error) {
       toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
+        title: "Logout failed",
+        description: "Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const handleSignUp = async (
-    username: string,
-    email: string,
-    password: string
-  ) => {
-    try {
-      await authApi.register({ username, email, password });
-      setCurrentDialog({ type: null });
-      toast({
-        title: "Account created",
-        description: "Please log in with your new account.",
-      });
-    } catch (error) {
-      toast({
-        title: "Sign up failed",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
+  // Dialog helpers
+  const openDialog = (type: "settings" | "help" | "logout") => {
+    setCurrentDialog({ type });
+    setIsProfileOpen(false);
+  };
+
+  const closeDialog = () => {
+    setCurrentDialog({ type: null });
   };
 
   const handleSaveSettings = async (username: string, password: string) => {
@@ -178,34 +148,23 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setIsProfileOpen(false);
-      toast({
-        title: "Logged out",
-        description: "You have been logged out successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Logout failed",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Dialog helpers
-  const openDialog = (
-    type: "login" | "signup" | "settings" | "help" | "logout"
-  ) => {
-    setCurrentDialog({ type });
-    setIsProfileOpen(false);
-  };
-
-  const closeDialog = () => {
-    setCurrentDialog({ type: null });
-  };
+  const sidebarItems = [
+    {
+      id: "user-management" as const,
+      title: "User Management",
+      icon: Users,
+    },
+    {
+      id: "audit-logs" as const,
+      title: "Audit Logs",
+      icon: FileText,
+    },
+    {
+      id: "knowledge-base" as const,
+      title: "Knowledge Base",
+      icon: Database,
+    },
+  ];
 
   return (
     <>
@@ -226,8 +185,8 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
           "sidebar-container fixed inset-y-0 left-0 z-30 flex h-full flex-col border-r bg-background transition-transform duration-300",
           // Mobile: slide in/out using its own state
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-          // Desktop/Tablet: show or hide entirely based on collapsed state
-          isCollapsed ? "md:-translate-x-full" : "md:translate-x-0",
+          // Desktop/Tablet: always visible
+          "md:translate-x-0",
           // Fixed width when visible on md+
           "w-64 md:w-64"
         )}
@@ -247,51 +206,38 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <h1
-                className={cn(
-                  "font-bold text-lg text-foreground",
-                  isCollapsed ? "md:hidden" : ""
-                )}
-              >
-                CEDRIK
+              <h1 className="font-bold text-lg text-foreground">
+                SuperAdmin
               </h1>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggle}
-              className="hidden md:flex h-8 w-8"
-              aria-label="Toggle sidebar"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
           </div>
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
-            {/* Chat List */}
+            {/* Navigation Items */}
             <div className="p-2">
-              {chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => {
-                    setActiveChat(chat.id);
-                    if (isMobile) setIsMobileMenuOpen(false);
-                  }}
-                  className={cn(
-                    "w-full text-left p-3 rounded-lg transition-colors mb-1 text-foreground",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    activeChat === chat.id
-                      ? "bg-accent text-accent-foreground"
-                      : ""
-                  )}
-                >
-                  <p className="font-medium text-sm">{chat.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {chat.timestamp}
-                  </p>
-                </button>
-              ))}
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      onSectionChange(item.id);
+                      if (isMobile) setIsMobileMenuOpen(false);
+                    }}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg transition-colors mb-1 text-foreground flex items-center gap-3",
+                      "hover:bg-accent hover:text-accent-foreground",
+                      activeSection === item.id
+                        ? "bg-accent text-accent-foreground"
+                        : ""
+                    )}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="font-medium">{item.title}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -304,28 +250,7 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   <div className="h-6 bg-muted rounded"></div>
                 </div>
               </div>
-            ) : !user ? (
-              <div className="p-4">
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-center gap-2"
-                    onClick={() => openDialog("login")}
-                  >
-                    <span>Login</span>
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => openDialog("signup")}
-                  >
-                    Sign Up
-                  </Button>
-                </div>
-              </div>
-            ) : (
+            ) : user ? (
               <div className="p-4">
                 <div className="relative">
                   <button
@@ -334,19 +259,19 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   >
                     <Avatar className="h-8 w-8 flex-shrink-0">
                       <AvatarImage
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'guest'}`}
-                        alt={user?.username || 'Guest'}
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'admin'}`}
+                        alt={user?.username || 'Admin'}
                       />
                       <AvatarFallback>
-                        {(user?.username || 'G').charAt(0).toUpperCase()}
+                        {(user?.username || 'A').charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">
-                        {user?.username || 'Guest'}
+                        {user?.username || 'SuperAdmin'}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {user?.email || ''}
+                        {user?.email || 'admin@system.com'}
                       </p>
                     </div>
                     {isProfileOpen ? (
@@ -360,7 +285,7 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   {isProfileOpen && (
                     <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover rounded-md shadow-lg border border-border overflow-hidden z-10">
                       <div className="px-4 py-2 text-sm text-muted-foreground border-b border-border">
-                        {user?.email || 'No email'}
+                        {user?.email || 'admin@system.com'}
                       </div>
                       <div className="py-1">
                         <button
@@ -390,33 +315,12 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   )}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
       {/* Dialog Components */}
-      <LoginDialog
-        onLogin={handleLogin}
-        open={currentDialog.type === "login"}
-        onClose={() => setCurrentDialog({ type: null })}
-        onSwitchToSignUp={() => setCurrentDialog({ type: "signup" })}
-        onSwitchToForgot={() => setCurrentDialog({ type: "forgot" })}
-      />
-
-      <ForgotPasswordDialog
-        open={currentDialog.type === "forgot"}
-        onClose={closeDialog}
-        onSwitchToSignIn={() => openDialog("login")}
-      />
-
-      <SignUpDialog
-        open={currentDialog.type === "signup"}
-        onClose={closeDialog}
-        onSignUp={handleSignUp}
-        onSwitchToLogin={() => openDialog("login")}
-      />
-
       <SettingsDialog
         open={currentDialog.type === "settings"}
         onClose={closeDialog}

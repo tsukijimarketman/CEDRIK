@@ -1,0 +1,247 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
+import { Search, Plus, Edit, Trash2, Eye, BookOpen, Tag, Clock } from "lucide-react";
+
+interface KnowledgeBaseItem {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  tags: string[];
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+  views: number;
+}
+
+export function KnowledgeBase() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [knowledgeItems] = useState<KnowledgeBaseItem[]>([
+    {
+      id: "1",
+      title: "System Architecture Overview",
+      content: "This document provides a comprehensive overview of the system architecture, including component interactions, data flow, and integration points.",
+      category: "Documentation",
+      tags: ["architecture", "system", "overview"],
+      author: "admin_user",
+      createdAt: "2024-01-15",
+      updatedAt: "2024-01-20",
+      views: 1250,
+    },
+    {
+      id: "2",
+      title: "API Authentication Guide",
+      content: "Complete guide for implementing API authentication, including JWT token management, refresh tokens, and security best practices.",
+      category: "API",
+      tags: ["api", "authentication", "jwt", "security"],
+      author: "tech_lead",
+      createdAt: "2024-01-10",
+      updatedAt: "2024-01-18",
+      views: 890,
+    },
+    {
+      id: "3",
+      title: "Database Schema Reference",
+      content: "Detailed reference of all database tables, relationships, and constraints used in the system.",
+      category: "Database",
+      tags: ["database", "schema", "reference"],
+      author: "db_admin",
+      createdAt: "2024-01-05",
+      updatedAt: "2024-01-15",
+      views: 2100,
+    },
+    {
+      id: "4",
+      title: "Troubleshooting Common Issues",
+      content: "Collection of common issues and their solutions, including error messages, causes, and step-by-step resolution procedures.",
+      category: "Support",
+      tags: ["troubleshooting", "errors", "support"],
+      author: "support_team",
+      createdAt: "2024-01-12",
+      updatedAt: "2024-01-19",
+      views: 3400,
+    },
+  ]);
+
+  const categories = ["all", "Documentation", "API", "Database", "Support"];
+
+  const filteredItems = knowledgeItems.filter((item) => {
+    const matchesSearch =
+      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  const getCategoryBadge = (category: string) => {
+    const colors = {
+      Documentation: "bg-blue-100 text-blue-800",
+      API: "bg-green-100 text-green-800",
+      Database: "bg-purple-100 text-purple-800",
+      Support: "bg-orange-100 text-orange-800",
+    };
+    return (
+      <Badge className={colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}>
+        {category}
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Knowledge Base</h1>
+            <p className="text-muted-foreground">Centralized documentation and reference materials</p>
+          </div>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Article
+          </Button>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search articles, content, or tags..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            {categories.map((category) => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className="capitalize"
+              >
+                {category === "all" ? "All" : category}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-4 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{knowledgeItems.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {knowledgeItems.reduce((sum, item) => sum + item.views, 0).toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Categories</CardTitle>
+              <Tag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{categories.length - 1}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">This Month</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">24</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Articles Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredItems.map((item) => (
+            <Card key={item.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
+                    <CardDescription className="mt-2">
+                      {getCategoryBadge(item.category)}
+                    </CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                  {item.content}
+                </p>
+
+                <div className="flex flex-wrap gap-1 mb-4">
+                  {item.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>By {item.author}</span>
+                  <span>{item.views} views</span>
+                </div>
+
+                <div className="flex items-center justify-between mt-4">
+                  <span className="text-xs text-muted-foreground">
+                    Updated {item.updatedAt}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm">
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredItems.length === 0 && (
+          <Card className="mt-6">
+            <CardContent className="text-center py-8">
+              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No articles found</h3>
+              <p className="text-muted-foreground">
+                Try adjusting your search terms or browse different categories.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}

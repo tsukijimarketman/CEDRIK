@@ -5,6 +5,7 @@ import { WelcomeMessage } from "./WelcomeMessage";
 import { ChatInput } from "./ChatInput";
 import { ThemeToggle } from "./ThemeToggle";
 import { aiApi } from "@/api/api";
+import { useUser } from "@/contexts/UserContext";
 
 interface Message {
   id: string;
@@ -29,12 +30,13 @@ export function ChatInterface() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useUser();
 
   const handleSendMessage = (content: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content,
+      content: content,
       timestamp: new Date().toLocaleTimeString(),
     };
 
@@ -58,7 +60,7 @@ export function ChatInterface() {
         conversation: null,
         prompt: {
           role: "user",
-          content,
+          content: content,
         },
       })
       .then((res) => {

@@ -22,6 +22,9 @@ function Load-DotEnv {
         }
     }
 }
+# [System.Environment]::SetEnvironmentVariable("SERVER_ENCODER_PORT", $null, "Process")
+# [System.Environment]::SetEnvironmentVariable("SERVER_MAIN_PORT", $null, "Process")
+# [System.Environment]::SetEnvironmentVariable("SERVER_MODEL_PORT", $null, "Process")
 
 function Get-EnvOrDefault {
     param(
@@ -50,8 +53,8 @@ if ( $null -ne $env:DEBUG ) {
 .\.venv\Scripts\Activate.ps1
 
 Start-Process -FilePath cmd -ArgumentList `
- $CMDFLAG,"flask --app backend.Apps.Main run ${DebugFlag} $(Get-EnvOrDefault -EnvValue $env:SERVER_MAIN_PORT -Default 5000)"
+ $CMDFLAG,"flask --app backend.Apps.Main run ${DebugFlag} --port 5000"
 Start-Process -FilePath cmd -ArgumentList `
- $CMDFLAG,"flask --app backend.Apps.Encoder run ${DebugFlag} --no-reload $(Get-EnvOrDefault -EnvValue $env:SERVER_ENCODER_PORT -Default 5001)"
+ $CMDFLAG,"flask --app backend.Apps.Encoder run ${DebugFlag} --no-reload --port 5001"
 Start-Process -FilePath cmd -ArgumentList `
- $CMDFLAG,"flask --app backend.Apps.Model run ${DebugFlag} --no-reload $(Get-EnvOrDefault -EnvValue $env:SERVER_MODEL_PORT -Default 5002)"
+ $CMDFLAG,"flask --app backend.Apps.Model run ${DebugFlag} --no-reload --port 5002"
