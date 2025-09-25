@@ -14,11 +14,11 @@ def _get_env_or_default(env_name, default, transform = None):
   return env
 
 # Model
-AI_MODEL = os.getenv(os.getenv("CURRENT_MODEL_KEY"))
+AI_MODEL = os.getenv("AI_MODEL")
 if AI_MODEL == None or len(AI_MODEL) == 0:
   raise Exception("DEFAULT_MODEL is not set")
 
-SENTENCE_TRANSFORMER_MODEL = os.getenv(os.getenv("CURRENT_SENTENCE_TRANSFORMER_MODEL_KEY"))
+SENTENCE_TRANSFORMER_MODEL = os.getenv("SENTENCE_TRANSFORMER_MODEL")
 if SENTENCE_TRANSFORMER_MODEL == None or len(SENTENCE_TRANSFORMER_MODEL) == 0:
   raise Exception("DEFAULT_SENTENCE_TRANSFORMER is not set")
 
