@@ -247,14 +247,7 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <h1
-                className={cn(
-                  "font-bold text-lg text-foreground",
-                  isCollapsed ? "md:hidden" : ""
-                )}
-              >
-                CEDRIK
-              </h1>
+              <img src="/cedrik.png" alt="CEDRIK" className="w-auto h-6 " />
             </div>
             <Button
               variant="ghost"
@@ -334,19 +327,21 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   >
                     <Avatar className="h-8 w-8 flex-shrink-0">
                       <AvatarImage
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'guest'}`}
-                        alt={user?.username || 'Guest'}
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${
+                          user?.username || "guest"
+                        }`}
+                        alt={user?.username || "Guest"}
                       />
                       <AvatarFallback>
-                        {(user?.username || 'G').charAt(0).toUpperCase()}
+                        {(user?.username || "G").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">
-                        {user?.username || 'Guest'}
+                        {user?.username || "Guest"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {user?.email || ''}
+                        {user?.email || ""}
                       </p>
                     </div>
                     {isProfileOpen ? (
@@ -360,7 +355,7 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   {isProfileOpen && (
                     <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover rounded-md shadow-lg border border-border overflow-hidden z-10">
                       <div className="px-4 py-2 text-sm text-muted-foreground border-b border-border">
-                        {user?.email || 'No email'}
+                        {user?.email || "No email"}
                       </div>
                       <div className="py-1">
                         <button

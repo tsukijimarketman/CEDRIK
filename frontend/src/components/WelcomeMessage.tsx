@@ -9,7 +9,7 @@ export function WelcomeMessage() {
         <div className="flex-shrink-0 w-10 h-10 mr-4">
           <div className="w-10 h-10 rounded-full flex items-center justify-center">
             <img
-              src="/cedrikFD.png"
+              src="/cedriklogo.png"
               alt="CEDRIK"
               className="w-10 h-10 rounded-full"
             />

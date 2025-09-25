@@ -30,7 +30,7 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
             )}
           >
             <img
-              src={role === "user" ? "/defaultpicture.jpg" : "/cedrikFD.png"}
+              src={role === "user" ? "/defaultpicture.jpg" : "/cedriklogo.png"}
               alt={role === "user" ? "USER" : "CEDRIK"}
               className="w-10 h-10 rounded-full"
             />
