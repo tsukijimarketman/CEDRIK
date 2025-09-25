@@ -42,10 +42,11 @@ def chat():
         # !!! Do not run inside transaction
         Logger.log.warning(f"Finding Related Context...")
         model_reply = generate_reply(
+            conversation_id=body.conversation,
             user=user_token,
             prompt=body.prompt
         )
-        Logger.log.info(f"ModelReply {model_reply.decoded} {model_reply.embeddings[:5]}")
+        Logger.log.info(f"ModelReply {model_reply.reply} {model_reply.embeddings[:5]}")
         # ==============
 
         with Transaction() as (session, db):
@@ -78,5 +79,5 @@ def chat():
         raise InternalServerError()
 
     return jsonify({
-        "reply": model_reply.decoded
+        "reply": model_reply.reply
     }), 200

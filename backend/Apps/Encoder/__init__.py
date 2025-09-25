@@ -11,7 +11,7 @@ CORS(
   app,
   resources={
       r"/*": {
-          "origins": ["http://localhost:{MAIN_PORT}", "http://127.0.0.1:{MAIN_PORT}"],
+          "origins": [f"http://localhost:{MAIN_PORT}", f"http://127.0.0.1:{MAIN_PORT}"],
           "methods": ["POST"],
           "allow_headers": ["Content-Type", "application/json"],
           "expose_headers": ["Content-Type", "Content-Length", "Authorization"]

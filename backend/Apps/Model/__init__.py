@@ -5,7 +5,7 @@ from flask_cors import CORS
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, set_seed
 from backend.Lib.Common import Prompt, load_json
 from backend.Lib.Logger import Logger
-from backend.Lib.Config import AI_MODEL, PIPE_CONFIG, TOKENIZER_CONFIG
+from backend.Lib.Config import AI_MODEL, PIPE_CONFIG, TOKENIZER_CONFIG, MAIN_PORT
 
 app = Flask(__name__)
 
@@ -13,7 +13,7 @@ CORS(
   app,
   resources={
       r"/*": {
-          "origins": ["http://localhost:{MAIN_PORT}", "http://127.0.0.1:{MAIN_PORT}"],
+          "origins": [f"http://localhost:{MAIN_PORT}", f"http://127.0.0.1:{MAIN_PORT}"],
           "methods": ["POST"],
           "allow_headers": ["Content-Type", "application/json"],
           "expose_headers": ["Content-Type", "Content-Length", "Authorization"]
@@ -92,12 +92,12 @@ class Model:
 @dataclass
 class GenerateReplyBody:
     prompt: Prompt
-    context: List[str] = []
+    context: List[str]
     def __post_init__(self):
         self.prompt = Prompt(**self.prompt)
 
 @app.route("/generate-reply", methods=["POST"])
-def encode():
+def generate_reply():
   """
   body format
   {
@@ -118,6 +118,7 @@ def encode():
     query = [Prompt(role="context", content=i) for i in body.context]
     query.append(body.prompt)
     inp, out = Model.generate(query)
+    # apply context
     decoded = Model.decode(inp, out)
     decoded = decoded.replace(body.prompt.content, "", 1).strip()
     return jsonify({
@@ -125,4 +126,3 @@ def encode():
     }), 200;
   except Exception as e:
     Logger.log.error(str(e))
-    return jsonify({ "error": "cannot encode data" }), 400

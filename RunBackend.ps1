@@ -54,4 +54,4 @@ Start-Process -FilePath cmd -ArgumentList `
 Start-Process -FilePath cmd -ArgumentList `
  $CMDFLAG,"flask --app backend.Apps.Encoder run ${DebugFlag} --no-reload $(Get-EnvOrDefault -EnvValue $env:SERVER_ENCODER_PORT -Default 5001)"
 Start-Process -FilePath cmd -ArgumentList `
- $CMDFLAG,"flask --app backend.Apps.Model run ${DebugFlag} --no-reload $(Get-EnvOrDefault -EnvValue $env:SERVER_ENCODER_PORT -Default 5001)"
+ $CMDFLAG,"flask --app backend.Apps.Model run ${DebugFlag} --no-reload $(Get-EnvOrDefault -EnvValue $env:SERVER_MODEL_PORT -Default 5002)"

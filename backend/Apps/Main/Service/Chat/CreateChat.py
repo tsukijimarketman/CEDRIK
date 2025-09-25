@@ -7,9 +7,11 @@ from backend.Lib.Logger import Logger
 from backend.Apps.Main.Utils import UserToken, get_object_id, Collections, AuditAction, ObjectId
 from backend.Apps.Main.Utils.Enum import VectorIndex
 from backend.Lib.Config import MAX_CONTEXT_SIZE
-from backend.Apps.Main.Utils.LLM import ModelReply, Prompt, generate_embeddings, generate_reply
+from backend.Apps.Main.Utils.LLM import Prompt, generate_embeddings, generate_model_reply, Reply
 
 def __search_similarity_from_memory(query_embeddings: List[float]):
+  # disable for now
+  return []
   # Text only vector search
   pipeline = [
     {
@@ -35,13 +37,15 @@ def __search_similarity_from_message(
   conversation_id: ObjectId,
   sender_id: ObjectId,
 ):
+  # disable for now
+  return []
   # Text only vector search
   pipeline = [
     {
         "$vectorSearch": {
             "index": VectorIndex.MESSAGE.value,
             "path": "embeddings",
-            "queryVector": query_embeddings.tolist(),
+            "queryVector": query_embeddings,
             "numCandidates": 100,
             "limit": MAX_CONTEXT_SIZE,
             "filter": {
@@ -60,33 +64,41 @@ def __search_similarity_from_message(
   return list(Message.objects.aggregate(*pipeline))
 
 def generate_reply(
+  conversation_id: str,
   user: UserToken,
   prompt: Prompt
 ):
   query_embeddings = generate_embeddings([prompt.content])
-  Logger.log.info(f"embeddings {query_embeddings}")
+
   if len(query_embeddings) == 0:
-    raise Exception(f"Embeddings is len 0")
+    Logger.log.warning("Embeddings length is 0")
+    # raise Exception(f"Embeddings is len 0")
+  # Logger.log.info(f"embeddings {query_embeddings[:5]}")
 
   sim_results = __search_similarity_from_memory(
     query_embeddings=query_embeddings,
   )
-  sim_results.append(
+  sim_results.extend(
     __search_similarity_from_message(
       query_embeddings=query_embeddings,
-      conversation_id=get_object_id(prompt.conversation),
+      conversation_id=get_object_id(conversation_id),
       sender_id=get_object_id(user.id),
     )
   )
   context = [ i.text for i in sim_results ]
-  return generate_reply(prompt=prompt, context=context)
+  embeddings = generate_embeddings([prompt.content])
+  return Reply(
+    reply=generate_model_reply(prompt=prompt, context=context),
+    embeddings=embeddings,
+    prompt=prompt
+  )
 
 def create_chat(
   session: ClientSession,
   col_audit: Collection,
   col_conversation: Collection,
   col_message: Collection,
-  model_reply: ModelReply,
+  model_reply: Reply,
   default_title: str,
   conversation_id: str | None,
   prompt: Prompt,
@@ -153,7 +165,7 @@ def create_chat(
   ai_reply = Message(
     sender=None,
     conversation=conv_id,
-    text=model_reply.decoded,
+    text=model_reply.reply,
     embeddings=[]
   )
   ai_reply.validate()
