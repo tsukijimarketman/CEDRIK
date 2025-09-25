@@ -1,7 +1,21 @@
 import { cn } from "@/lib/utils";
 
 export function WelcomeMessage() {
-  const content = `Hello and welcome! I’m CEDRIK your AI companion, here to assist, explore ideas, and make your tasks easier.`;
+  const messages = [
+    "Hello and welcome! I’m CEDRIK your AI companion, here to assist, explore ideas, and make your tasks easier.",
+    "Hi there! CEDRIK here to help you with answers, inspiration, and guidance anytime you need.",
+    "Greetings! I’m CEDRIK, ready to assist, chat, or brainstorm with you—let’s get started!",
+    "Hey! I’m CEDRIK, your friendly AI assistant. Let’s make your tasks easier and more fun today.",
+    "Welcome! CEDRIK at your service, here to help you explore ideas and solve problems efficiently.",
+    "Hi! I’m CEDRIK, here to guide you, answer questions, and make your workflow smoother.",
+    "Hello! CEDRIK ready to assist you in discovering ideas and achieving your goals today.",
+    "Greetings! I’m your AI assistant, CEDRIK, here to make tasks simpler and conversations smarter.",
+    "Hey there! I’m CEDRIK, ready to help you brainstorm, learn, or just have a chat anytime.",
+    "Welcome! I’m CEDRIK, your AI companion, here to provide answers, tips, and support whenever you need.",
+  ];
+
+  // Pick a random message
+  const content = messages[Math.floor(Math.random() * messages.length)];
 
   return (
     <div className="flex w-full py-6 px-4 bg-chat-message-assistant">
