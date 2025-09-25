@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessage } from "./ChatMessage";
+import { WelcomeMessage } from "./WelcomeMessage";
 import { ChatInput } from "./ChatInput";
 import { ThemeToggle } from "./ThemeToggle";
 import { aiApi } from "@/api/api";
@@ -65,7 +66,11 @@ export function ChatInterface() {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === thinkingId
-              ? { ...m, content: reply, timestamp: new Date().toLocaleTimeString() }
+              ? {
+                  ...m,
+                  content: reply,
+                  timestamp: new Date().toLocaleTimeString(),
+                }
               : m
           )
         );
@@ -133,6 +138,7 @@ export function ChatInterface() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto">
+          <WelcomeMessage />
           {messages.map((message) => (
             <ChatMessage
               key={message.id}
