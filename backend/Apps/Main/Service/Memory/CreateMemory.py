@@ -4,6 +4,7 @@ from pymongo.client_session import ClientSession
 from backend.Apps.Main.Database import Audit, AuditData, Memory
 from backend.Apps.Main.Utils import Collections, AuditAction, generate_embeddings
 from backend.Apps.Main.Utils.Enum import MemoryType, Permission
+from backend.Apps.Main.Validation.File import validate_file
 
 def create_memory(
   session: ClientSession,
@@ -28,7 +29,9 @@ def create_memory(
     embeddings=embeddings
   )
 
+  # Only take 1 file
   if len(files) > 0:
+    validate_file(files[0])
     with open(files[0], "rb") as f:
       mem.content.put(
         f,

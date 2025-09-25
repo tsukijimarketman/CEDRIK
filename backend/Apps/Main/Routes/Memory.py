@@ -1,8 +1,10 @@
 import uuid
+import os
 from dataclasses import dataclass
 from http.client import HTTPException
 from flask import jsonify, request
 from flask.blueprints import Blueprint
+from flask_jwt_extended import jwt_required
 from typing import List
 from mongoengine import ValidationError
 
@@ -25,6 +27,7 @@ class CreateMemoryBody:
   files: List[str] | str = ""
 
 @memory.route("/create", methods=["POST"])
+@jwt_required(optional=False)
 @protect(role=Role.ADMIN)
 def create():
   try:
@@ -57,6 +60,15 @@ def create():
         }
       )
 
+      for f in body.files:
+        try:
+          path = f"{RESOURCE_DIR}/{f}"
+          if not os.path.exists(path): continue
+          os.remove(path)
+        except Exception as e:
+          Logger.log.error(str(e))
+          continue
+
   except ValidationError as e:
     raise HttpValidationError(e.to_dict())
   except Exception as e:
@@ -66,23 +78,25 @@ def create():
   return "", 200
 
 @memory.route("/upload", methods=["POST"])
+@jwt_required(optional=False)
 @protect(role=Role.ADMIN)
 def upload():
-  if "file" in request.files:
+  if "file" not in request.files:
     raise BadBody("No `file` key in request body");
 
   try:
     # Only save one file
-    files = request.files.getlist()[0]
+    f = request.files.get("file")
     saved = []
     iid = str(uuid.uuid4())
-    files.save(f"{RESOURCE_DIR}/{iid}")
-    saved.append(iid)
+    filename = f"{iid}.{f.filename}"
+    f.save(f"{RESOURCE_DIR}/{filename}")
+    saved.append(filename)
     return jsonify({
       "files": saved
     }), 200
 
-    # files = request.files.getlist()
+    # files = request.files.getlist("files")
     # saved = []
     # for f in files:
     #   iid = str(uuid.uuid4())
