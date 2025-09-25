@@ -3,6 +3,7 @@ import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { ThemeToggle } from "./ThemeToggle";
+import { aiApi } from "@/api/api";
 
 interface Message {
   id: string;
@@ -11,17 +12,22 @@ interface Message {
   timestamp: string;
 }
 
+// Extract a human-readable error message from various error shapes
+function getErrorMessage(err: unknown): string {
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const e = err as { error?: unknown; msg?: unknown; message?: unknown };
+    if (typeof e.error === "string") return e.error;
+    if (typeof e.msg === "string") return e.msg;
+    if (typeof e.message === "string") return e.message;
+  }
+  return "An error occurred while getting a response.";
+}
+
 export function ChatInterface() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content:
-        "Hello! I'm CEDRIK, your AI assistant. How can I help you today?",
-      timestamp: new Date().toLocaleTimeString(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSendMessage = (content: string) => {
     const userMessage: Message = {
@@ -31,19 +37,54 @@ export function ChatInterface() {
       timestamp: new Date().toLocaleTimeString(),
     };
 
+    // Append user message immediately
     setMessages((prev) => [...prev, userMessage]);
 
-    // Simulate assistant response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "Thank you for your message! This is a demo response. In a real implementation, this would be connected to your AI backend.",
-        timestamp: new Date().toLocaleTimeString(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    }, 1000);
+    // Add a temporary assistant "thinking" message
+    const thinkingId = `thinking-${Date.now()}`;
+    const thinkingMessage: Message = {
+      id: thinkingId,
+      role: "assistant",
+      content: "CEDRIk is thinking...",
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setMessages((prev) => [...prev, thinkingMessage]);
+    setIsLoading(true);
+
+    // Fire the AI chat request
+    void aiApi
+      .chat({
+        conversation: null,
+        prompt: {
+          role: "user",
+          content,
+        },
+      })
+      .then((res) => {
+        const reply = res.data.reply ?? "";
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? { ...m, content: reply, timestamp: new Date().toLocaleTimeString() }
+              : m
+          )
+        );
+      })
+      .catch((err) => {
+        const message = getErrorMessage(err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? {
+                  ...m,
+                  content: `Sorry, I ran into an issue: ${message}`,
+                  timestamp: new Date().toLocaleTimeString(),
+                }
+              : m
+          )
+        );
+      })
+      .finally(() => setIsLoading(false));
   };
 
   // Compute responsive left margin for the fixed sidebar on desktop sizes
@@ -85,11 +126,6 @@ export function ChatInterface() {
                   </svg>
                 </button>
               )}
-              <img
-                src="/cedrikFD.png"
-                alt="CEDRIK"
-                className="w-8 h-8 rounded-full"
-              />
             </div>
             <ThemeToggle />
           </div>
@@ -108,7 +144,7 @@ export function ChatInterface() {
         </div>
 
         {/* Input */}
-        <ChatInput onSendMessage={handleSendMessage} />
+        <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ interface LoginDialogProps {
   onLogin: (email: string, password: string) => void;
   onLoginSuccess?: () => void;
   onSwitchToSignUp: () => void;
+  onSwitchToForgot: () => void;
 }
 
 export function LoginDialog({
@@ -25,6 +26,7 @@ export function LoginDialog({
   onLogin,
   onLoginSuccess,
   onSwitchToSignUp,
+  onSwitchToForgot,
 }: LoginDialogProps) {
   const [formData, setFormData] = useState({ email: "", password: "" });
 
@@ -137,6 +139,7 @@ export function LoginDialog({
               <button
                 type="button"
                 className="text-sm text-primary hover:underline"
+                onClick={onSwitchToForgot}
               >
                 Forgot password?
               </button>
