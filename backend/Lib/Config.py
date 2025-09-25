@@ -49,4 +49,4 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 if JWT_SECRET == None or len(JWT_SECRET) == 0:
   raise Exception("JWT_SECRET not set")
 
-RESOURCE_DIR = _get_env_or_default("RESOURCE_DIR", "./Uploads/")
+RESOURCE_DIR = _get_env_or_default("RESOURCE_DIR", "Uploads/")

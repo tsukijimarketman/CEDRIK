@@ -6,8 +6,14 @@ from backend.Apps.Main.Database import db_connection_init
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from backend.Apps.Main.Routes import ROUTES
+from backend.Lib.Config import RESOURCE_DIR
+import os
+from backend.Lib.Logger import Logger
 
-app = Flask(__name__)
+Logger.log.info(f"Static Resource Folder {os.path.abspath(RESOURCE_DIR)}")
+
+resource_abs_path = os.path.abspath(RESOURCE_DIR)
+app = Flask(__name__, static_url_path="/static/", static_folder=resource_abs_path)
 db_connection_init()
 
 app.config["TRAP_HTTP_EXCEPTIONS"]=True
