@@ -28,8 +28,10 @@ class Model:
     _engine: LLMEngine = LLMEngine("")
 
     if AI_MODEL == "distilbert/distilgpt2":
+        Logger.log.info("Model DistilGPT2")
         _engine = DistilGPT2()
     else:
+        Logger.log.info("Model DeepSeekV3")
         _engine = DeepSeekV3()
 
     def __new__(cls, *args, **kwargs):
@@ -68,6 +70,7 @@ def generate_reply():
     query = [Prompt(role="context", content=i) for i in body.context]
     query.append(body.prompt)
 
+    Logger.log.info(f"query {query}")
     reply = Model.generate(query)
 
     return jsonify({
