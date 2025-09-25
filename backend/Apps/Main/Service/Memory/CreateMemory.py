@@ -5,22 +5,36 @@ from backend.Apps.Main.Database import Audit, AuditData, Memory
 from backend.Apps.Main.Utils import Collections, AuditAction, generate_embeddings
 from backend.Apps.Main.Utils.Enum import MemoryType, Permission
 
-def create_text_memory(
+def create_memory(
   session: ClientSession,
   col_audit: Collection,
   col_memory: Collection,
   data: dict
 ):
-  embeddings = generate_embeddings([f"{data["title"]}\n{data["content"]}"])
+  files = data["files"]
+  mem_type = MemoryType.TEXT
+  if len(files) > 0:
+    mem_type = MemoryType.FILE
+  else:
+    embeddings = generate_embeddings([f"{data["title"]}\n{data["content"]}"])
 
+  # At the moment use the embeddings of the title and text even for files
   mem = Memory(
     title=data["title"],
-    mem_type=MemoryType.TEXT,
+    mem_type=mem_type,
     text=data["content"],
     tags=data["tags"],
     permission=[Permission.ALL.value],
     embeddings=embeddings
   )
+
+  if len(files) > 0:
+    with open(files[0], "rb") as f:
+      mem.content.put(
+        f,
+        session=session
+      )
+
   mem.validate()
   res_insert = col_memory.insert_one(mem.to_mongo(), session=session)
 

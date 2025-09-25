@@ -1,1 +1,1 @@
-from .CreateMemory import create_text_memory
+from .CreateMemory import create_memory
