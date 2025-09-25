@@ -16,7 +16,12 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
           : "bg-chat-message-assistant"
       )}
     >
-      <div className="flex w-full max-w-4xl mx-auto">
+      <div
+        className={cn(
+          "flex w-full max-w-4xl mx-auto",
+          role === "user" ? "flex-row-reverse" : "flex-row"
+        )}
+      >
         <div className="flex-shrink-0 w-10 h-10 mr-4">
           <div
             className={cn(
@@ -25,14 +30,23 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
             )}
           >
             <img
-              src="/cedrikFD.png"
-              alt="CEDRIK"
-              className="w-8 h-8 rounded-full"
+              src={role === "user" ? "/nguso.png" : "/cedrikFD.png"}
+              alt={role === "user" ? "USER" : "CEDRIK"}
+              className="w-10 h-10 rounded-full"
             />
           </div>
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div
+          className={cn(
+            // "flex-1 min-w-0",
+            "inline-block rounded-lg p-3",
+            role === "user",
+            // ? "bg-blue-500 text-white mr-5"
+            // : "bg-gray-200 text-black",
+            "max-w-[70%] mr-3 "
+          )}
+        >
           <div className="prose prose-sm max-w-none">
             <p className="text-foreground whitespace-pre-wrap break-words">
               {content}
