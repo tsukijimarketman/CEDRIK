@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 export function WelcomeMessage() {
@@ -14,8 +15,13 @@ export function WelcomeMessage() {
     "Hey there! I’m CEDRIK, your AI friend—here for answers, tips, or just a friendly chat anytime!",
   ];
 
-  // Pick a random message
-  const content = messages[Math.floor(Math.random() * messages.length)];
+  // Pick a random message only once when component mounts
+  const [content, setContent] = useState("");
+
+  useEffect(() => {
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+    setContent(randomMessage);
+  }, []); // empty dependency array = runs only once per page load
 
   return (
     <div className="flex w-full py-6 px-4 bg-chat-message-assistant">
