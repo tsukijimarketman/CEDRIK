@@ -3,12 +3,16 @@ import { SuperAdminSidebar } from "@/components/SuperAdminSidebar";
 import { UserManagement } from "@/components/UserManagement";
 import { AuditLogs } from "@/components/AuditLogs";
 import { KnowledgeBase } from "@/components/KnowledgeBase";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/ThemeProvider";
+import { Moon, Sun } from "lucide-react";
 
 type ActiveSection = "user-management" | "audit-logs" | "knowledge-base";
 
 const SuperAdmin = () => {
   const [activeSection, setActiveSection] = useState<ActiveSection>("user-management");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const renderContent = () => {
     switch (activeSection) {
@@ -63,6 +67,21 @@ const SuperAdmin = () => {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                className="gap-2"
+              >
+                {theme === "light" ? (
+                  <Moon className="h-4 w-4" />
+                ) : (
+                  <Sun className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {theme === "light" ? "Dark" : "Light"}
+                </span>
+              </Button>
               <span className="text-sm text-muted-foreground capitalize">
                 {activeSection.replace("-", " ")}
               </span>

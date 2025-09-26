@@ -84,7 +84,7 @@ export function ChatInterface() {
             m.id === thinkingId
               ? {
                   ...m,
-                  content: `Sorry, I ran into an issue: ${message}`,
+                  content: `Login ka muna HSHAHSHA`,
                   timestamp: new Date().toLocaleTimeString(),
                 }
               : m
