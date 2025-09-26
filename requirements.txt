@@ -12,6 +12,7 @@ Flask==3.1.2
 flask-cors==6.0.1
 Flask-JWT-Extended==4.7.1
 fsspec==2025.7.0
+hf-xet==1.1.10
 huggingface-hub==0.34.4
 idna==3.10
 itsdangerous==2.2.0
@@ -38,10 +39,10 @@ sentence-transformers==5.1.0
 setuptools==80.9.0
 sympy==1.14.0
 threadpoolctl==3.6.0
-tokenizers==0.21.4
+tokenizers==0.22.1
 torch==2.8.0
 tqdm==4.67.1
-transformers==4.55.4
+transformers==4.56.2
 typing_extensions==4.15.0
 urllib3==2.5.0
 Werkzeug==3.1.3
