@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine
+from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, Qwen3Next
 from backend.Lib.Common import Prompt
 from backend.Lib.Logger import Logger
 from backend.Lib.Config import AI_MODEL, MAIN_PORT
@@ -27,12 +27,13 @@ class Model:
     """
     _engine: LLMEngine = LLMEngine("")
 
-    if AI_MODEL == "distilbert/distilgpt2":
-        Logger.log.info("Model DistilGPT2")
-        _engine = DistilGPT2()
+    Logger.log.info(f"Model {AI_MODEL}")
+    if AI_MODEL == "deepseek-ai":
+      _engine = DeepSeekV3()
+    elif AI_MODEL == "Qwen":
+      _engine = Qwen3Next()
     else:
-        Logger.log.info("Model DeepSeekV3")
-        _engine = DeepSeekV3()
+      _engine = DistilGPT2()
 
     def __new__(cls, *args, **kwargs):
         raise Exception("Do not Instantiate Model")
