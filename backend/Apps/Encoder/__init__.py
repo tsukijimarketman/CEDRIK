@@ -44,6 +44,8 @@ def encode():
     buffer = list(data["data"])
     if len(buffer) == 0:
       raise Exception()
+
+    Logger.log.info(f"data {buffer}")
     embeddings = Encoder.encode(buffer)
     if len(embeddings) > 0:
       embeddings = embeddings[0]
