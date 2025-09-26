@@ -14,7 +14,7 @@ class Reply:
 
 def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
     try:
-        query = [Prompt(role="context", content=i) for i in context]
+        query = [asdict(Prompt(role="context", content=i)) for i in context]
 
         response = requests.post(
             url=f"http://localhost:{MODEL_PORT}/generate-reply",

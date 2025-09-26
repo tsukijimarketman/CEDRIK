@@ -3,6 +3,7 @@ import flask
 from flask_jwt_extended import get_jwt
 from backend.Apps.Main.Utils.Enum import Role
 from backend.Lib.Error import CUnauthorized
+from backend.Lib.Logger import Logger
 from .UserToken import UserToken
 
 def set_token(f):
@@ -20,10 +21,11 @@ def protect(role=Role.USER):
   def a(f):
     @wraps(f)
     def decorator(*args, **kwargs):
-      token = UserToken()
-      if len(get_jwt()) == 0:
+      jwt = get_jwt()
+      token: UserToken = None
+      if len(jwt) == 0:
         raise CUnauthorized()
-      token = UserToken(token)
+      token = UserToken(jwt)
 
       match role:
         case Role.ADMIN:

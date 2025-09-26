@@ -21,12 +21,13 @@ class DistilGPT2(LLMEngine):
     except Exception as _:
       config = {}
 
+    q = "\n".join(f"{p.role}: {p.content}" for p in query)
     outputs = self._pipe(
-      "\n".join(f"{p.role}: {p.content}" for p in query),
+      q,
       **config
     )
 
     reply = outputs[0]["generated_text"] 
-    reply = reply.replace(f"{query[-1].role}: {query[-1].content}", "").strip()
+    reply = reply.replace(q, "").strip()
 
     return reply

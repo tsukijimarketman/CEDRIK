@@ -10,8 +10,6 @@ from backend.Lib.Config import MAX_CONTEXT_SIZE
 from backend.Apps.Main.Utils.LLM import Prompt, generate_embeddings, generate_model_reply, Reply
 
 def __search_similarity_from_memory(query_embeddings: List[float]):
-  # disable for now
-  return []
   # Text only vector search
   pipeline = [
     {
@@ -37,8 +35,6 @@ def __search_similarity_from_message(
   conversation_id: ObjectId,
   sender_id: ObjectId,
 ):
-  # disable for now
-  return []
   # Text only vector search
   pipeline = [
     {
@@ -85,7 +81,8 @@ def generate_reply(
       sender_id=get_object_id(user.id),
     )
   )
-  context = [ i.text for i in sim_results ]
+  Logger.log.info(f"context {sim_results}")
+  context = [ i["text"] for i in sim_results ]
   embeddings = generate_embeddings([prompt.content])
   return Reply(
     reply=generate_model_reply(prompt=prompt, context=context),
