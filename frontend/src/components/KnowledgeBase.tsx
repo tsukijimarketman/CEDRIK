@@ -1,10 +1,25 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { Search, Plus, Edit, Trash2, Eye, BookOpen, Tag, Clock } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  BookOpen,
+  Tag,
+  Clock,
+} from "lucide-react";
 
 interface KnowledgeBaseItem {
   id: string;
@@ -25,7 +40,8 @@ export function KnowledgeBase() {
     {
       id: "1",
       title: "System Architecture Overview",
-      content: "This document provides a comprehensive overview of the system architecture, including component interactions, data flow, and integration points.",
+      content:
+        "This document provides a comprehensive overview of the system architecture, including component interactions, data flow, and integration points.",
       category: "Documentation",
       tags: ["architecture", "system", "overview"],
       author: "admin_user",
@@ -36,7 +52,8 @@ export function KnowledgeBase() {
     {
       id: "2",
       title: "API Authentication Guide",
-      content: "Complete guide for implementing API authentication, including JWT token management, refresh tokens, and security best practices.",
+      content:
+        "Complete guide for implementing API authentication, including JWT token management, refresh tokens, and security best practices.",
       category: "API",
       tags: ["api", "authentication", "jwt", "security"],
       author: "tech_lead",
@@ -47,7 +64,8 @@ export function KnowledgeBase() {
     {
       id: "3",
       title: "Database Schema Reference",
-      content: "Detailed reference of all database tables, relationships, and constraints used in the system.",
+      content:
+        "Detailed reference of all database tables, relationships, and constraints used in the system.",
       category: "Database",
       tags: ["database", "schema", "reference"],
       author: "db_admin",
@@ -58,7 +76,8 @@ export function KnowledgeBase() {
     {
       id: "4",
       title: "Troubleshooting Common Issues",
-      content: "Collection of common issues and their solutions, including error messages, causes, and step-by-step resolution procedures.",
+      content:
+        "Collection of common issues and their solutions, including error messages, causes, and step-by-step resolution procedures.",
       category: "Support",
       tags: ["troubleshooting", "errors", "support"],
       author: "support_team",
@@ -74,9 +93,12 @@ export function KnowledgeBase() {
     const matchesSearch =
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      item.tags.some((tag) =>
+        tag.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
-    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+    const matchesCategory =
+      selectedCategory === "all" || item.category === selectedCategory;
 
     return matchesSearch && matchesCategory;
   });
@@ -89,7 +111,11 @@ export function KnowledgeBase() {
       Support: "bg-orange-100 text-orange-800",
     };
     return (
-      <Badge className={colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}>
+      <Badge
+        className={
+          colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
+        }
+      >
         {category}
       </Badge>
     );
@@ -100,12 +126,16 @@ export function KnowledgeBase() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Knowledge Base</h1>
-            <p className="text-muted-foreground">Centralized documentation and reference materials</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              Knowledge Base
+            </h1>
+            <p className="text-muted-foreground">
+              Centralized documentation and reference materials
+            </p>
           </div>
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
-            New Article
+            New File
           </Button>
         </div>
 
@@ -139,7 +169,9 @@ export function KnowledgeBase() {
         <div className="grid gap-4 md:grid-cols-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Articles
+              </CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -153,7 +185,9 @@ export function KnowledgeBase() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {knowledgeItems.reduce((sum, item) => sum + item.views, 0).toLocaleString()}
+                {knowledgeItems
+                  .reduce((sum, item) => sum + item.views, 0)
+                  .toLocaleString()}
               </div>
             </CardContent>
           </Card>
@@ -184,7 +218,9 @@ export function KnowledgeBase() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
+                    <CardTitle className="text-lg line-clamp-2">
+                      {item.title}
+                    </CardTitle>
                     <CardDescription className="mt-2">
                       {getCategoryBadge(item.category)}
                     </CardDescription>
@@ -220,7 +256,11 @@ export function KnowledgeBase() {
                     <Button variant="ghost" size="sm">
                       <Edit className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700"
+                    >
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
