@@ -82,8 +82,8 @@ services:
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan
     profiles: ["llama"]
-    entrypoint: /app/llama-server
-    commands: -m $${MODEL} --host $${HOST} --port $${PORT} --threads 8 --n-gpu-layers 0 --ctx-size 1024
+    entrypoint: "/bin/sh"
+    command: [ "-c", "/app/llama-server -m $${MODEL} --host $${HOST} --port $${PORT} --threads 8 --n-gpu-layers 0 --ctx-size 1024" ]
     # stdin_open: true
     # tty: true
     volumes:
@@ -91,6 +91,6 @@ services:
     ports:
       - 8080:8080
     environment:
-      MODEL: ./models/Qwen2.5-VL-7B-Instruct-UD-IQ1_M.gguf
+      MODEL: /app/models/Qwen2.5-VL-7B-Instruct-UD-IQ1_M.gguf
       HOST: 0.0.0.0
       PORT: 8080
