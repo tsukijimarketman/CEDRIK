@@ -1,0 +1,96 @@
+name: cedrik
+services:
+  backendbase:
+    build:
+      dockerfile: Backend.Dockerfile
+    image: cedrik-base
+    pull_policy: never
+    profiles: ["base"]
+  backend:
+    build:
+      dockerfile: BackendRunner.Dockerfile
+    image: cedrik-backend
+    profiles: ["backend"]
+  frontend:
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+    profiles: ["frontend"]
+    volumes:
+      - ./frontend/.env:/app/.env:ro
+    ports:
+      - 5173:5173
+
+  main:
+    image: cedrik-backend
+    pull_policy: never
+    volumes:
+      - ./Uploads/:/Uploads/
+      - ./backend/:/app/backend/
+      - ./log/:/app/log/
+      - ./.env:/app/.env:ro
+      - ./tokenizer_config.json:/app/tokenizer_config.json:ro
+      - ./pipe_config.json:/app/pipe_config.json:ro
+    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    ports:
+      - 5000:5000
+    environment:
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_RUN_PORT: 5000
+      FLASK_APP: backend.Apps.Main
+      DEBUG: --debug
+      NO_RELOAD: --no-reload
+  encoder:
+    image: cedrik-backend
+    pull_policy: never
+    volumes:
+      - ./backend/:/app/backend/
+      - ./log/:/app/log/
+      - ./.env:/app/.env:ro
+      - ./tokenizer_config.json:/app/tokenizer_config.json:ro
+      - ./pipe_config.json:/app/pipe_config.json:ro
+      - ./hf_cache:/app/hf_cache
+    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    ports:
+      - 5001:5001
+    environment:
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_RUN_PORT: 5001
+      FLASK_APP: backend.Apps.Encoder
+      DEBUG: --debug
+      NO_RELOAD: --no-reload
+      HF_HOME: /app/hf_cache
+  model:
+    image: cedrik-backend
+    pull_policy: never
+    volumes:
+      - ./backend/:/app/backend/
+      - ./log/:/app/log/
+      - ./.env:/app/.env:ro
+      - ./tokenizer_config.json:/app/tokenizer_config.json:ro
+      - ./pipe_config.json:/app/pipe_config.json:ro
+    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    ports:
+      - 5002:5002
+    environment:
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_RUN_PORT: 5002
+      FLASK_APP: backend.Apps.Model
+      DEBUG: --debug
+      NO_RELOAD: --no-reload
+
+  llama-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    profiles: ["llama"]
+    entrypoint: /app/llama-server
+    commands: -m $${MODEL} --host $${HOST} --port $${PORT} --threads 8 --n-gpu-layers 0 --ctx-size 1024
+    # stdin_open: true
+    # tty: true
+    volumes:
+      - ./models/:/app/models/
+    ports:
+      - 8080:8080
+    environment:
+      MODEL: ./models/Qwen2.5-VL-7B-Instruct-UD-IQ1_M.gguf
+      HOST: 0.0.0.0
+      PORT: 8080
