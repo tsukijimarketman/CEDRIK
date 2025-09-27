@@ -50,3 +50,5 @@ if JWT_SECRET == None or len(JWT_SECRET) == 0:
   raise Exception("JWT_SECRET not set")
 
 RESOURCE_DIR = _get_env_or_default("RESOURCE_DIR", "Uploads/")
+
+LLAMA_SERVER = os.getenv("LLAMA_SERVER")

@@ -14,15 +14,14 @@ class Reply:
 
 def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
     try:
-        query = [asdict(Prompt(role="context", content=i)) for i in context]
-
         response = requests.post(
             url=f"http://localhost:{MODEL_PORT}/generate-reply",
             data=json.dumps({
-                "context": query,
+                "context": context,
                 "prompt": asdict(prompt)
             }),
-            headers={ "Content-Type": "application/json" }
+            headers={ "Content-Type": "application/json" },
+            # timeout=10
         )
         response.raise_for_status()
         d = response.json()
@@ -39,9 +38,8 @@ def generate_embeddings(buffer: List[Any]):
             data=json.dumps({
                 "data": buffer
             }),
-            headers={
-                "Content-Type": "application/json"
-            }
+            headers={ "Content-Type": "application/json" },
+            timeout=10
         )
         response.raise_for_status()
         d = response.json()
