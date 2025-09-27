@@ -14,10 +14,11 @@ def create_memory(
 ):
   files = data["files"]
   mem_type = MemoryType.TEXT
+  embeddings = []
   if len(files) > 0:
     mem_type = MemoryType.FILE
   else:
-    embeddings = generate_embeddings([f"{data["title"]}\n{data["content"]}"])
+    embeddings = generate_embeddings([f"{data['title']}\n{data['content']}"])
 
   # At the moment use the embeddings of the title and text even for files
   mem = Memory(
