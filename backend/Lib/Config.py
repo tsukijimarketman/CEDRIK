@@ -52,3 +52,5 @@ if JWT_SECRET == None or len(JWT_SECRET) == 0:
 RESOURCE_DIR = _get_env_or_default("RESOURCE_DIR", "Uploads/")
 
 LLAMA_SERVER = os.getenv("LLAMA_SERVER")
+if AI_MODEL == "llama" and (LLAMA_SERVER == None or len(LLAMA_SERVER) == 0):
+  raise Exception("LLAMA_SERVER is not set but AI_MODEL is set to llama")
