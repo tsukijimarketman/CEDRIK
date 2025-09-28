@@ -2,7 +2,7 @@ from flask_cors import CORS
 from sentence_transformers import SentenceTransformer
 from flask import Flask, request, jsonify
 from backend.Lib.Logger import Logger
-from backend.Lib.Config import SENTENCE_TRANSFORMER_MODEL, MAIN_PORT
+from backend.Lib.Config import SENTENCE_TRANSFORMER_MODEL, MAIN_SERVER
 from typing import List, Any
 
 app = Flask(__name__)
@@ -11,7 +11,7 @@ CORS(
   app,
   resources={
       r"/*": {
-          "origins": [f"http://localhost:{MAIN_PORT}", f"http://127.0.0.1:{MAIN_PORT}"],
+          "origins": [MAIN_SERVER],
           "methods": ["POST"],
           "allow_headers": ["Content-Type", "application/json"],
       }

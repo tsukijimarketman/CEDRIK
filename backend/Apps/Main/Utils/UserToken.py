@@ -5,7 +5,7 @@ from backend.Lib.Error import InvalidId
 from backend.Lib.Logger import Logger
 
 class UserToken:
-    id = None
+    id = ""
     aud = ""
     username = ""
     email = ""

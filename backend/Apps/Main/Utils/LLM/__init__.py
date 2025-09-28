@@ -3,7 +3,7 @@ import requests
 import json
 from backend.Lib.Logger import Logger
 from backend.Lib.Common import Prompt
-from backend.Lib.Config import ENCODER_PORT, MODEL_PORT
+from backend.Lib.Config import ENCODER_SERVER, MODEL_SERVER
 from typing import Any, List
 
 @dataclass
@@ -15,7 +15,7 @@ class Reply:
 def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
     try:
         response = requests.post(
-            url=f"http://localhost:{MODEL_PORT}/generate-reply",
+            url=MODEL_SERVER,
             data=json.dumps({
                 "context": context,
                 "prompt": asdict(prompt)
@@ -34,7 +34,7 @@ def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
 def generate_embeddings(buffer: List[Any]):
     try:
         response = requests.post(
-            url=f"http://localhost:{ENCODER_PORT}/encode",
+            url=ENCODER_SERVER,
             data=json.dumps({
                 "data": buffer
             }),
