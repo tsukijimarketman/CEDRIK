@@ -40,6 +40,10 @@ services:
       FLASK_APP: backend.Apps.Main
       DEBUG: --debug
       NO_RELOAD: --no-reload
+    develop:
+      watch:
+        - path: ./backend/
+          action: restart
   encoder:
     image: cedrik-backend
     pull_policy: never
