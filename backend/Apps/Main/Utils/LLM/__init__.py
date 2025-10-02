@@ -39,7 +39,7 @@ def generate_embeddings(buffer: List[Any]):
                 "data": buffer
             }),
             headers={ "Content-Type": "application/json" },
-            timeout=10
+            timeout=240
         )
         response.raise_for_status()
         d = response.json()

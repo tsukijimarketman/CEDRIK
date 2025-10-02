@@ -42,7 +42,7 @@ class LLamaServer(LLMEngine):
         url=LLAMA_SERVER,
         data=json.dumps(body),
         headers={ "Content-Type": "application/json" },
-        timeout=120
+        # timeout=120
       )
       response.raise_for_status()
       d = response.json()
