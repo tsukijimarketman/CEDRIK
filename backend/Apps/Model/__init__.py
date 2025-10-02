@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import List
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine
+from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaServer
 from backend.Lib.Common import Prompt
 from backend.Lib.Logger import Logger
-from backend.Lib.Config import AI_MODEL, MAIN_PORT
+from backend.Lib.Config import AI_MODEL, MAIN_SERVER
 
 app = Flask(__name__)
 
@@ -13,7 +13,7 @@ CORS(
   app,
   resources={
       r"/*": {
-          "origins": [f"http://localhost:{MAIN_PORT}", f"http://127.0.0.1:{MAIN_PORT}"],
+          "origins": [MAIN_SERVER],
           "methods": ["POST"],
           "allow_headers": ["Content-Type", "application/json"],
       }
@@ -27,12 +27,13 @@ class Model:
     """
     _engine: LLMEngine = LLMEngine("")
 
-    if AI_MODEL == "distilbert/distilgpt2":
-        Logger.log.info("Model DistilGPT2")
-        _engine = DistilGPT2()
+    Logger.log.info(f"Model {AI_MODEL}")
+    if AI_MODEL == "deepseek-ai":
+      _engine = DeepSeekV3()
+    elif AI_MODEL == "llama":
+      _engine = LLamaServer()
     else:
-        Logger.log.info("Model DeepSeekV3")
-        _engine = DeepSeekV3()
+      _engine = DistilGPT2()
 
     def __new__(cls, *args, **kwargs):
         raise Exception("Do not Instantiate Model")

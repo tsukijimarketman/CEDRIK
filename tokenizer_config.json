@@ -1,5 +1,4 @@
 {
-    "add_generation_prompt": true,
     "tokenize": true,
     "return_dict": true,
     "return_tensors": "pt",
@@ -7,6 +6,6 @@
     "do_sample": true,
     "temperature": 0.7,
     "top_p": 0.9,
-    "repetition_penalty": 1.1,
+    "repetition_penalty": 1.0,
     "pad_token_id": 50256
 }

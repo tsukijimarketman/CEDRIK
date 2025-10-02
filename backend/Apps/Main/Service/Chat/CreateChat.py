@@ -79,7 +79,7 @@ def generate_reply(
       query_embeddings=query_embeddings,
       conversation_id=get_object_id(conversation_id),
       sender_id=get_object_id(user.id),
-    )
+    ) if len(conversation_id) > 0 else []
   )
   Logger.log.info(f"context {sim_results}")
   context = [ i["text"] for i in sim_results ]

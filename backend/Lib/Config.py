@@ -37,9 +37,9 @@ if not os.path.exists(TOKENIZER_CONFIG):
 
 FILE_SIZE_LIMIT_MB = _get_env_or_default("FILE_SIZE_LIMIT_MB",10, lambda x: int(x))
 MAX_CONTEXT_SIZE = _get_env_or_default("MAX_CONTEXT_SIZE",5, lambda x: int(x))
-MAIN_PORT = _get_env_or_default("SERVER_MAIN_PORT", "5000")
-ENCODER_PORT = _get_env_or_default("SERVER_ENCODER_PORT" , "5001")
-MODEL_PORT = _get_env_or_default("SERVER_MODEL_PORT", "5002")
+MAIN_SERVER = _get_env_or_default("SERVER_MAIN", "http://localhost:5000")
+ENCODER_SERVER = _get_env_or_default("SERVER_ENCODER" , "http://localhost:5001/encode")
+MODEL_SERVER = _get_env_or_default("SERVER_MODEL", "http://localhost:5002/generate-reply")
 DATABASE_URI = os.getenv("CyberSync_DatabaseUri")
 
 if DATABASE_URI == None or len(DATABASE_URI) == 0:
@@ -50,3 +50,7 @@ if JWT_SECRET == None or len(JWT_SECRET) == 0:
   raise Exception("JWT_SECRET not set")
 
 RESOURCE_DIR = _get_env_or_default("RESOURCE_DIR", "Uploads/")
+
+LLAMA_SERVER = os.getenv("LLAMA_SERVER")
+if AI_MODEL == "llama" and (LLAMA_SERVER == None or len(LLAMA_SERVER) == 0):
+  raise Exception("LLAMA_SERVER is not set but AI_MODEL is set to llama")

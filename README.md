@@ -16,3 +16,23 @@ On powershell
 ```
 .\RunBackend.ps1
 ```
+
+## Docker
+### Backend
+build service `backend`
+> No need to rebuild `backendbase` the latest image is uploaded to dockerhub
+```
+docker compose --profile backend build
+```
+run backend
+```
+docker compose --profile llama up
+```
+### Frontend
+```
+docker compose  --profile frontend up
+```
+### All runnables
+```
+docker compose --profile llama --profile frontend up
+```
