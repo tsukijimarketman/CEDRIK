@@ -78,7 +78,7 @@ def _file_memory(data: DCreateMemory, session: ClientSession, col_memory: Collec
         tags=data.tags,
         embeddings=embeddings,
         text=decoded,
-        file_id=str(file_id)
+        file_id=file_id
       )
       mem.validate() # type: ignore
       memories.append(mem.to_mongo()) # type: ignore

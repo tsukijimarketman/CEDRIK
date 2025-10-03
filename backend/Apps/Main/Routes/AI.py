@@ -20,7 +20,7 @@ class ChatBody:
     conversation: str | None
     prompt: Prompt
     def __post_init__(self):
-        self.prompt = Prompt(**self.prompt)
+        self.prompt = Prompt(**self.prompt) # type: ignore
 
 @ai.route("/chat", methods=["POST"])
 @jwt_required(optional=False)
@@ -30,9 +30,14 @@ def chat():
         body = request.get_json()
         body = ChatBody(**body)
         body.prompt.role = "user" # force user role for testing
+        if body.conversation == None:
+            body.conversation = ""
     except Exception as _:
         raise BadBody()
     user_token = get_token()
+
+    assert(user_token != None)
+
     Logger.log.info(f"chat::prompt {body}")
 
     try:
