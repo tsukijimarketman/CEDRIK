@@ -12,6 +12,11 @@ class UserDoesNotExist(HTTPException):
         super().__init__("User Does not exist", Response(status=400))
         self.code = 400
 
+class UserAlreadyExist(HTTPException):
+    def __init__(self):
+        super().__init__("User already exist", Response(status=400))
+        self.code = 400
+
 class HttpValidationError(HTTPException):
     def __init__(self, msg = "Validation Error"):
         super().__init__(msg, Response(status=400))
