@@ -93,14 +93,6 @@ def create_memory(
       col_memory=col_memory
     )
 
-  # if data.file != None:
-  #     data.file.stream.seek(0)
-  #     mem.content.put(
-  #       data.file.stream,
-  #       filename=data.file.filename,
-  #       content_type=data.file.content_type
-  #     )
-
   audit = Audit(
       action=AuditAction.ADD,
       data=AuditData(

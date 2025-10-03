@@ -75,7 +75,7 @@ def chat():
     except ValidationError as e:
         raise HttpValidationError(e.to_dict())
     except Exception as e:
-        Logger.log.error(f"{str(e)} {str(body)}")
+        Logger.log.error(f"{repr(e)} {str(body)}")
         raise InternalServerError()
 
     return jsonify({

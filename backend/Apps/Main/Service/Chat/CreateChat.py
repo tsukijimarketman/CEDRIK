@@ -37,20 +37,19 @@ def __search_similarity_from_memory(query_embeddings: List[float]):
   ]
   return list(Memory.objects.aggregate(*pipeline))
 
-
 def __get_last_message(
   conversation_id: ObjectId,
   sender_id: ObjectId,
 ):
-  return list(
+  return [ { "text": i.text } for i in list(
     Message.objects(
-        conversation_id=conversation_id,
-        sender_id=sender_id
+        conversation=conversation_id,
+        sender=sender_id
        )
       .only("text")
       .order_by("-created_at")
       .limit(MAX_CONTEXT_SIZE)
-  )
+  ) ]
 
 def __search_similarity_from_message(
   query_embeddings: List[float],

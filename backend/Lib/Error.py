@@ -32,6 +32,11 @@ class FileNotSupported(HTTPException):
         super().__init__(msg)
         self.code = 400
 
+class TooManyFiles(HTTPException):
+    def __init__(self, msg = "Too many files in key `file`"):
+        super().__init__(msg)
+        self.code = 400
+
 class InvalidId(Exception): ...
 
 def ErrHTTPExceptionHandler(e):
