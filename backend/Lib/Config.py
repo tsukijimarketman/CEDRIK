@@ -57,3 +57,5 @@ if AI_MODEL == "llama" and (LLAMA_SERVER == None or len(LLAMA_SERVER) == 0):
 
 CHUNK_SIZE_BYTES = _get_env_or_default("CHUNK_SIZE_BYTES", 256, lambda x:  int(x))
 CHUNK_OFFSET_BYTES = _get_env_or_default("CHUNK_OFFSET_BYTES", 28, lambda x:  int(x))
+
+DEBUG = bool(_get_env_or_default("DEBUG", False, lambda x: x != None or len(x) > 0))

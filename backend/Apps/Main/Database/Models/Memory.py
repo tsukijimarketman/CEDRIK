@@ -7,7 +7,7 @@ class Memory(BaseDocument):
     title = StringField()
     mem_type = EnumField(MemoryType, default=MemoryType.TEXT)
     text = StringField()
-    content = FileField()
+    file_id = StringField()
     permission = ListField(StringField())
     tags = ListField(StringField())
     embeddings = ListField(FloatField())

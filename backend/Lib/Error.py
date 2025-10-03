@@ -4,7 +4,7 @@ from flask import jsonify
 from .Logger import Logger
 
 class BadBody(BadRequest):
-    def __init__(self, description="Bad Body"):
+    def __init__(self, description: str="Bad Body"):
         super().__init__(description=description)
 
 class UserDoesNotExist(HTTPException):
@@ -18,30 +18,30 @@ class UserAlreadyExist(HTTPException):
         self.code = 400
 
 class HttpValidationError(HTTPException):
-    def __init__(self, msg = "Validation Error"):
+    def __init__(self, msg: str = "Validation Error"):
         super().__init__(msg, Response(status=400))
         self.code = 400
 
 class HttpInvalidId(HTTPException):
-    def __init__(self, msg = "Invalid Id"):
+    def __init__(self, msg: str = "Invalid Id"):
         super().__init__(msg, Response(status=400))
         self.code = 400
 
 class FileNotSupported(HTTPException):
-    def __init__(self, msg = "File is not supported"):
+    def __init__(self, msg: str = "File is not supported"):
         super().__init__(msg)
         self.code = 400
 
 class TooManyFiles(HTTPException):
-    def __init__(self, msg = "Too many files in key `file`"):
+    def __init__(self, msg: str = "Too many files in key `file`"):
         super().__init__(msg)
         self.code = 400
 
 class InvalidId(Exception): ...
 
-def ErrHTTPExceptionHandler(e):
+def ErrHTTPExceptionHandler(e: HTTPException):
     Logger.log.error(repr(e))
-    status = e.code
+    status = e.code if e.code else 500
     message = e.description
 
     return jsonify({

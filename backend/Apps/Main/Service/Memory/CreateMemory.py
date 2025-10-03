@@ -5,6 +5,8 @@ from pymongo.collection import Collection
 from pymongo.client_session import ClientSession
 from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import HTTPException
+from gridfs import GridFS
+from mongoengine.connection import get_db
 from bson import ObjectId
 
 from backend.Apps.Main.Database import Audit, AuditData, Memory
@@ -13,6 +15,7 @@ from backend.Apps.Main.RAG.Dataclass import FileInfo
 from backend.Apps.Main.RAG.Extract import extract
 from backend.Apps.Main.Utils import Collections, AuditAction, generate_embeddings
 from backend.Apps.Main.Utils.Enum import MemoryType, Permission
+from backend.Lib.Logger import Logger
 
 @dataclass
 class DCreateMemory:
@@ -33,48 +36,57 @@ def _text_memory(data: DCreateMemory, session: ClientSession, col_memory: Collec
     embeddings=embeddings
   )
 
-  mem.validate()
+  mem.validate() # type: ignore
   return col_memory.insert_one(mem.to_mongo(), session=session).inserted_id # type: ignore
 
 def _file_memory(data: DCreateMemory, session: ClientSession, col_memory: Collection): # type: ignore
   assert(data.file != None)
 
   data.file.stream.seek(0)
-  file_id: ObjectId | None = Memory().content.put( # type: ignore
-    data.file.stream, # type: ignore
+  file_info = FileInfo(
+    filename=data.file.filename, # type: ignore
+    content_type=data.file.content_type, # type: ignore
+    stream=io.BytesIO(data.file.stream.read())
+  )
+  data.file.stream.seek(0)
+
+  extracted = extract(file_info)
+  chunks = chunkify(
+    io.BytesIO(extracted.encode())
+  )
+  Logger.log.warning(f"CHUNKS {chunks}")
+
+  fs = GridFS(get_db())
+  Logger.log.info("Uploading File")
+  file_id: ObjectId | None = fs.put(
+    data.file.stream,
     filename=data.file.filename,
     content_type=data.file.content_type
   )
   if file_id == None:
     raise HTTPException(description="Something went wrong please try again")
+  Logger.log.info("File Uploaded")
 
-  data.file.stream.seek(0)
-  file_info = FileInfo(
-    filename=data.file.filename, # type: ignore
-    content_type=data.file.content_type, # type: ignore
-    stream=data.file.stream # type: ignore
-  )
-
-  extracted = extract(file_info)
-
-  chunks = chunkify(
-    io.BytesIO(extracted.encode())
-  )
-
-  memories: List[Memory] = []
-  for chunk in chunks:
-    decoded = chunk.decode()
-    mem = Memory(
-      title=data.title,
-      mem_type=MemoryType.FILE,
-      tags=data.tags,
-      text=decoded,
-      content=file_id # type: ignore
-    )
-    mem.validate()
-    memories.append(mem.to_mongo()) # type: ignore
-  
-  return col_memory.insert_many(memories, session=session).inserted_ids # type: ignore
+  try:
+    memories: List[Memory] = []
+    for chunk in chunks:
+      decoded = chunk.decode()
+      embeddings = generate_embeddings([decoded])
+      mem = Memory(
+        title=data.title,
+        mem_type=MemoryType.FILE,
+        tags=data.tags,
+        embeddings=embeddings,
+        text=decoded,
+        file_id=str(file_id)
+      )
+      mem.validate() # type: ignore
+      memories.append(mem.to_mongo()) # type: ignore
+    
+    return col_memory.insert_many(memories, session=session).inserted_ids # type: ignore
+  except Exception as e:
+    fs.delete(file_id)
+    raise
 
 def create_memory(
   session: ClientSession,
