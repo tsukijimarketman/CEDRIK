@@ -42,7 +42,7 @@ def chat():
         # !!! Do not run inside transaction
         Logger.log.warning(f"Finding Related Context...")
         model_reply = generate_reply(
-            conversation_id=body.conversation,
+            conversation_id=body.conversation if body.conversation != None else "",
             user=user_token,
             prompt=body.prompt
         )
@@ -75,7 +75,7 @@ def chat():
     except ValidationError as e:
         raise HttpValidationError(e.to_dict())
     except Exception as e:
-        Logger.log.error(f"{str(e)} {str(body)}")
+        Logger.log.error(f"{repr(e)} {str(body)}")
         raise InternalServerError()
 
     return jsonify({
