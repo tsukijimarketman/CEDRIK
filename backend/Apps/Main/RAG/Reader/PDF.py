@@ -24,4 +24,4 @@ class PDF(BaseRAG):
 
       return "\n".join(contents)
     except Exception as e:
-      return FileNotSupported(str(e))
+      raise FileNotSupported(str(e))

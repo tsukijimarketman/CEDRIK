@@ -21,4 +21,4 @@ class PPT(BaseRAG):
                 texts.append(shape.text)
       return "\n".join(texts)
     except Exception as e:
-      return FileNotSupported(str(e))
+      raise FileNotSupported(str(e))

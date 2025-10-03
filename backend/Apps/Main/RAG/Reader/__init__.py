@@ -6,8 +6,8 @@ from .PPT import *
 from .Docx import *
 
 READERS: List[BaseRAG] = [
-  PDF(),
-  Docx(),
-  PPT(),
-  Text(),
+  PDF,
+  Docx,
+  PPT,
+  Text,
 ]

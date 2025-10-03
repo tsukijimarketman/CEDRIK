@@ -17,4 +17,4 @@ class Docx(BaseRAG):
         texts = [p.text for p in doc.paragraphs if p.text.strip()]
         return "\n".join(texts)
     except Exception as e:
-      return FileNotSupported(str(e))
+      raise FileNotSupported(str(e))
