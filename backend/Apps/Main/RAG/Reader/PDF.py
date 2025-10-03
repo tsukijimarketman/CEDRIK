@@ -7,10 +7,7 @@ from charset_normalizer import from_bytes
 class PDF(BaseRAG):
   @classmethod
   def is_document(self, file_info: FileInfo):
-    ext = file_info.filename.split(".")[-1]
-    if ext.lower() != self.ext:
-      return False
-    return True
+    return file_info.filename.lower().endswith(".pdf") or file_info.content_type == "application/pdf"
 
   @classmethod
   def read(self, file_info: FileInfo):
