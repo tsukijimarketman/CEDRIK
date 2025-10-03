@@ -6,9 +6,8 @@ from .BaseDocument import BaseDocument
 class Memory(BaseDocument):
     title = StringField()
     mem_type = EnumField(MemoryType, default=MemoryType.TEXT)
-    status = StringField()
     text = StringField()
-    content = FileField()
+    file_id = StringField()
     permission = ListField(StringField())
     tags = ListField(StringField())
     embeddings = ListField(FloatField())

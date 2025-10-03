@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaServer
+from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaServer, Qwen
 from backend.Lib.Common import Prompt
 from backend.Lib.Logger import Logger
 from backend.Lib.Config import AI_MODEL, MAIN_SERVER
@@ -32,6 +32,8 @@ class Model:
       _engine = DeepSeekV3()
     elif AI_MODEL == "llama":
       _engine = LLamaServer()
+    elif AI_MODEL == "qwen":
+      _engine = Qwen()
     else:
       _engine = DistilGPT2()
 

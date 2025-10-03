@@ -6,7 +6,7 @@ from backend.Apps.Main.Database import db_connection_init
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from backend.Apps.Main.Routes import ROUTES
-from backend.Lib.Config import RESOURCE_DIR
+from backend.Lib.Config import RESOURCE_DIR, MAX_CONTENT_LENGTH
 import os
 from backend.Lib.Logger import Logger
 
@@ -25,6 +25,7 @@ app.config["JWT_COOKIE_CSRF_PROTECT"] = not app.debug  # Disable CSRF for in deb
 app.config["JWT_COOKIE_SECURE"] = not app.debug
 app.config["JWT_COOKIE_HTTPONLY"] = True
 app.config["JWT_COOKIE_SAMESITE"] = "Lax"
+app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
 # Configure CORS with all necessary settings
 cors = CORS(

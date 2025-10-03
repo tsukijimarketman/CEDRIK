@@ -1,8 +1,9 @@
 from flask import jsonify
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
+from werkzeug.exceptions import Unauthorized
 
-from backend.Lib.Error import CUnauthorized, InvalidId
+from backend.Lib.Error import InvalidId
 from backend.Apps.Main.Database import Conversation
 from backend.Apps.Main.Utils.Decorator import protect
 from backend.Apps.Main.Utils.UserToken import get_object_id, get_token
@@ -18,7 +19,7 @@ def get():
 
   token = get_token()
   if token == None:
-    raise CUnauthorized()
+    raise Unauthorized()
 
   user_id = get_object_id(token.id)
   conversations = Conversation.objects(owner=user_id)

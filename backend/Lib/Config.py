@@ -35,8 +35,8 @@ if TOKENIZER_CONFIG == None or len(TOKENIZER_CONFIG) == 0:
 if not os.path.exists(TOKENIZER_CONFIG):
   raise FileNotFoundError()
 
-FILE_SIZE_LIMIT_MB = _get_env_or_default("FILE_SIZE_LIMIT_MB",10, lambda x: int(x))
-MAX_CONTEXT_SIZE = _get_env_or_default("MAX_CONTEXT_SIZE",5, lambda x: int(x))
+MAX_CONTENT_LENGTH = _get_env_or_default("MAX_CONTENT_LENGTH",10*1024*1024, lambda x: int(x))
+MAX_CONTEXT_SIZE = _get_env_or_default("MAX_CONTEXT_SIZE", 5, lambda x: int(x))
 MAIN_SERVER = _get_env_or_default("SERVER_MAIN", "http://localhost:5000")
 ENCODER_SERVER = _get_env_or_default("SERVER_ENCODER" , "http://localhost:5001/encode")
 MODEL_SERVER = _get_env_or_default("SERVER_MODEL", "http://localhost:5002/generate-reply")
@@ -54,3 +54,8 @@ RESOURCE_DIR = _get_env_or_default("RESOURCE_DIR", "Uploads/")
 LLAMA_SERVER = os.getenv("LLAMA_SERVER")
 if AI_MODEL == "llama" and (LLAMA_SERVER == None or len(LLAMA_SERVER) == 0):
   raise Exception("LLAMA_SERVER is not set but AI_MODEL is set to llama")
+
+CHUNK_SIZE_BYTES = _get_env_or_default("CHUNK_SIZE_BYTES", 256, lambda x:  int(x))
+CHUNK_OFFSET_BYTES = _get_env_or_default("CHUNK_OFFSET_BYTES", 28, lambda x:  int(x))
+
+DEBUG = bool(_get_env_or_default("DEBUG", False, lambda x: x != None or len(x) > 0))

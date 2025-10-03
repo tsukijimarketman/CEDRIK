@@ -1,6 +1,8 @@
 from pymongo.collection import Collection
 from pymongo.client_session import ClientSession
 from typing import List
+from concurrent.futures import ThreadPoolExecutor
+import time
 
 from backend.Apps.Main.Database import Conversation, Message, Audit, AuditData, Memory
 from backend.Lib.Logger import Logger
@@ -26,9 +28,28 @@ def __search_similarity_from_memory(query_embeddings: List[float]):
             "text": 1,
             "score": {"$meta": "vectorSearchScore"}  # include similarity score
         }
+    },
+    {
+        "$match": {
+            "score": { "$gte": 0.5 }
+        }
     }
   ]
   return list(Memory.objects.aggregate(*pipeline))
+
+def __get_last_message(
+  conversation_id: ObjectId,
+  sender_id: ObjectId,
+):
+  return [ { "text": i.text } for i in list(
+    Message.objects(
+        conversation=conversation_id,
+        sender=sender_id
+       )
+      .only("text")
+      .order_by("-created_at")
+      .limit(MAX_CONTEXT_SIZE)
+  ) ]
 
 def __search_similarity_from_message(
   query_embeddings: List[float],
@@ -55,6 +76,11 @@ def __search_similarity_from_message(
             "text": 1,
             "score": {"$meta": "vectorSearchScore"}  # include similarity score
         }
+    },
+    {
+        "$match": {
+            "score": { "$gte": 0.5 }
+        }
     }
   ]
   return list(Message.objects.aggregate(*pipeline))
@@ -71,22 +97,41 @@ def generate_reply(
     # raise Exception(f"Embeddings is len 0")
   # Logger.log.info(f"embeddings {query_embeddings[:5]}")
 
-  sim_results = __search_similarity_from_memory(
-    query_embeddings=query_embeddings,
-  )
-  sim_results.extend(
-    __search_similarity_from_message(
-      query_embeddings=query_embeddings,
-      conversation_id=get_object_id(conversation_id),
-      sender_id=get_object_id(user.id),
-    ) if len(conversation_id) > 0 else []
-  )
+  sim_results = []
+  if len(query_embeddings) > 0:
+    start = time.perf_counter()
+    with ThreadPoolExecutor(max_workers=2) as executer:
+      ex1 = executer.submit(__search_similarity_from_memory, query_embeddings=query_embeddings)
+      ex2 = executer.submit(
+        __get_last_message,
+        conversation_id=get_object_id(conversation_id),
+        sender_id=get_object_id(user.id),
+      )
+      # if len(conversation_id) > 0:
+      #   ex2 = executer.submit(
+      #     __search_similarity_from_message, 
+      #     query_embeddings=query_embeddings,
+      #     conversation_id=get_object_id(conversation_id),
+      #     sender_id=get_object_id(user.id),
+      #   )
+
+      sim_results.extend(ex1.result())
+      sim_results.extend(ex2.result())
+      # if ex2 == None:
+      #   sim_results.extend(ex2.result())
+      
+    end = time.perf_counter()
+    elapsed = end - start;
+    Logger.log.info(f"Query Context took {elapsed}ms")
+
   Logger.log.info(f"context {sim_results}")
   context = [ i["text"] for i in sim_results ]
-  embeddings = generate_embeddings([prompt.content])
+
+  reply = generate_model_reply(prompt=prompt, context=context)
+
   return Reply(
-    reply=generate_model_reply(prompt=prompt, context=context),
-    embeddings=embeddings,
+    reply=reply,
+    embeddings=query_embeddings,
     prompt=prompt
   )
 

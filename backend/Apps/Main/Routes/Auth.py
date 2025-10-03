@@ -7,7 +7,7 @@ from mongoengine import ValidationError
 from pymongo.errors import DuplicateKeyError
 from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 
-from backend.Lib.Error import BadBody, UserDoesNotExist, CUnauthorized, HttpValidationError
+from backend.Lib.Error import BadBody, UserAlreadyExist, UserDoesNotExist, HttpValidationError
 from backend.Apps.Main.Hasher import verify_password, hash as hash_password
 from backend.Lib.Logger import Logger
 from backend.Apps.Main.Database import Transaction, Audit, AuditData, User
@@ -91,7 +91,7 @@ def logout():
 def me():
     payload = get_token()
     if (payload == None):
-        return CUnauthorized()
+        return Unauthorized()
     return jsonify(payload.__dict__), 200
 
 @auth.route("/me", methods=["PUT"])
@@ -105,7 +105,7 @@ def update_me():
 
     payload = get_token()
     if payload is None:
-        return CUnauthorized()
+        return Unauthorized()
 
     try:
         with Transaction() as (session, db):
@@ -236,11 +236,10 @@ def register():
     except ValidationError as e:
         raise HttpValidationError(e.to_dict())
     except DuplicateKeyError as e:
-        print("Duplicate")
         Logger.log.error(str(e))
-        raise Unauthorized(description="User already exists")
+        raise UserAlreadyExist(description="User already exists")
     except Exception as e:
         Logger.log.error(str(e))
-        raise HTTPException(f"Failed to Register User {str(req_register)}", Response(status=400))
+        raise HTTPException(description=str(e))
 
     return "", 200

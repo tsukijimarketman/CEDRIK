@@ -73,6 +73,7 @@ services:
       - ./.env:/app/.env:ro
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
+      - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
     ports:
       - 5002:5002
@@ -82,6 +83,7 @@ services:
       FLASK_APP: backend.Apps.Model
       DEBUG: --debug
       NO_RELOAD: --no-reload
+      HF_HOME: /app/hf_cache
 
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan

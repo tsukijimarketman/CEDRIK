@@ -1,6 +1,6 @@
 from dataclasses import fields, MISSING
 
-def get_schema_of_dataclass(class_name):
+def get_schema_of_dataclass(class_name): # type: ignore
   """
   Returns the schema of `class_name`
 
@@ -8,12 +8,12 @@ def get_schema_of_dataclass(class_name):
     `dict`
   """
   out = {}
-  for f in fields(class_name):
+  for f in fields(class_name): # type: ignore
     required = f.default is MISSING and f.default_factory is MISSING
 
-    ftype = str(f.type) if hasattr(f.type, '__origin__') else f.type.__name__
+    ftype = str(f.type) if hasattr(f.type, '__origin__') else f.type.__name__ # type: ignore
     out[f.name] = {
       "type": ftype,
       "required": required
     }
-  return out
+  return out # type: ignore

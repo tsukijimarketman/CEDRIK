@@ -31,7 +31,7 @@ def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
         Logger.log.error(str(e))
         return ""
 
-def generate_embeddings(buffer: List[Any]):
+def generate_embeddings(buffer: List[Any]) -> List[float]:
     try:
         response = requests.post(
             url=ENCODER_SERVER,
@@ -39,7 +39,7 @@ def generate_embeddings(buffer: List[Any]):
                 "data": buffer
             }),
             headers={ "Content-Type": "application/json" },
-            timeout=10
+            timeout=240
         )
         response.raise_for_status()
         d = response.json()
