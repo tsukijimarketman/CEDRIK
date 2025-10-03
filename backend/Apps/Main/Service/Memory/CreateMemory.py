@@ -4,6 +4,8 @@ from typing import List
 from pymongo.collection import Collection
 from pymongo.client_session import ClientSession
 from werkzeug.datastructures import FileStorage
+from werkzeug.exceptions import HTTPException
+from bson import ObjectId
 
 from backend.Apps.Main.Database import Audit, AuditData, Memory
 from backend.Apps.Main.RAG.Chunk import chunkify
@@ -11,16 +13,15 @@ from backend.Apps.Main.RAG.Dataclass import FileInfo
 from backend.Apps.Main.RAG.Extract import extract
 from backend.Apps.Main.Utils import Collections, AuditAction, generate_embeddings
 from backend.Apps.Main.Utils.Enum import MemoryType, Permission
-from backend.Apps.Main.Validation.File import validate_file
 
 @dataclass
-class CreateMemory:
+class DCreateMemory:
   title: str
   text: str
-  file: FileStorage = None
+  file: FileStorage | None = None
   tags: List[str] | str = ""
 
-def _text_memory(data: CreateMemory, session: ClientSession, col_memory: Collection):
+def _text_memory(data: DCreateMemory, session: ClientSession, col_memory: Collection): # type: ignore
   embeddings = generate_embeddings([f"{data.title}\n{data.text}"])
 
   mem = Memory(
@@ -33,21 +34,25 @@ def _text_memory(data: CreateMemory, session: ClientSession, col_memory: Collect
   )
 
   mem.validate()
-  return col_memory.insert_one(mem.to_mongo(), session=session).inserted_id
+  return col_memory.insert_one(mem.to_mongo(), session=session).inserted_id # type: ignore
 
-def _file_memory(data: CreateMemory, session: ClientSession, col_memory: Collection):
+def _file_memory(data: DCreateMemory, session: ClientSession, col_memory: Collection): # type: ignore
+  assert(data.file != None)
+
   data.file.stream.seek(0)
-  file_id = Memory.content.put(
-    data.file.stream,
+  file_id: ObjectId | None = Memory().content.put( # type: ignore
+    data.file.stream, # type: ignore
     filename=data.file.filename,
     content_type=data.file.content_type
   )
+  if file_id == None:
+    raise HTTPException(description="Something went wrong please try again")
 
   data.file.stream.seek(0)
   file_info = FileInfo(
-    filename=data.file.filename,
-    content_type=data.file.content_type,
-    stream=data.file.stream
+    filename=data.file.filename, # type: ignore
+    content_type=data.file.content_type, # type: ignore
+    stream=data.file.stream # type: ignore
   )
 
   extracted = extract(file_info)
@@ -64,19 +69,17 @@ def _file_memory(data: CreateMemory, session: ClientSession, col_memory: Collect
       mem_type=MemoryType.FILE,
       tags=data.tags,
       text=decoded,
-      content=file_id
+      content=file_id # type: ignore
     )
     mem.validate()
-    memories.append(mem.to_mongo())
+    memories.append(mem.to_mongo()) # type: ignore
   
-  return col_memory.insert_many(memories, session=session).inserted_ids
-
+  return col_memory.insert_many(memories, session=session).inserted_ids # type: ignore
 
 def create_memory(
   session: ClientSession,
-  col_audit: Collection,
-  col_memory: Collection,
-  data: CreateMemory
+  col_audit: Collection, col_memory: Collection, # type: ignore
+  data: DCreateMemory
 ):
   res_insert = []
   if data.file != None:
@@ -97,7 +100,7 @@ def create_memory(
       action=AuditAction.ADD,
       data=AuditData(
           collection=Collections.MEMORY.value,
-          ad_id=res_insert.inserted_id
+          ad_id=res_insert
       ).__dict__
   )
-  col_audit.insert_one(audit.to_mongo(), session=session)
+  col_audit.insert_one(audit.to_mongo(), session=session) # type: ignore

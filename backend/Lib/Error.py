@@ -40,7 +40,7 @@ class TooManyFiles(HTTPException):
 class InvalidId(Exception): ...
 
 def ErrHTTPExceptionHandler(e):
-    Logger.log.error(str(e))
+    Logger.log.error(repr(e))
     status = e.code
     message = e.description
 

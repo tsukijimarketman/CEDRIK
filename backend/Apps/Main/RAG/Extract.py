@@ -3,9 +3,8 @@ from backend.Lib.Error import FileNotSupported
 from .Reader import *
 
 def extract(file_info: FileInfo):
-  reader = PDF(file_info.filename)
   for reader in READERS:
-    if reader.is_document(file_info.stream):
-      return reader.read(file_info.stream)
+    if reader.is_document(file_info):
+      return reader.read(file_info)
 
   raise FileNotSupported()

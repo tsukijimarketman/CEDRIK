@@ -1,1 +1,1 @@
-from .CreateMemory import create_memory
+from .CreateMemory import create_memory, DCreateMemory

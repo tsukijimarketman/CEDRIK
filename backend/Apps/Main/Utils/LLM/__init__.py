@@ -31,7 +31,7 @@ def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
         Logger.log.error(str(e))
         return ""
 
-def generate_embeddings(buffer: List[Any]):
+def generate_embeddings(buffer: List[Any]) -> List[float]:
     try:
         response = requests.post(
             url=ENCODER_SERVER,

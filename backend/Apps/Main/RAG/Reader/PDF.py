@@ -2,20 +2,20 @@ from backend.Apps.Main.RAG.Dataclass import FileInfo
 from backend.Lib.Error import FileNotSupported
 from .Base import BaseRAG
 import PyPDF2 as pdf2
-from charset_normalizer import from_bytes
+from typing import List
 
 class PDF(BaseRAG):
   @classmethod
-  def is_document(self, file_info: FileInfo):
+  def is_document(cls, file_info: FileInfo):
     return file_info.filename.lower().endswith(".pdf") or file_info.content_type == "application/pdf"
 
   @classmethod
-  def read(self, file_info: FileInfo):
+  def read(cls, file_info: FileInfo):
     buffer = file_info.stream
     try:
       read_pdf = pdf2.PdfReader(buffer)
 
-      contents = []
+      contents: List[str] = []
       for page in read_pdf.pages:
         contents.append(
           page.extract_text()

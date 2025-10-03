@@ -240,6 +240,6 @@ def register():
         raise UserAlreadyExist(description="User already exists")
     except Exception as e:
         Logger.log.error(str(e))
-        raise HTTPException(f"Failed to Register User {str(req_register)}", Response(status=400))
+        raise HTTPException(description=str(e))
 
     return "", 200
