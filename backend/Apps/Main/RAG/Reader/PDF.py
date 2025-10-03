@@ -1,20 +1,21 @@
+from backend.Apps.Main.RAG.Dataclass import FileInfo
 from .Base import BaseRAG
 import PyPDF2 as pdf2
 from charset_normalizer import from_bytes
 
-class Text(BaseRAG):
-  def __init__(self, filepath):
-    super().__init__("pdf", "pdf", "pdf")
-    self.filepath: str = filepath
-  
-  def is_document(self, buffer):
-    ext = self.filepath.split(".")[-1]
+class PDF(BaseRAG):
+  @classmethod
+  def is_document(self, file_info: FileInfo):
+    ext = file_info.filename.split(".")[-1]
     if ext.lower() != self.ext:
       return False
     return True
 
-  def read(self, buffer):
+  @classmethod
+  def read(self, file_info: FileInfo):
+    buffer = file_info.stream
     read_pdf = pdf2.PdfReader(buffer)
+
     contents = []
     for page in read_pdf.pages:
       contents.append(

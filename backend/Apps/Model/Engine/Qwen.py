@@ -8,7 +8,7 @@ from .Base import LLMEngine
 
 class Qwen(LLMEngine):
   def __init__(self):
-    super().__init__("Qwen/Qwen2.5-VL-7B-Instruct")
+    super().__init__("Qwen/Qwen3-Next-80B-A3B-Instruct")
     self._processor = AutoProcessor.from_pretrained(self.model, trust_remote_code=True)
     self._model = AutoModelForVision2Seq.from_pretrained(self.model,
       device_map="auto",

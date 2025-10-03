@@ -37,6 +37,21 @@ def __search_similarity_from_memory(query_embeddings: List[float]):
   ]
   return list(Memory.objects.aggregate(*pipeline))
 
+
+def __get_last_message(
+  conversation_id: ObjectId,
+  sender_id: ObjectId,
+):
+  return list(
+    Message.objects(
+        conversation_id=conversation_id,
+        sender_id=sender_id
+       )
+      .only("text")
+      .order_by("-created_at")
+      .limit(MAX_CONTEXT_SIZE)
+  )
+
 def __search_similarity_from_message(
   query_embeddings: List[float],
   conversation_id: ObjectId,
@@ -88,18 +103,23 @@ def generate_reply(
     start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=2) as executer:
       ex1 = executer.submit(__search_similarity_from_memory, query_embeddings=query_embeddings)
-      ex2 = None
-      if len(conversation_id) > 0:
-        ex2 = executer.submit(
-          __search_similarity_from_message, 
-          query_embeddings=query_embeddings,
-          conversation_id=get_object_id(conversation_id),
-          sender_id=get_object_id(user.id),
-        )
+      ex2 = executer.submit(
+        __get_last_message,
+        conversation_id=get_object_id(conversation_id),
+        sender_id=get_object_id(user.id),
+      )
+      # if len(conversation_id) > 0:
+      #   ex2 = executer.submit(
+      #     __search_similarity_from_message, 
+      #     query_embeddings=query_embeddings,
+      #     conversation_id=get_object_id(conversation_id),
+      #     sender_id=get_object_id(user.id),
+      #   )
 
       sim_results.extend(ex1.result())
-      if ex2 == None:
-        sim_results.extend(ex2.result())
+      sim_results.extend(ex2.result())
+      # if ex2 == None:
+      #   sim_results.extend(ex2.result())
       
     end = time.perf_counter()
     elapsed = end - start;

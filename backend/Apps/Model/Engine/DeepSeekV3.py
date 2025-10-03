@@ -11,7 +11,7 @@ class DeepSeekV3(LLMEngine):
     super().__init__("deepseek-ai/DeepSeek-V3")
     self._tokenizer = AutoTokenizer.from_pretrained(self.model, trust_remote_code=True)
     self._model = AutoModelForCausalLM.from_pretrained(self.model,
-      device_map="auto",
+      # device_map="auto",
       # load_in_8bit=True,
       trust_remote_code=True
     )

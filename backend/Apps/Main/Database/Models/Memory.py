@@ -6,7 +6,6 @@ from .BaseDocument import BaseDocument
 class Memory(BaseDocument):
     title = StringField()
     mem_type = EnumField(MemoryType, default=MemoryType.TEXT)
-    status = StringField()
     text = StringField()
     content = FileField()
     permission = ListField(StringField())
