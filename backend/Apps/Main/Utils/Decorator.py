@@ -2,7 +2,7 @@ from functools import wraps
 import flask
 from flask_jwt_extended import get_jwt
 from backend.Apps.Main.Utils.Enum import Role
-from backend.Lib.Error import CUnauthorized
+from werkzeug.exceptions import Unauthorized
 from backend.Lib.Logger import Logger
 from .UserToken import UserToken
 
@@ -24,21 +24,21 @@ def protect(role=Role.USER):
       jwt = get_jwt()
       token: UserToken = None
       if len(jwt) == 0:
-        raise CUnauthorized()
+        raise Unauthorized()
       token = UserToken(jwt)
 
       match role:
         case Role.ADMIN:
           if not (token.aud == Role.SUPERADMIN.value or token.aud == Role.SUPERADMIN.value):
-            raise CUnauthorized()
+            raise Unauthorized()
           pass
         case Role.SUPERADMIN:
           if not token.aud == Role.SUPERADMIN.value:
-            raise CUnauthorized()
+            raise Unauthorized()
         case Role.USER:
           pass
         case _:
-          raise CUnauthorized()
+          raise Unauthorized()
 
       return f(*args, **kwargs)
     return decorator
