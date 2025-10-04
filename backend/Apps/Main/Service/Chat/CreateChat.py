@@ -31,18 +31,18 @@ def __search_similarity_from_memory(query_embeddings: List[float]):
     },
     {
         "$match": {
-            "score": { "$gte": 0.5 }
+            "score": { "$gte": 0.75 }
         }
     }
   ]
-  return list(Memory.objects.aggregate(*pipeline))
+  return list(Memory.objects.aggregate(*pipeline)) # type: ignore
 
 def __get_last_message(
   conversation_id: ObjectId,
   sender_id: ObjectId,
 ):
   return [ { "text": i.text } for i in list(
-    Message.objects(
+    Message.objects( # type: ignore
         conversation=conversation_id,
         sender=sender_id
        )
@@ -83,7 +83,7 @@ def __search_similarity_from_message(
         }
     }
   ]
-  return list(Message.objects.aggregate(*pipeline))
+  return list(Message.objects.aggregate(*pipeline)) # type: ignore
 
 def generate_reply(
   conversation_id: str,
@@ -102,11 +102,13 @@ def generate_reply(
     start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=2) as executer:
       ex1 = executer.submit(__search_similarity_from_memory, query_embeddings=query_embeddings)
-      ex2 = executer.submit(
-        __get_last_message,
-        conversation_id=get_object_id(conversation_id),
-        sender_id=get_object_id(user.id),
-      )
+      ex2 = None
+      if len(conversation_id) > 0:
+        ex2 = executer.submit(
+          __get_last_message,
+          conversation_id=get_object_id(conversation_id),
+          sender_id=get_object_id(user.id),
+        )
       # if len(conversation_id) > 0:
       #   ex2 = executer.submit(
       #     __search_similarity_from_message, 
@@ -116,7 +118,8 @@ def generate_reply(
       #   )
 
       sim_results.extend(ex1.result())
-      sim_results.extend(ex2.result())
+      if len(conversation_id) > 0 and ex2:
+        sim_results.extend(ex2.result())
       # if ex2 == None:
       #   sim_results.extend(ex2.result())
       
@@ -180,7 +183,7 @@ def create_chat(
 
   else:
       conv_id = get_object_id(conversation_id)
-      conv = Conversation.objects.with_id(conv_id)
+      conv = Conversation.objects.with_id(conv_id) # type: ignore
       if (conv == None):
         conv = Conversation(owner=user_token.id, title=title)
         conv.validate()
