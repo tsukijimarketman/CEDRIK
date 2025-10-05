@@ -63,6 +63,9 @@ def chat():
             if len(default_title) > 10:
                 default_title = default_title[:10]
 
+            # !!! WARN DEBUGGING only
+            return "", 200
+
             create_chat(
                 session,
                 col_audit,
@@ -78,7 +81,7 @@ def chat():
     except InvalidId as e:
         raise HttpInvalidId()
     except ValidationError as e:
-        raise HttpValidationError(e.to_dict())
+        raise HttpValidationError(e.to_dict()) # type: ignore
     except Exception as e:
         Logger.log.error(f"{repr(e)} {str(body)}")
         raise InternalServerError()
