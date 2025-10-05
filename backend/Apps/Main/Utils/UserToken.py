@@ -32,6 +32,7 @@ def get_token():
         return None
     return UserToken(token)
 
+# NOTE move this to another file
 def get_object_id(id: str):
     try:
         return ObjectId(id)

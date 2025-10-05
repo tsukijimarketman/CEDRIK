@@ -1,8 +1,7 @@
-from backend.Lib.Logger import Logger
+from flask import current_app
+from .FilterExtension import KEY
+from .FilterService import FilterService
 
-
-class Filter:
-  service = None
-
-  def __init__(self):
-    Logger.log.warning("Filter Service is not yet implemented")
+def filter(v: str):
+  service: FilterService = current_app.extensions[KEY]
+  return service.filter(v)
