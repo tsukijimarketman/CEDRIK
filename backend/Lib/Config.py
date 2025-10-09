@@ -40,6 +40,7 @@ MAX_CONTEXT_SIZE = int(_get_env_or_default("MAX_CONTEXT_SIZE", 5, lambda x: int(
 MAIN_SERVER = str(_get_env_or_default("SERVER_MAIN", "http://localhost:5000"))
 ENCODER_SERVER = str( _get_env_or_default("SERVER_ENCODER" , "http://localhost:5001/encode") )
 MODEL_SERVER = str( _get_env_or_default("SERVER_MODEL", "http://localhost:5002/generate-reply") )
+FRONTEND_SERVER = str( _get_env_or_default("SERVER_FRONTEND", "http://localhost:5173") )
 DATABASE_URI = str(_get_required_env("CyberSync_DatabaseUri"))
 JWT_SECRET = str(_get_required_env("JWT_SECRET"))
 RESOURCE_DIR = str(_get_env_or_default("RESOURCE_DIR", "Uploads/"))

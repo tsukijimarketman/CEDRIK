@@ -7,7 +7,7 @@ from backend.Apps.Main.Database import db_connection_init
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from backend.Apps.Main.Routes import ROUTES
-from backend.Lib.Config import RESOURCE_DIR, MAX_CONTENT_LENGTH
+from backend.Lib.Config import RESOURCE_DIR, MAX_CONTENT_LENGTH, FRONTEND_SERVER
 import os
 from backend.Lib.Logger import Logger
 
@@ -35,7 +35,7 @@ cors = CORS(
     app,
     resources={
         r"/*": {
-            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+            "origins": [FRONTEND_SERVER],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization", "X-CSRF-TOKEN"],
             "supports_credentials": True,
