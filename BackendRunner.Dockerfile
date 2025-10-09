@@ -4,7 +4,7 @@ WORKDIR /app/
 
 COPY ./requirements.txt ./
 RUN --mount=type=cache,mode=0755,target=/root/.cache/pip \
-    pip install -r requirements.txt && pip install PyPDF2 python-docx python-pptx openpyxl
+    pip install -r requirements.txt
 
 ARG UID=10001
 RUN adduser \
