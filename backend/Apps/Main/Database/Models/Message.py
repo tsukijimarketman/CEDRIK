@@ -1,11 +1,11 @@
-from mongoengine import DictField, Document, FileField, FloatField, ListField, ReferenceField, StringField, DateTimeField
+from mongoengine import FloatField, ListField, ReferenceField, StringField
+from mongoengine.base.fields import ObjectIdField
 from backend.Apps.Main.Database.Models import User, Conversation
-from datetime import datetime
 from .BaseDocument import BaseDocument
 
 class Message(BaseDocument):
     sender = ReferenceField(User, default=None) # None for AI Model
     conversation = ReferenceField(Conversation)
     text = StringField()
-    m_file = FileField()
+    file_id = ObjectIdField(required=False)
     embeddings = ListField(FloatField()) # No Embeddings for AI Model
