@@ -63,9 +63,6 @@ def chat():
             if len(default_title) > 10:
                 default_title = default_title[:10]
 
-            # !!! WARN DEBUGGING only
-            return "", 200
-
             create_chat(
                 session,
                 col_audit,

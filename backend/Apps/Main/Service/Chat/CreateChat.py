@@ -31,7 +31,7 @@ def __search_similarity_from_memory(query_embeddings: List[float]):
     },
     {
         "$match": {
-            "score": { "$gte": 0.75 }
+            "score": { "$gte": 0.65 }
         }
     }
   ]

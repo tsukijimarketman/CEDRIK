@@ -49,18 +49,8 @@ export function SignUpDialog({
     try {
       setIsLoading(true);
 
-      await authApi.register({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-      });
-
-      toast({
-        title: "Success",
-        description: "Account created successfully!",
-      });
-      onSignUpSuccess?.();
       onSignUp(formData.username, formData.email, formData.password);
+      onSignUpSuccess?.();
       onClose();
     } catch (error) {
       toast({
