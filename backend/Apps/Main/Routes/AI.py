@@ -20,7 +20,7 @@ class ChatBody:
     conversation: str | None
     prompt: Prompt
     def __post_init__(self):
-        self.prompt = Prompt(**self.prompt)
+        self.prompt = Prompt(**self.prompt) # type: ignore
 
 @ai.route("/chat", methods=["POST"])
 @jwt_required(optional=False)
@@ -30,9 +30,14 @@ def chat():
         body = request.get_json()
         body = ChatBody(**body)
         body.prompt.role = "user" # force user role for testing
+        if body.conversation == None:
+            body.conversation = ""
     except Exception as _:
         raise BadBody()
     user_token = get_token()
+
+    assert(user_token != None)
+
     Logger.log.info(f"chat::prompt {body}")
 
     try:
@@ -58,6 +63,9 @@ def chat():
             if len(default_title) > 10:
                 default_title = default_title[:10]
 
+            # !!! WARN DEBUGGING only
+            return "", 200
+
             create_chat(
                 session,
                 col_audit,
@@ -73,7 +81,7 @@ def chat():
     except InvalidId as e:
         raise HttpInvalidId()
     except ValidationError as e:
-        raise HttpValidationError(e.to_dict())
+        raise HttpValidationError(e.to_dict()) # type: ignore
     except Exception as e:
         Logger.log.error(f"{repr(e)} {str(body)}")
         raise InternalServerError()

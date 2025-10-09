@@ -9,11 +9,11 @@ from gridfs import GridFS
 from mongoengine.connection import get_db
 from bson import ObjectId
 
-from backend.Apps.Main.Database import Audit, AuditData, Memory
+from backend.Apps.Main.Database import Audit, Memory
 from backend.Apps.Main.RAG.Chunk import chunkify
 from backend.Apps.Main.RAG.Dataclass import FileInfo
 from backend.Apps.Main.RAG.Extract import extract
-from backend.Apps.Main.Utils import Collections, AuditAction, generate_embeddings
+from backend.Apps.Main.Utils import Collections, AuditType, generate_embeddings
 from backend.Apps.Main.Utils.Enum import MemoryType, Permission
 from backend.Lib.Logger import Logger
 
@@ -78,7 +78,7 @@ def _file_memory(data: DCreateMemory, session: ClientSession, col_memory: Collec
         tags=data.tags,
         embeddings=embeddings,
         text=decoded,
-        file_id=str(file_id)
+        file_id=file_id
       )
       mem.validate() # type: ignore
       memories.append(mem.to_mongo()) # type: ignore
@@ -108,11 +108,22 @@ def create_memory(
       col_memory=col_memory
     )
 
-  audit = Audit(
-      action=AuditAction.ADD,
-      data=AuditData(
-          collection=Collections.MEMORY.value,
-          ad_id=res_insert
-      ).__dict__
-  )
-  col_audit.insert_one(audit.to_mongo(), session=session) # type: ignore
+  audits = []
+  if isinstance(res_insert, list):
+    for inserted_id in res_insert:
+      audits.append(
+        Audit.audit_collection(
+          type=AuditType.ADD,
+          collection=Collections.MEMORY,
+          id=inserted_id
+        ).to_mongo()
+      )
+  else:
+    audits.append(
+      Audit.audit_collection(
+        type=AuditType.ADD,
+        collection=Collections.MEMORY,
+        id=res_insert,
+      ).to_mongo()
+    )
+  col_audit.insert_many(audits, session=session) # type: ignore

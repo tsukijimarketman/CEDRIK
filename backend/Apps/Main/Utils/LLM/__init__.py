@@ -1,5 +1,8 @@
 from dataclasses import asdict, dataclass
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 import json
 from backend.Lib.Logger import Logger
 from backend.Lib.Common import Prompt
@@ -14,7 +17,18 @@ class Reply:
 
 def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
     try:
-        response = requests.post(
+      with requests.Session() as s:
+        retry = Retry(
+          total=3,
+          backoff_factor=0.3,
+          allowed_methods=["POST"],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        adapter = HTTPAdapter(max_retries=retry)
+        s.mount("http://", adapter)
+        s.mount("https://", adapter)
+
+        response = s.post(
             url=MODEL_SERVER,
             data=json.dumps({
                 "context": context,
@@ -28,22 +42,33 @@ def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
 
         return d["reply"]
     except Exception as e:
-        Logger.log.error(str(e))
+        Logger.log.error(repr(e))
         return ""
 
 def generate_embeddings(buffer: List[Any]) -> List[float]:
     try:
-        response = requests.post(
-            url=ENCODER_SERVER,
-            data=json.dumps({
-                "data": buffer
-            }),
-            headers={ "Content-Type": "application/json" },
-            timeout=240
+      with requests.Session() as s:
+        retry = Retry(
+          total=3,
+          backoff_factor=0.3,
+          allowed_methods=["POST"],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        s.mount("http://", adapter)
+        s.mount("https://", adapter)
+
+        response = s.post(
+          url=ENCODER_SERVER,
+          data=json.dumps({
+              "data": buffer
+          }),
+          headers={ "Content-Type": "application/json" },
+          timeout=30
         )
         response.raise_for_status()
         d = response.json()
         return d["embeddings"]
+
     except Exception as e:
-        Logger.log.error(str(e))
+        Logger.log.error(repr(e))
         return []

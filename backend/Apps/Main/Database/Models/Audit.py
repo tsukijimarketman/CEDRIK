@@ -2,16 +2,34 @@ from dataclasses import dataclass
 from typing import List, Union
 from mongoengine import DictField, EnumField
 
-from backend.Apps.Main.Utils.Enum import AuditAction
+from backend.Apps.Main.Utils.Enum import AuditType, Collections
 from .BaseDocument import BaseDocument
-
-@dataclass
-class AuditData:
-    collection: str = ""
-    ad_id: Union[List[str], str] = None
-    ad_from: dict | None = None
-    ad_to: dict | None = None
+from bson import ObjectId
 
 class Audit(BaseDocument):
-    action = EnumField(AuditAction, required=True)
+    type = EnumField(AuditType, required=True)
     data = DictField()
+
+    @staticmethod
+    def audit_collection(type: AuditType, collection: Collections, id: ObjectId, from_data: dict | None = None, to_data: dict | None = None):
+        """
+        for AuditType `ADD` or `DELETE` keep `from_data` and `to_data` to None
+        """
+        return Audit(
+            type=type,
+            data={
+                "collection": collection,
+                "id": id,
+                "from": from_data,
+                "to": to_data
+            }
+        )
+
+    @staticmethod
+    def audit_message(msg: str):
+        return Audit(
+            type=AuditType.MESSAGE,
+            data={
+                "msg": msg
+            }
+        )

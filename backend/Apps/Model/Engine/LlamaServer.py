@@ -31,7 +31,8 @@ class LLamaServer(LLMEngine):
   #   return self._tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:])
 
   def generate(self, query):
-    try: 
+    try:
+      assert(isinstance(LLAMA_SERVER, str))
       config = load_json(TOKENIZER_CONFIG)
       body = {
         "messages": [ asdict(i) for i in query ],

@@ -1,3 +1,4 @@
+from backend.Apps.Main.Filter import FilterExtension
 from backend.Lib.Config import JWT_SECRET
 from werkzeug.exceptions import HTTPException, InternalServerError
 from backend.Lib.Error import ErrHTTPExceptionHandler
@@ -26,6 +27,8 @@ app.config["JWT_COOKIE_SECURE"] = not app.debug
 app.config["JWT_COOKIE_HTTPONLY"] = True
 app.config["JWT_COOKIE_SAMESITE"] = "Lax"
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
+
+FilterExtension(app)
 
 # Configure CORS with all necessary settings
 cors = CORS(

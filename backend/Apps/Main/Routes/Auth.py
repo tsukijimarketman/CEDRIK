@@ -10,8 +10,8 @@ from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 from backend.Lib.Error import BadBody, UserAlreadyExist, UserDoesNotExist, HttpValidationError
 from backend.Apps.Main.Hasher import verify_password, hash as hash_password
 from backend.Lib.Logger import Logger
-from backend.Apps.Main.Database import Transaction, Audit, AuditData, User
-from backend.Apps.Main.Utils import get_token, Role, AuditAction, Collections, get_object_id
+from backend.Apps.Main.Database import Transaction, Audit, User
+from backend.Apps.Main.Utils import get_token, Role, AuditType, Collections, get_object_id
 from backend.Apps.Main.Validation import validate_username, validate_password
 
 auth = Blueprint("Auth", __name__)
@@ -48,6 +48,9 @@ def login():
             raise UserDoesNotExist()
 
         user: User = userQS.first()
+        if not isinstance(user, User):
+            raise UserDoesNotExist()
+
         if not verify_password(str(user.password), req_login.password):
             raise UserDoesNotExist()
 
@@ -61,10 +64,10 @@ def login():
                 "username": user.username
             },
         )
-        
+
         # Create response with user data
         resp = make_response(jsonify({
-            "id": str(user.id),
+            "id": str(user.id), # type: ignore
             "email": user.email,
             "username": user.username
         }), 200)
@@ -156,14 +159,12 @@ def update_me():
                 session=session,
             )
 
-            audit = Audit(
-                action=AuditAction.EDIT,
-                data=AuditData(
-                    collection=Collections.USER.value,
-                    ad_id=user_id,
-                    ad_from=ad_from if len(ad_from) > 0 else None,
-                    ad_to=ad_to if len(ad_to) > 0 else None,
-                ).__dict__
+            audit = Audit.audit_collection(
+                type=AuditType.EDIT,
+                collection=Collections.USER,
+                id=user_id,
+                from_data=ad_from if len(ad_from) > 0 else None,
+                to_data=ad_to if len(ad_to) > 0 else None
             )
             col_audit.insert_one(audit.to_mongo(), session=session)
 
@@ -197,7 +198,7 @@ def update_me():
         Logger.log.error(str(e))
         raise Unauthorized(description="Username already exists")
     except ValidationError as e:
-        raise HttpValidationError(e.to_dict())
+        raise HttpValidationError(e.to_dict()) # type: ignore
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -225,19 +226,19 @@ def register():
                 user.validate()
                 user.hash_password()
                 res_insert = col_user.insert_one(user.to_mongo(), session=session)
-                audit = Audit(
-                    action=AuditAction.ADD,
-                    data=AuditData(
-                        collection=Collections.USER.value,
-                        ad_id=res_insert.inserted_id
-                    ).__dict__
+                audit = Audit.audit_collection(
+                    type=AuditType.ADD,
+                    collection=Collections.USER,
+                    id=res_insert.inserted_id,
+                    from_data=None,
+                    to_data=None
                 )
                 col_audit.insert_one(audit.to_mongo(), session=session)
     except ValidationError as e:
-        raise HttpValidationError(e.to_dict())
+        raise HttpValidationError(e.to_dict()) # type: ignore
     except DuplicateKeyError as e:
         Logger.log.error(str(e))
-        raise UserAlreadyExist(description="User already exists")
+        raise UserAlreadyExist()
     except Exception as e:
         Logger.log.error(str(e))
         raise HTTPException(description=str(e))

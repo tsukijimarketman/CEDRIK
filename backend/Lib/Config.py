@@ -1,8 +1,9 @@
 import os
+from typing import Any, Callable
 from dotenv import load_dotenv
 load_dotenv()
 
-def _get_env_or_default(env_name, default, transform = None):
+def _get_env_or_default(env_name: str, default: Any, transform: Callable | None = None):
   env = os.getenv(env_name)
   if env == None or len(env) == 0:
     return default
@@ -13,49 +14,40 @@ def _get_env_or_default(env_name, default, transform = None):
       return default
   return env
 
+def _get_required_env(env_name: str):
+  v = os.getenv(env_name)
+  if v == None or len(v) == 0:
+    raise Exception(f"env {env_name} not set")
+  return v
+
+def _get_env_as_path(env_name: str):
+  v = os.getenv(env_name)
+  if v == None or len(v) == 0:
+    raise Exception(f"env {env_name} not set")
+  if not os.path.exists(v):
+    raise FileNotFoundError()
+  return v
+
 # Model
-AI_MODEL = os.getenv("AI_MODEL")
-if AI_MODEL == None or len(AI_MODEL) == 0:
-  raise Exception("DEFAULT_MODEL is not set")
-
-SENTENCE_TRANSFORMER_MODEL = os.getenv("SENTENCE_TRANSFORMER_MODEL")
-if SENTENCE_TRANSFORMER_MODEL == None or len(SENTENCE_TRANSFORMER_MODEL) == 0:
-  raise Exception("DEFAULT_SENTENCE_TRANSFORMER is not set")
-
+AI_MODEL = str(_get_required_env("AI_MODEL"))
+SENTENCE_TRANSFORMER_MODEL = str(_get_required_env("SENTENCE_TRANSFORMER_MODEL"))
 # Pipeline Configuration
-PIPE_CONFIG = os.getenv("PIPE_CONFIG")
-if PIPE_CONFIG == None or len(PIPE_CONFIG) == 0:
-  raise Exception("PIPE_CONFIG not set")
-if not os.path.exists(PIPE_CONFIG):
-  raise FileNotFoundError()
+PIPE_CONFIG = str(_get_env_as_path("PIPE_CONFIG"))
+TOKENIZER_CONFIG = str(_get_env_as_path("TOKENIZER_CONFIG"))
 
-TOKENIZER_CONFIG = os.getenv("TOKENIZER_CONFIG")
-if TOKENIZER_CONFIG == None or len(TOKENIZER_CONFIG) == 0:
-  raise Exception("TOKENIZER_CONFIG not set")
-if not os.path.exists(TOKENIZER_CONFIG):
-  raise FileNotFoundError()
-
-MAX_CONTENT_LENGTH = _get_env_or_default("MAX_CONTENT_LENGTH",10*1024*1024, lambda x: int(x))
-MAX_CONTEXT_SIZE = _get_env_or_default("MAX_CONTEXT_SIZE", 5, lambda x: int(x))
-MAIN_SERVER = _get_env_or_default("SERVER_MAIN", "http://localhost:5000")
-ENCODER_SERVER = _get_env_or_default("SERVER_ENCODER" , "http://localhost:5001/encode")
-MODEL_SERVER = _get_env_or_default("SERVER_MODEL", "http://localhost:5002/generate-reply")
-DATABASE_URI = os.getenv("CyberSync_DatabaseUri")
-
-if DATABASE_URI == None or len(DATABASE_URI) == 0:
-  raise Exception("CyberSync_DatabaseUri not set")
-
-JWT_SECRET = os.getenv("JWT_SECRET")
-if JWT_SECRET == None or len(JWT_SECRET) == 0:
-  raise Exception("JWT_SECRET not set")
-
-RESOURCE_DIR = _get_env_or_default("RESOURCE_DIR", "Uploads/")
+MAX_CONTENT_LENGTH = int(_get_env_or_default("MAX_CONTENT_LENGTH",10*1024*1024, lambda x: int(x)))
+MAX_CONTEXT_SIZE = int(_get_env_or_default("MAX_CONTEXT_SIZE", 5, lambda x: int(x)))
+MAIN_SERVER = str(_get_env_or_default("SERVER_MAIN", "http://localhost:5000"))
+ENCODER_SERVER = str( _get_env_or_default("SERVER_ENCODER" , "http://localhost:5001/encode") )
+MODEL_SERVER = str( _get_env_or_default("SERVER_MODEL", "http://localhost:5002/generate-reply") )
+DATABASE_URI = str(_get_required_env("CyberSync_DatabaseUri"))
+JWT_SECRET = str(_get_required_env("JWT_SECRET"))
+RESOURCE_DIR = str(_get_env_or_default("RESOURCE_DIR", "Uploads/"))
 
 LLAMA_SERVER = os.getenv("LLAMA_SERVER")
 if AI_MODEL == "llama" and (LLAMA_SERVER == None or len(LLAMA_SERVER) == 0):
   raise Exception("LLAMA_SERVER is not set but AI_MODEL is set to llama")
 
-CHUNK_SIZE_BYTES = _get_env_or_default("CHUNK_SIZE_BYTES", 256, lambda x:  int(x))
-CHUNK_OFFSET_BYTES = _get_env_or_default("CHUNK_OFFSET_BYTES", 28, lambda x:  int(x))
-
+CHUNK_SIZE_BYTES = int(_get_env_or_default("CHUNK_SIZE_BYTES", 256, lambda x:  int(x)))
+CHUNK_OFFSET_BYTES = int(_get_env_or_default("CHUNK_OFFSET_BYTES", 28, lambda x:  int(x)))
 DEBUG = bool(_get_env_or_default("DEBUG", False, lambda x: x != None or len(x) > 0))

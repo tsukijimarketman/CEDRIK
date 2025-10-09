@@ -4,9 +4,9 @@ from typing import List
 from concurrent.futures import ThreadPoolExecutor
 import time
 
-from backend.Apps.Main.Database import Conversation, Message, Audit, AuditData, Memory
+from backend.Apps.Main.Database import Conversation, Message, Audit, Memory
 from backend.Lib.Logger import Logger
-from backend.Apps.Main.Utils import UserToken, get_object_id, Collections, AuditAction, ObjectId
+from backend.Apps.Main.Utils import UserToken, get_object_id, Collections, AuditType, ObjectId
 from backend.Apps.Main.Utils.Enum import VectorIndex
 from backend.Lib.Config import MAX_CONTEXT_SIZE
 from backend.Apps.Main.Utils.LLM import Prompt, generate_embeddings, generate_model_reply, Reply
@@ -31,18 +31,18 @@ def __search_similarity_from_memory(query_embeddings: List[float]):
     },
     {
         "$match": {
-            "score": { "$gte": 0.5 }
+            "score": { "$gte": 0.75 }
         }
     }
   ]
-  return list(Memory.objects.aggregate(*pipeline))
+  return list(Memory.objects.aggregate(*pipeline)) # type: ignore
 
 def __get_last_message(
   conversation_id: ObjectId,
   sender_id: ObjectId,
 ):
   return [ { "text": i.text } for i in list(
-    Message.objects(
+    Message.objects( # type: ignore
         conversation=conversation_id,
         sender=sender_id
        )
@@ -51,39 +51,39 @@ def __get_last_message(
       .limit(MAX_CONTEXT_SIZE)
   ) ]
 
-def __search_similarity_from_message(
-  query_embeddings: List[float],
-  conversation_id: ObjectId,
-  sender_id: ObjectId,
-):
-  # Text only vector search
-  pipeline = [
-    {
-        "$vectorSearch": {
-            "index": VectorIndex.MESSAGE.value,
-            "path": "embeddings",
-            "queryVector": query_embeddings,
-            "numCandidates": 100,
-            "limit": MAX_CONTEXT_SIZE,
-            "filter": {
-                "conversation": conversation_id,
-                "sender": sender_id
-            }
-        }
-    },
-    {
-        "$project": {
-            "text": 1,
-            "score": {"$meta": "vectorSearchScore"}  # include similarity score
-        }
-    },
-    {
-        "$match": {
-            "score": { "$gte": 0.5 }
-        }
-    }
-  ]
-  return list(Message.objects.aggregate(*pipeline))
+# def __search_similarity_from_message(
+#   query_embeddings: List[float],
+#   conversation_id: ObjectId,
+#   sender_id: ObjectId,
+# ):
+#   # Text only vector search
+#   pipeline = [
+#     {
+#         "$vectorSearch": {
+#             "index": VectorIndex.MESSAGE.value,
+#             "path": "embeddings",
+#             "queryVector": query_embeddings,
+#             "numCandidates": 100,
+#             "limit": MAX_CONTEXT_SIZE,
+#             "filter": {
+#                 "conversation": conversation_id,
+#                 "sender": sender_id
+#             }
+#         }
+#     },
+#     {
+#         "$project": {
+#             "text": 1,
+#             "score": {"$meta": "vectorSearchScore"}  # include similarity score
+#         }
+#     },
+#     {
+#         "$match": {
+#             "score": { "$gte": 0.5 }
+#         }
+#     }
+#   ]
+#   return list(Message.objects.aggregate(*pipeline)) # type: ignore
 
 def generate_reply(
   conversation_id: str,
@@ -102,11 +102,13 @@ def generate_reply(
     start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=2) as executer:
       ex1 = executer.submit(__search_similarity_from_memory, query_embeddings=query_embeddings)
-      ex2 = executer.submit(
-        __get_last_message,
-        conversation_id=get_object_id(conversation_id),
-        sender_id=get_object_id(user.id),
-      )
+      ex2 = None
+      if len(conversation_id) > 0:
+        ex2 = executer.submit(
+          __get_last_message,
+          conversation_id=get_object_id(conversation_id),
+          sender_id=get_object_id(user.id),
+        )
       # if len(conversation_id) > 0:
       #   ex2 = executer.submit(
       #     __search_similarity_from_message, 
@@ -116,7 +118,8 @@ def generate_reply(
       #   )
 
       sim_results.extend(ex1.result())
-      sim_results.extend(ex2.result())
+      if len(conversation_id) > 0 and ex2:
+        sim_results.extend(ex2.result())
       # if ex2 == None:
       #   sim_results.extend(ex2.result())
       
@@ -170,28 +173,24 @@ def create_chat(
     conv.validate()
     conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
-    col_audit.insert_one(Audit(
-       action=AuditAction.ADD,
-       data=AuditData(
-          collection=Collections.CONVERSATION.value,
-          ad_id=str(conv_id)
-       ).__dict__
+    col_audit.insert_one(Audit.audit_collection(
+      type=AuditType.ADD,
+      collection=Collections.CONVERSATION,
+      id=conv_id
     ).to_mongo(), session=session)
 
   else:
       conv_id = get_object_id(conversation_id)
-      conv = Conversation.objects.with_id(conv_id)
+      conv = Conversation.objects.with_id(conv_id) # type: ignore
       if (conv == None):
         conv = Conversation(owner=user_token.id, title=title)
         conv.validate()
         conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
-        col_audit.insert_one(Audit(
-          action=AuditAction.ADD,
-          data=AuditData(
-              collection=Collections.CONVERSATION.value,
-              ad_id=str(conv_id)
-          ).__dict__
+        col_audit.insert_one(Audit.audit_collection(
+          type=AuditType.ADD,
+          collection=Collections.CONVERSATION,
+          id=conv_id
         ).to_mongo(), session=session)
   # ============
 
@@ -217,12 +216,10 @@ def create_chat(
   # Audit for Messages
   messages_audits = []
   for iid in messages_id:
-    ad = Audit(
-      action=AuditAction.ADD,
-      data=AuditData(
-          collection=Collections.MESSAGE.value,
-          ad_id=str(iid)
-      ).__dict__
+    ad = Audit.audit_collection(
+      type=AuditType.ADD,
+      collection=Collections.CONVERSATION,
+      id=iid
     )
     ad.validate()
     messages_audits.append(ad.to_mongo())
