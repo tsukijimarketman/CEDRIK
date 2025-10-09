@@ -58,10 +58,8 @@ export function ChatInterface() {
     void aiApi
       .chat({
         conversation: null,
-        prompt: {
-          role: "user",
-          content: content,
-        },
+        content: content,
+        file: null
       })
       .then((res) => {
         const reply = res.data.reply ?? "";

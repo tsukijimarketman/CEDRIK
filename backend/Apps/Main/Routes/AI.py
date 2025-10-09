@@ -3,9 +3,10 @@ from mongoengine import ValidationError
 from flask import request, jsonify
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
-from werkzeug.exceptions import InternalServerError
+from werkzeug.exceptions import InternalServerError, NotAcceptable
+from werkzeug.datastructures import FileStorage
 
-from backend.Lib.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId
+from backend.Lib.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId, TooManyFiles
 from backend.Apps.Main.Database import Transaction
 from backend.Lib.Logger import Logger
 from backend.Apps.Main.Service.Chat.CreateChat import generate_reply
@@ -17,28 +18,46 @@ ai = Blueprint("Ai", __name__)
 
 @dataclass
 class ChatBody:
-    conversation: str | None
+    conversation: str
     prompt: Prompt
+    file: FileStorage | None = None
     def __post_init__(self):
         self.prompt = Prompt(**self.prompt) # type: ignore
 
 @ai.route("/chat", methods=["POST"])
 @jwt_required(optional=False)
 def chat():
+    """
+    **Method**
+    - `multipart/form-data`
+
+    **Body**
+    - conversation  str
+    - content       str
+    - file          File
+    """
     body = None
+
+    if not request.content_type or not request.content_type.startswith("multipart/form-data"):
+        raise NotAcceptable(description="Content-Type must be multipart/form-data")
+    if len(request.files.getlist("file")) > 1:
+        raise TooManyFiles()
+
     try:
-        body = request.get_json()
-        body = ChatBody(**body)
-        body.prompt.role = "user" # force user role for testing
-        if body.conversation == None:
-            body.conversation = ""
+        json = {}
+        json["conversation"] = request.form.get("conversation", "")
+        json["prompt"] = {
+            "role": "user",
+            "content": request.form.get("content", "")
+        }
+        json["file"] = request.files.get("file")
+
+        body = ChatBody(**json)
+        body.prompt.role = "user"
     except Exception as _:
         raise BadBody()
     user_token = get_token()
-
-    assert(user_token != None)
-
-    Logger.log.info(f"chat::prompt {body}")
+    if (user_token == None): raise HttpInvalidId()
 
     try:
         Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
@@ -51,7 +70,7 @@ def chat():
             user=user_token,
             prompt=body.prompt
         )
-        Logger.log.info(f"ModelReply {model_reply.reply} {model_reply.embeddings[:5]}")
+        Logger.log.info(f"Reply {model_reply.reply} {model_reply.embeddings[:5]}")
         # ==============
 
         with Transaction() as (session, db):
