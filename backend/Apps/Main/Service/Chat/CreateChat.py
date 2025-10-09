@@ -4,9 +4,9 @@ from typing import List
 from concurrent.futures import ThreadPoolExecutor
 import time
 
-from backend.Apps.Main.Database import Conversation, Message, Audit, AuditData, Memory
+from backend.Apps.Main.Database import Conversation, Message, Audit, Memory
 from backend.Lib.Logger import Logger
-from backend.Apps.Main.Utils import UserToken, get_object_id, Collections, AuditAction, ObjectId
+from backend.Apps.Main.Utils import UserToken, get_object_id, Collections, AuditType, ObjectId
 from backend.Apps.Main.Utils.Enum import VectorIndex
 from backend.Lib.Config import MAX_CONTEXT_SIZE
 from backend.Apps.Main.Utils.LLM import Prompt, generate_embeddings, generate_model_reply, Reply
@@ -51,39 +51,39 @@ def __get_last_message(
       .limit(MAX_CONTEXT_SIZE)
   ) ]
 
-def __search_similarity_from_message(
-  query_embeddings: List[float],
-  conversation_id: ObjectId,
-  sender_id: ObjectId,
-):
-  # Text only vector search
-  pipeline = [
-    {
-        "$vectorSearch": {
-            "index": VectorIndex.MESSAGE.value,
-            "path": "embeddings",
-            "queryVector": query_embeddings,
-            "numCandidates": 100,
-            "limit": MAX_CONTEXT_SIZE,
-            "filter": {
-                "conversation": conversation_id,
-                "sender": sender_id
-            }
-        }
-    },
-    {
-        "$project": {
-            "text": 1,
-            "score": {"$meta": "vectorSearchScore"}  # include similarity score
-        }
-    },
-    {
-        "$match": {
-            "score": { "$gte": 0.5 }
-        }
-    }
-  ]
-  return list(Message.objects.aggregate(*pipeline)) # type: ignore
+# def __search_similarity_from_message(
+#   query_embeddings: List[float],
+#   conversation_id: ObjectId,
+#   sender_id: ObjectId,
+# ):
+#   # Text only vector search
+#   pipeline = [
+#     {
+#         "$vectorSearch": {
+#             "index": VectorIndex.MESSAGE.value,
+#             "path": "embeddings",
+#             "queryVector": query_embeddings,
+#             "numCandidates": 100,
+#             "limit": MAX_CONTEXT_SIZE,
+#             "filter": {
+#                 "conversation": conversation_id,
+#                 "sender": sender_id
+#             }
+#         }
+#     },
+#     {
+#         "$project": {
+#             "text": 1,
+#             "score": {"$meta": "vectorSearchScore"}  # include similarity score
+#         }
+#     },
+#     {
+#         "$match": {
+#             "score": { "$gte": 0.5 }
+#         }
+#     }
+#   ]
+#   return list(Message.objects.aggregate(*pipeline)) # type: ignore
 
 def generate_reply(
   conversation_id: str,
@@ -173,12 +173,10 @@ def create_chat(
     conv.validate()
     conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
-    col_audit.insert_one(Audit(
-       action=AuditAction.ADD,
-       data=AuditData(
-          collection=Collections.CONVERSATION.value,
-          ad_id=str(conv_id)
-       ).__dict__
+    col_audit.insert_one(Audit.audit_collection(
+      type=AuditType.ADD,
+      collection=Collections.CONVERSATION,
+      id=conv_id
     ).to_mongo(), session=session)
 
   else:
@@ -189,12 +187,10 @@ def create_chat(
         conv.validate()
         conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
-        col_audit.insert_one(Audit(
-          action=AuditAction.ADD,
-          data=AuditData(
-              collection=Collections.CONVERSATION.value,
-              ad_id=str(conv_id)
-          ).__dict__
+        col_audit.insert_one(Audit.audit_collection(
+          type=AuditType.ADD,
+          collection=Collections.CONVERSATION,
+          id=conv_id
         ).to_mongo(), session=session)
   # ============
 
@@ -220,12 +216,10 @@ def create_chat(
   # Audit for Messages
   messages_audits = []
   for iid in messages_id:
-    ad = Audit(
-      action=AuditAction.ADD,
-      data=AuditData(
-          collection=Collections.MESSAGE.value,
-          ad_id=str(iid)
-      ).__dict__
+    ad = Audit.audit_collection(
+      type=AuditType.ADD,
+      collection=Collections.CONVERSATION,
+      id=iid
     )
     ad.validate()
     messages_audits.append(ad.to_mongo())

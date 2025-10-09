@@ -5,10 +5,11 @@ class Role(Enum):
   ADMIN = "admin"
   SUPERADMIN = "superadmin"
 
-class AuditAction(Enum):
+class AuditType(Enum):
   ADD = "add"
   EDIT = "edit"
   DELETE = "delete"
+  MESSAGE = "message"
 
 class Collections(Enum):
   USER = "user"
