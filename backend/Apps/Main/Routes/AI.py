@@ -28,7 +28,7 @@ class ChatBody:
 @jwt_required(optional=False)
 def chat():
     """
-    **Method**
+    **Content-Type**
     - `multipart/form-data`
 
     **Body**

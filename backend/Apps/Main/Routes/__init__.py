@@ -4,7 +4,7 @@ from flask import Blueprint
 from .Auth import auth
 from .AI import ai
 from .Memory import memory
-from .Conversation import conversation
+from .Conversation import b_conversation
 
 @dataclass
 class Route:
@@ -14,6 +14,6 @@ class Route:
 ROUTES = [
   Route(path="auth", blueprint=auth),
   Route(path="ai", blueprint=ai),
-  Route(path="conversation", blueprint=conversation),
+  Route(path="conversation", blueprint=b_conversation),
   Route(path="memory", blueprint=memory),
 ]
