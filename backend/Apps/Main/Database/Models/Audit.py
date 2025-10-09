@@ -18,7 +18,7 @@ class Audit(BaseDocument):
         return Audit(
             type=type,
             data={
-                "collection": collection,
+                "collection": collection.value,
                 "id": id,
                 "from": from_data,
                 "to": to_data
