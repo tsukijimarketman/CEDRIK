@@ -81,6 +81,43 @@ export const authApi = {
   },
 };
 
+//conversation
+//title
+//created_at
+
+export type ChatSidebarTitle = {
+  conversation: string;
+  title: string;
+  created_at: Date;
+};
+
+export type ChatSidebarOpen = {
+  text: string;
+  created_at: Date;
+};
+
+export const sidebarTitleApi = {
+  sidebarConversationGetTitle: async () => {
+    const res = await api.get<ChatSidebarTitle[]>("/conversation/get");
+    res.data = res.data.map((x) => ({
+      ...x,
+      created_at: new Date(x.created_at),
+    }));
+    return res;
+  },
+};
+
+export const sidebarConversationOpen = {
+  conversationOpen: async (id) => {
+    const res = await api.get<ChatSidebarOpen[]>("/conversation/get/" + id);
+    res.data = res.data.map((x) => ({
+      ...x,
+      created_at: new Date(x.created_at),
+    }));
+    return res;
+  },
+};
+
 // AI Chat API
 export type ChatPrompt = {
   role: string;
@@ -104,11 +141,11 @@ export const aiApi = {
     formData.append("content", data.content);
     formData.append("file", data.file);
     return api.post<ChatResponse>("/ai/chat", formData, {
-      headers:{
-        "Content-Type": undefined // let axios set content-type
-      }
-    })
-  }
+      headers: {
+        "Content-Type": undefined, // let axios set content-type
+      },
+    });
+  },
 };
 
 api.interceptors.response.use(
