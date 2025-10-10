@@ -92,8 +92,14 @@ export type ChatSidebarTitle = {
 };
 
 export const sidebarTitleApi = {
-  sidebarConversationGetTitle: async () =>
-    api.get<ChatSidebarTitle[]>("/conversation"),
+  sidebarConversationGetTitle: async () => {
+    const res = await api.get<ChatSidebarTitle[]>("/conversation");
+    res.data = res.data.map((x) => ({
+      ...x,
+      created_at: new Date(x.created_at),
+    }));
+    return res;
+  },
 };
 
 // AI Chat API
@@ -119,11 +125,11 @@ export const aiApi = {
     formData.append("content", data.content);
     formData.append("file", data.file);
     return api.post<ChatResponse>("/ai/chat", formData, {
-      headers:{
-        "Content-Type": undefined // let axios set content-type
-      }
-    })
-  }
+      headers: {
+        "Content-Type": undefined, // let axios set content-type
+      },
+    });
+  },
 };
 
 api.interceptors.response.use(
