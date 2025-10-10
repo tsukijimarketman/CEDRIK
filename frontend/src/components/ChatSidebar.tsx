@@ -18,14 +18,14 @@ import { SignUpDialog } from "./dialogs/SignUpDialog";
 import { SettingsDialog } from "./dialogs/SettingsDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
 import { LogoutDialog } from "./dialogs/LogoutDialog";
-import { authApi } from "@/api/api";
+import { authApi, sidebarTitleApi } from "@/api/api";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 
 interface Chat {
-  id: string;
+  conversation: string;
   title: string;
-  timestamp: string;
+  created_at: Date;
 }
 
 interface ChatSidebarProps {
@@ -35,13 +35,23 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
   const { user, loading, login, logout } = useUser();
-
+  const [chats, setChats] = useState<Chat[]>([]);
   // Chat data
-  const [chats] = useState<Chat[]>([
-    { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },
-    { id: "2", title: "React best practices", timestamp: "Yesterday" },
-    { id: "3", title: "TypeScript configuration", timestamp: "2 days ago" },
-  ]);
+
+  const handleChatTitle = async () => {
+    const res = await sidebarTitleApi.sidebarConversationGetTitle();
+    setChats(res.data);
+    console.log(res.data);
+  };
+
+  useEffect(() => {
+    handleChatTitle();
+  }, []);
+
+  // mockData; put this instead of res for checking
+  // { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },
+  // { id: "2", title: "React best practices", timestamp: "Yesterday" },
+  // { id: "3", title: "TypeScript configuration", timestamp: "2 days ago" },
 
   // UI State
   const [activeChat, setActiveChat] = useState("1");
@@ -266,22 +276,22 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
             <div className="p-2">
               {chats.map((chat) => (
                 <button
-                  key={chat.id}
+                  key={chat.conversation}
                   onClick={() => {
-                    setActiveChat(chat.id);
+                    setActiveChat(chat.conversation);
                     if (isMobile) setIsMobileMenuOpen(false);
                   }}
                   className={cn(
                     "w-full text-left p-3 rounded-lg transition-colors mb-1 text-foreground",
                     "hover:bg-accent hover:text-accent-foreground",
-                    activeChat === chat.id
+                    activeChat === chat.conversation
                       ? "bg-accent text-accent-foreground"
                       : ""
                   )}
                 >
                   <p className="font-medium text-sm">{chat.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {chat.timestamp}
+                    {chat.created_at.toDateString()}
                   </p>
                 </button>
               ))}

@@ -81,6 +81,21 @@ export const authApi = {
   },
 };
 
+//conversation
+//title
+//created_at
+
+export type ChatSidebarTitle = {
+  conversation: string;
+  title: string;
+  created_at: Date;
+};
+
+export const sidebarTitleApi = {
+  sidebarConversationGetTitle: async () =>
+    api.get<ChatSidebarTitle[]>("/conversation"),
+};
+
 // AI Chat API
 export type ChatPrompt = {
   role: string;
