@@ -24,7 +24,7 @@ class GetResult:
   title: str
   created_at: datetime
 
-@b_conversation.route("")
+@b_conversation.route("/get")
 @jwt_required(optional=False)
 def get():
   user_id = get_token()
@@ -61,7 +61,7 @@ def get():
     Logger.log.error(repr(e))
     return jsonify([]), 200
 
-@b_conversation.route("/<id>")
+@b_conversation.route("/get/<id>")
 @jwt_required(optional=False)
 def get_id(id: str):
   user_id = get_token()
