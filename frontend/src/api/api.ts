@@ -91,9 +91,25 @@ export type ChatSidebarTitle = {
   created_at: Date;
 };
 
+export type ChatSidebarOpen = {
+  text: string;
+  created_at: Date;
+};
+
 export const sidebarTitleApi = {
   sidebarConversationGetTitle: async () => {
-    const res = await api.get<ChatSidebarTitle[]>("/conversation");
+    const res = await api.get<ChatSidebarTitle[]>("/conversation/get");
+    res.data = res.data.map((x) => ({
+      ...x,
+      created_at: new Date(x.created_at),
+    }));
+    return res;
+  },
+};
+
+export const sidebarConversationOpen = {
+  conversationOpen: async (id) => {
+    const res = await api.get<ChatSidebarOpen[]>("/conversation/get/" + id);
     res.data = res.data.map((x) => ({
       ...x,
       created_at: new Date(x.created_at),
