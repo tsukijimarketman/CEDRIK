@@ -3,7 +3,7 @@ FROM node:24-bookworm-slim
 WORKDIR /app/
 
 
-ARG UID=10001
+ARG UID=1001
 RUN adduser \
     --disabled-password \
     --gecos "" \
@@ -12,13 +12,13 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
-RUN chown -R appuser:appuser /app
+RUN chown -R ${UID}:${UID} /app
 
 USER appuser
 
-COPY ./package.json .
+COPY --chown=${UID}:${UID} ./package.json .
 RUN npm i
 
-COPY . .
+COPY --chown=${UID}:${UID} . .
 
 CMD [ "npm", "run", "dev", "--", "--host", "0.0.0.0" ]
