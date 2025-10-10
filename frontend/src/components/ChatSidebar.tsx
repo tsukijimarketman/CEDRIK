@@ -118,20 +118,14 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
 
   // Auth handlers
   const handleLogin = async (email: string, password: string) => {
-    try {
-      await login(email, password);
-      setCurrentDialog({ type: null });
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
-    }
+    await login(email, password);
+    setCurrentDialog({ type: null });
+    toast({
+      title: "Login successful",
+      description: "Welcome back!",
+    });
+    // do not try ... catch here
+    // catch inside handleSubmit of Signup
   };
 
   const handleSignUp = async (
@@ -139,20 +133,14 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
     email: string,
     password: string
   ) => {
-    try {
-      await authApi.register({ username, email, password });
-      setCurrentDialog({ type: null });
-      toast({
-        title: "Account created",
-        description: "Please log in with your new account.",
-      });
-    } catch (error) {
-      toast({
-        title: "Sign up failed",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
+    await authApi.register({ username, email, password });
+    setCurrentDialog({ type: null });
+    toast({
+      title: "Account created",
+      description: "Please log in with your new account.",
+    });
+    // do not try ... catch here
+    // catch inside handleSubmit of Signup
   };
 
   const handleSaveSettings = async (username: string, password: string) => {

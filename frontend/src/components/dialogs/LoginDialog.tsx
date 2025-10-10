@@ -92,17 +92,12 @@ export function LoginDialog({
         // Close the dialog
         onClose();
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Login error:", error);
 
       let errorMessage = "Failed to login. Please check your credentials.";
-      if (
-        error instanceof Error &&
-        (error as { response?: { data?: { message?: string } } }).response?.data
-          ?.message
-      ) {
-        errorMessage = (error as { response?: { data?: { message?: string } } })
-          .response.data.message;
+      if (error.error != undefined) {
+        errorMessage = error.error;
       }
 
       toast({
