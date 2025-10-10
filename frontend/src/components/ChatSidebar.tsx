@@ -31,9 +31,10 @@ interface Chat {
 interface ChatSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
+  onSelectConversation:(conversation: string) => void;
 }
 
-export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
+export function ChatSidebar({ isCollapsed, onToggle, onSelectConversation }: ChatSidebarProps) {
   const { user, loading, login, logout } = useUser();
   const [chats, setChats] = useState<Chat[]>([]);
   // Chat data
@@ -267,6 +268,7 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   key={chat.conversation}
                   onClick={() => {
                     setActiveChat(chat.conversation);
+                    onSelectConversation(chat.conversation)
                     if (isMobile) setIsMobileMenuOpen(false);
                   }}
                   className={cn(

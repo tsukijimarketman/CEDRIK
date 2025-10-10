@@ -4,7 +4,7 @@ import { ChatMessage } from "./ChatMessage";
 import { WelcomeMessage } from "./WelcomeMessage";
 import { ChatInput } from "./ChatInput";
 import { ThemeToggle } from "./ThemeToggle";
-import { aiApi } from "@/api/api";
+import { aiApi, sidebarConversationOpen } from "@/api/api";
 import { useUser } from "@/contexts/UserContext";
 
 interface Message {
@@ -59,7 +59,7 @@ export function ChatInterface() {
       .chat({
         conversation: null,
         content: content,
-        file: null
+        file: null,
       })
       .then((res) => {
         const reply = res.data.reply ?? "";
@@ -92,6 +92,24 @@ export function ChatInterface() {
       .finally(() => setIsLoading(false));
   };
 
+  const handleOpenMessage = async (conversation: string) => {
+    try {
+      const res = await sidebarConversationOpen.conversationOpen(conversation);
+      const fetchedMessages = res.data.map(
+        (msg, index) =>
+          ({
+            id: index.toString(),
+            role: index % 2 == 0 ? "user" : "assistant",
+            content: msg.text,
+            timestamp: msg.created_at.toLocaleString(),
+          } as Message)
+      );
+      setMessages(fetchedMessages);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+    }
+  };
+
   // Compute responsive left margin for the fixed sidebar on desktop sizes
   // When collapsed on desktop, hide the sidebar entirely and remove left margin
   const contentMarginClass = isSidebarCollapsed ? "md:ml-0" : "md:ml-64";
@@ -101,6 +119,7 @@ export function ChatInterface() {
       <ChatSidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onSelectConversation={handleOpenMessage}
       />
 
       <div
