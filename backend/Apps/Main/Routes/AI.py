@@ -82,7 +82,7 @@ def chat():
             if len(default_title) > 10:
                 default_title = default_title[:10]
 
-            create_chat(
+            conv_id = create_chat(
                 session,
                 col_audit,
                 col_conversation,
@@ -94,6 +94,13 @@ def chat():
                 user_token
             )
 
+            if conv_id != None:
+                conv_id = str(conv_id)
+            return jsonify({
+                "conversation": conv_id,
+                "reply": model_reply.reply
+            }), 200
+
     except InvalidId as e:
         raise HttpInvalidId()
     except ValidationError as e:
@@ -101,7 +108,3 @@ def chat():
     except Exception as e:
         Logger.log.error(f"{repr(e)} {str(body)}")
         raise InternalServerError()
-
-    return jsonify({
-        "reply": model_reply.reply
-    }), 200
