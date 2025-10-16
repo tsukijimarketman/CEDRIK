@@ -91,6 +91,7 @@ export function AddUserDialog({
               value={formData.username}
               onChange={handleChange}
               required
+              placeholder="Juan_DelaCruz21"
             />
           </div>
           <div className="space-y-2">
@@ -102,6 +103,7 @@ export function AddUserDialog({
               value={formData.email}
               onChange={handleChange}
               required
+              placeholder="juandelacruz@gmail.com"
             />
           </div>
           <div className="space-y-2">
@@ -113,6 +115,7 @@ export function AddUserDialog({
               value={formData.password}
               onChange={handleChange}
               required
+              placeholder="Password"
             />
           </div>
           <div className="space-y-2">
@@ -128,9 +131,10 @@ export function AddUserDialog({
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" className="w-full" >
-           Add User
-          </Button>
+          <div className="pt-4 flex justify-end">
+            <Button type="submit" className="w-full" >
+              Add User
+            </Button></div>
         </form>
       </DialogContent>
     </Dialog>
