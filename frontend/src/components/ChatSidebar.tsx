@@ -21,6 +21,7 @@ import { LogoutDialog } from "./dialogs/LogoutDialog";
 import { authApi, sidebarTitleApi } from "@/api/api";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
+import { useChat } from "@/contexts/ChatContext";
 
 interface Chat {
   conversation: string;
@@ -28,13 +29,26 @@ interface Chat {
   created_at: Date;
 }
 
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+}
+
 interface ChatSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
-  onSelectConversation:(conversation: string) => void;
+  onSelectConversation: (conversation: string) => void;
+  setMessages: (id: Message[]) => void;
 }
 
-export function ChatSidebar({ isCollapsed, onToggle, onSelectConversation }: ChatSidebarProps) {
+export function ChatSidebar({
+  isCollapsed,
+  onToggle,
+  onSelectConversation,
+  setMessages,
+}: ChatSidebarProps) {
   const { user, loading, login, logout } = useUser();
   const [chats, setChats] = useState<Chat[]>([]);
   // Chat data
@@ -42,12 +56,12 @@ export function ChatSidebar({ isCollapsed, onToggle, onSelectConversation }: Cha
   const handleChatTitle = async () => {
     const res = await sidebarTitleApi.sidebarConversationGetTitle();
     setChats(res.data);
-    console.log(res.data);
   };
 
   useEffect(() => {
-    handleChatTitle();
-  }, []);
+    if (user) handleChatTitle();
+    else setChats([]);
+  }, [user]);
 
   // mockData; put this instead of res for checking
   // { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },
@@ -121,6 +135,7 @@ export function ChatSidebar({ isCollapsed, onToggle, onSelectConversation }: Cha
   const handleLogin = async (email: string, password: string) => {
     await login(email, password);
     setCurrentDialog({ type: null });
+    handleChatTitle();
     toast({
       title: "Login successful",
       description: "Welcome back!",
@@ -177,10 +192,15 @@ export function ChatSidebar({ isCollapsed, onToggle, onSelectConversation }: Cha
     }
   };
 
+  const { setActiveChatId } = useChat();
+
   const handleLogout = async () => {
     try {
       await logout();
       setIsProfileOpen(false);
+      setChats([]);
+      setActiveChatId(null);
+      setMessages([]);
       toast({
         title: "Logged out",
         description: "You have been logged out successfully.",
@@ -267,8 +287,9 @@ export function ChatSidebar({ isCollapsed, onToggle, onSelectConversation }: Cha
                 <button
                   key={chat.conversation}
                   onClick={() => {
+                    setActiveChatId(chat.conversation);
                     setActiveChat(chat.conversation);
-                    onSelectConversation(chat.conversation)
+                    onSelectConversation(chat.conversation);
                     if (isMobile) setIsMobileMenuOpen(false);
                   }}
                   className={cn(

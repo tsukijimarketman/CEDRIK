@@ -6,6 +6,7 @@ import { ChatInput } from "./ChatInput";
 import { ThemeToggle } from "./ThemeToggle";
 import { aiApi, sidebarConversationOpen } from "@/api/api";
 import { useUser } from "@/contexts/UserContext";
+import { useChat } from "@/contexts/ChatContext";
 
 interface Message {
   id: string;
@@ -31,6 +32,9 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  const { activeChatId } = useChat(); // ✅ get the ID from context
 
   const handleSendMessage = (content: string) => {
     const userMessage: Message = {
@@ -57,12 +61,13 @@ export function ChatInterface() {
     // Fire the AI chat request
     void aiApi
       .chat({
-        conversation: null,
+        conversation: activeChatId,
         content: content,
         file: null,
       })
       .then((res) => {
         const reply = res.data.reply ?? "";
+
         setMessages((prev) =>
           prev.map((m) =>
             m.id === thinkingId
@@ -117,6 +122,7 @@ export function ChatInterface() {
   return (
     <div className="relative h-screen bg-chat-background">
       <ChatSidebar
+      setMessages={setMessages}
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onSelectConversation={handleOpenMessage}

@@ -79,8 +79,8 @@ def chat():
             col_audit = db.get_collection(Collections.AUDIT.value)
 
             default_title = body.prompt.content
-            if len(default_title) > 10:
-                default_title = default_title[:10]
+            if len(default_title) > 20:
+                default_title = default_title[:20]
 
             create_chat(
                 session,

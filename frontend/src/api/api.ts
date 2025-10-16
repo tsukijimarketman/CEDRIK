@@ -148,37 +148,6 @@ export const aiApi = {
   },
 };
 
-// KaliGPT Connection API
-export type KaliGPTConnectionRequest = {
-  userId?: string;
-  sessionId?: string;
-};
-
-export type KaliGPTConnectionResponse = {
-  connected: boolean;
-  sessionId: string;
-  message: string;
-};
-
-export const kaliGPTApi = {
-  // Reserved endpoint for KaliGPT connection
-  connect: async (data?: KaliGPTConnectionRequest) => {
-    // This is a placeholder endpoint that will be implemented later
-    // For now, it simulates a connection request
-    return api.post<KaliGPTConnectionResponse>("/kaligpt/connect", data || {});
-  },
-  
-  disconnect: async (sessionId: string) => {
-    return api.post("/kaligpt/disconnect", { sessionId });
-  },
-  
-  status: async (sessionId?: string) => { 
-    return api.get("/kaligpt/status", { 
-      params: sessionId ? { sessionId } : {} 
-    });
-  },
-};
-
 api.interceptors.response.use(
   (response) => response,
   (error) => {
