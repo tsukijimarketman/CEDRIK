@@ -41,6 +41,7 @@ interface ChatSidebarProps {
   onToggle: () => void;
   onSelectConversation: (conversation: string) => void;
   setMessages: (id: Message[]) => void;
+  setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export function ChatSidebar({
@@ -48,6 +49,7 @@ export function ChatSidebar({
   onToggle,
   onSelectConversation,
   setMessages,
+  setIsLoggedIn,
 }: ChatSidebarProps) {
   const { user, loading, login, logout } = useUser();
   const [chats, setChats] = useState<Chat[]>([]);
@@ -136,6 +138,7 @@ export function ChatSidebar({
     await login(email, password);
     setCurrentDialog({ type: null });
     handleChatTitle();
+    setIsLoggedIn(true);
     toast({
       title: "Login successful",
       description: "Welcome back!",
@@ -201,6 +204,7 @@ export function ChatSidebar({
       setChats([]);
       setActiveChatId(null);
       setMessages([]);
+      setIsLoggedIn(false);
       toast({
         title: "Logged out",
         description: "You have been logged out successfully.",
