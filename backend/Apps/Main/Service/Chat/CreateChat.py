@@ -224,3 +224,5 @@ def create_chat(
 
   col_audit.insert_many(messages_audits, session=session)
   # ============
+
+  return conv_id
