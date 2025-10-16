@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import TrueOrFalse from "./components/sandbox/TrueOrFalse";
 import MultipleChoices from "./components/sandbox/MultipleChoices";
+import { ChatProvider } from "./contexts/ChatContext";
 
 const queryClient = new QueryClient();
 
@@ -63,22 +64,24 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light">
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          <UserProvider>
-            <AppRoutes />
-          </UserProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
+    <ChatProvider>
+      <ThemeProvider defaultTheme="light">
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
+            <UserProvider>
+              <AppRoutes />
+            </UserProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </ChatProvider>
   </QueryClientProvider>
 );
 
