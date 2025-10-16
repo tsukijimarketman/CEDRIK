@@ -31,9 +31,10 @@ interface Chat {
 interface ChatSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
+  onSelectConversation:(conversation: string) => void;
 }
 
-export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
+export function ChatSidebar({ isCollapsed, onToggle, onSelectConversation }: ChatSidebarProps) {
   const { user, loading, login, logout } = useUser();
   const [chats, setChats] = useState<Chat[]>([]);
   // Chat data
@@ -118,20 +119,14 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
 
   // Auth handlers
   const handleLogin = async (email: string, password: string) => {
-    try {
-      await login(email, password);
-      setCurrentDialog({ type: null });
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
-    }
+    await login(email, password);
+    setCurrentDialog({ type: null });
+    toast({
+      title: "Login successful",
+      description: "Welcome back!",
+    });
+    // do not try ... catch here
+    // catch inside handleSubmit of Signup
   };
 
   const handleSignUp = async (
@@ -139,20 +134,14 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
     email: string,
     password: string
   ) => {
-    try {
-      await authApi.register({ username, email, password });
-      setCurrentDialog({ type: null });
-      toast({
-        title: "Account created",
-        description: "Please log in with your new account.",
-      });
-    } catch (error) {
-      toast({
-        title: "Sign up failed",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
+    await authApi.register({ username, email, password });
+    setCurrentDialog({ type: null });
+    toast({
+      title: "Account created",
+      description: "Please log in with your new account.",
+    });
+    // do not try ... catch here
+    // catch inside handleSubmit of Signup
   };
 
   const handleSaveSettings = async (username: string, password: string) => {
@@ -279,6 +268,7 @@ export function ChatSidebar({ isCollapsed, onToggle }: ChatSidebarProps) {
                   key={chat.conversation}
                   onClick={() => {
                     setActiveChat(chat.conversation);
+                    onSelectConversation(chat.conversation)
                     if (isMobile) setIsMobileMenuOpen(false);
                   }}
                   className={cn(

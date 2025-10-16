@@ -104,24 +104,18 @@ def generate_reply(
       ex1 = executer.submit(__search_similarity_from_memory, query_embeddings=query_embeddings)
       ex2 = None
       if len(conversation_id) > 0:
-        ex2 = executer.submit(
-          __get_last_message,
-          conversation_id=get_object_id(conversation_id),
-          sender_id=get_object_id(user.id),
-        )
-      # if len(conversation_id) > 0:
-      #   ex2 = executer.submit(
-      #     __search_similarity_from_message, 
-      #     query_embeddings=query_embeddings,
-      #     conversation_id=get_object_id(conversation_id),
-      #     sender_id=get_object_id(user.id),
-      #   )
+        try:
+          ex2 = executer.submit(
+            __get_last_message,
+            conversation_id=get_object_id(conversation_id),
+            sender_id=get_object_id(user.id),
+          )
+        except Exception as _:
+          pass
 
       sim_results.extend(ex1.result())
       if len(conversation_id) > 0 and ex2:
         sim_results.extend(ex2.result())
-      # if ex2 == None:
-      #   sim_results.extend(ex2.result())
       
     end = time.perf_counter()
     elapsed = end - start;
@@ -163,6 +157,11 @@ def create_chat(
   title=default_title
   user_id = get_object_id(user_token.id)
   conv_id = None
+  try:
+    if conversation_id != None:
+      conv_id = get_object_id(conversation_id)
+  except Exception as _:
+    pass
 
   # Conversation
   if conversation_id == None or len(conversation_id) == 0:
@@ -180,7 +179,6 @@ def create_chat(
     ).to_mongo(), session=session)
 
   else:
-      conv_id = get_object_id(conversation_id)
       conv = Conversation.objects.with_id(conv_id) # type: ignore
       if (conv == None):
         conv = Conversation(owner=user_token.id, title=title)

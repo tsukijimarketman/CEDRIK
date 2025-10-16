@@ -104,7 +104,8 @@ export type ChatPrompt = {
 
 export type ChatRequest = {
   conversation?: string | null;
-  prompt: ChatPrompt;
+  content: string;
+  file: File | null;
 };
 
 export type ChatResponse = {
@@ -112,7 +113,17 @@ export type ChatResponse = {
 };
 
 export const aiApi = {
-  chat: async (data: ChatRequest) => api.post<ChatResponse>("/ai/chat", data),
+  chat: async (data: ChatRequest) => {
+    let formData = new FormData();
+    formData.append("conversation", data.conversation || "");
+    formData.append("content", data.content);
+    formData.append("file", data.file);
+    return api.post<ChatResponse>("/ai/chat", formData, {
+      headers:{
+        "Content-Type": undefined // let axios set content-type
+      }
+    })
+  }
 };
 
 api.interceptors.response.use(

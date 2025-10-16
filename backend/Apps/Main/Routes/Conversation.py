@@ -1,27 +1,88 @@
-from flask import jsonify
+from dataclasses import asdict, dataclass
+from typing import List
+from flask import jsonify, request
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
-from werkzeug.exceptions import Unauthorized
+from datetime import datetime
+from werkzeug.exceptions import BadRequest
 
 from backend.Lib.Error import InvalidId
-from backend.Apps.Main.Database import Conversation
-from backend.Apps.Main.Utils.Decorator import protect
-from backend.Apps.Main.Utils.UserToken import get_object_id, get_token
+from backend.Apps.Main.Database import Conversation, Message
+from backend.Apps.Main.Utils.UserToken import get_token
+from backend.Lib.Logger import Logger
 
-conversation = Blueprint("Conversation", __name__)
+b_conversation = Blueprint("Conversation", __name__)
 
-@conversation.route("/")
-@jwt_required()
-@protect()
+@dataclass
+class MessageResult:
+  text: str
+  created_at: datetime
+
+@dataclass
+class GetResult:
+  conversation: str
+  title: str
+  created_at: datetime
+
+@b_conversation.route("/get")
+@jwt_required(optional=False)
 def get():
-  if len(user_id) == 0:
+  user_id = get_token()
+  if user_id == None:
     raise InvalidId()
 
-  token = get_token()
-  if token == None:
-    raise Unauthorized()
+  try:
+    conversations: List[Conversation] = Conversation.objects( # type: ignore
+      owner=user_id.id
+    ).only("id", "title", "created_at")
+    # Logger.log.info(f"Conversations {conversations}")
 
-  user_id = get_object_id(token.id)
-  conversations = Conversation.objects(owner=user_id)
+    results: List[GetResult] = []
+    for conv in conversations:
+      # messages = []
+      # if isIncludeMessages:
+      #   Logger.log.warning("TODO Optimize")
+      #   msgs: List[Message] = Message.objects(conversation=conv.id) # type: ignore
+      #   for m in msgs:
+      #     messages.append(
+      #       MessageResult(text=str(m.text))
+      #     )
 
-  return jsonify(conversations), 200
+      results.append(
+        GetResult(
+          conversation=str(conv.id), # type: ignore
+          title=str(conv.title),
+          created_at=conv.created_at, # type: ignore
+        )
+      )
+    return jsonify([ asdict(i) for i in results]), 200
+
+  except Exception as e:
+    Logger.log.error(repr(e))
+    return jsonify([]), 200
+
+@b_conversation.route("/get/<id>")
+@jwt_required(optional=False)
+def get_id(id: str):
+  user_id = get_token()
+  if user_id == None:
+    raise InvalidId()
+
+  try:
+    messages: List[Message] = Message.objects( # type: ignore
+      conversation=id
+    ).only("id", "text", "created_at")
+
+    results = []
+    for msg in messages:
+      results.append(
+        MessageResult(
+          text=str(msg.text),
+          created_at=msg.created_at # type: ignore
+        )
+      )
+    return jsonify([ asdict(i) for i in results]), 200
+
+  except Exception as e:
+    Logger.log.error(repr(e))
+    return BadRequest()
