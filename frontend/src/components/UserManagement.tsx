@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, UserPlus, Edit, Trash2, Eye, Users } from "lucide-react";
 
 import { AddUserDialog } from "@/components/dialogs/AddUserDialog";
 import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
 import { DeleteUserDialog } from "@/components/dialogs/DeleteUserDialog";
 import { ViewUserDialog } from "@/components/dialogs/ViewUserDialog";
+import { authApi, type UserRecord } from "@/api/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface User {
   id: string;
@@ -20,34 +22,12 @@ interface User {
   createdAt: string;
 }
 
+const PAGE_SIZE = 10;
+
 export function UserManagement() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      username: "john_doe",
-      email: "john@example.com",
-      role: "user",
-      status: "active",
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "2",
-      username: "admin_user",
-      email: "admin@system.com",
-      role: "admin",
-      status: "active",
-      createdAt: "2024-01-10",
-    },
-    {
-      id: "3",
-      username: "superadmin",
-      email: "superadmin@system.com",
-      role: "superadmin",
-      status: "active",
-      createdAt: "2024-01-01",
-    },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -56,11 +36,67 @@ export function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const response = await authApi.listUsers();
+        const fetchedUsers = response.data.map((user: UserRecord): User => {
+          const rawRole = (user.role ?? "").toString().toLowerCase();
+          const normalizedRole: User["role"] = ["user", "admin", "superadmin"].includes(
+            rawRole
+          )
+            ? (rawRole as User["role"])
+            : "user";
+
+          return {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: normalizedRole,
+            status: user.is_active ? "active" : "inactive",
+            createdAt: user.created_at ? user.created_at.split("T")[0] : "—",
+          };
+        });
+        setUsers(fetchedUsers);
+      } catch (error) {
+        console.error("Failed to load users", error);
+        toast({
+          title: "Unable to fetch users",
+          description: "Please try again later.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadUsers();
+  }, [toast]);
+
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
 
   const filteredUsers = users.filter(
     (user) =>
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+
+  useEffect(() => {
+    setCurrentPage((prev) => {
+      const clamped = Math.min(Math.max(prev, 1), totalPages);
+      return clamped;
+    });
+  }, [totalPages]);
+
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const displayedUsers = filteredUsers.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE
   );
 
   const getStatusBadge = (status: User["status"]) => {
@@ -102,6 +138,27 @@ export function UserManagement() {
     }
   };
 
+  const handleFirstPage = () => setCurrentPage(1);
+  const handleLastPage = () => setCurrentPage(totalPages);
+  const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const handleNextPage = () =>
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setPageInput(value);
+
+    if (value === "") {
+      return;
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isNaN(numericValue)) {
+      const clamped = Math.min(Math.max(numericValue, 1), totalPages);
+      setCurrentPage(clamped);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-6xl mx-auto">
@@ -122,7 +179,10 @@ export function UserManagement() {
           <Input
             placeholder="Search users by username or email..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="pl-10"
           />
         </div>
@@ -183,7 +243,7 @@ export function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {displayedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.username}</TableCell>
                     <TableCell>{user.email}</TableCell>
@@ -223,8 +283,64 @@ export function UserManagement() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {displayedUsers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                      No users found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFirstPage}
+                  disabled={safeCurrentPage === 1}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={safeCurrentPage === 1}
+                >
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={safeCurrentPage === totalPages}
+                >
+                  Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLastPage}
+                  disabled={safeCurrentPage === totalPages}
+                >
+                  Last
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Page {safeCurrentPage} of {totalPages}
+                </span>
+                <Input
+                  type="text"
+                  value={pageInput}
+                  onChange={handlePageInputChange}
+                  className="w-20"
+                  placeholder="Go to"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -234,11 +350,17 @@ export function UserManagement() {
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onAddUser={(username, email, password, role) => {
+          const normalizedRole: User["role"] = ["user", "admin", "superadmin"].includes(
+            role.toLowerCase()
+          )
+            ? (role.toLowerCase() as User["role"])
+            : "user";
+
           const newUser: User = {
             id: Date.now().toString(),
             username,
             email,
-            role,
+            role: normalizedRole,
             status: "active",
             createdAt: new Date().toISOString().split("T")[0],
           };
@@ -255,9 +377,15 @@ export function UserManagement() {
         }}
         user={selectedUser}
         onUpdateUser={(id, username, email, role) => {
+          const normalizedRole: User["role"] = ["user", "admin", "superadmin"].includes(
+            role.toLowerCase()
+          )
+            ? (role.toLowerCase() as User["role"])
+            : "user";
+
           setUsers((prev) =>
             prev.map((u) =>
-              u.id === id ? { ...u, username, email, role } : u
+              u.id === id ? { ...u, username, email, role: normalizedRole } : u
             )
           );
         }}
