@@ -26,9 +26,9 @@ class Audit(BaseDocument):
         )
 
     @staticmethod
-    def audit_message(msg: str):
+    def audit_message(msg: str, type: AuditType = AuditType.MESSAGE):
         return Audit(
-            type=AuditType.MESSAGE,
+            type=type,
             data={
                 "msg": msg
             }

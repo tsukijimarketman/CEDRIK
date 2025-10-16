@@ -6,6 +6,10 @@ from flask_jwt_extended import jwt_required
 from werkzeug.exceptions import InternalServerError, NotAcceptable
 from werkzeug.datastructures import FileStorage
 
+import random
+from backend.Apps.Main.Database.Models import Audit
+from backend.Apps.Main.Filter.Filter import FILTER_ERR_MSG, m_filter
+from backend.Apps.Main.Utils.Enum import AuditType
 from backend.Lib.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId, TooManyFiles
 from backend.Apps.Main.Database import Transaction
 from backend.Lib.Logger import Logger
@@ -60,11 +64,21 @@ def chat():
     if (user_token == None): raise HttpInvalidId()
 
     try:
-        Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
+        Audit.audit_message(f"user {user_token.username} query {body.prompt.content}").save()
+        # Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
+        filter_result = m_filter(body.prompt.content)
+        Logger.log.warning(f"FilterResult {filter_result}")
+        if filter_result.is_filtered:
+            Audit.audit_message(f"user {user_token.username} query {body.prompt.content} is filtered", AuditType.FILTERED).save()
+            return jsonify({
+                "conversation": "",
+                "reply": FILTER_ERR_MSG[random.randint(0,len(FILTER_ERR_MSG))]
+            }), 200
 
         # Generate Reply
         # !!! Do not run inside transaction
         Logger.log.warning(f"Finding Related Context...")
+
         model_reply = generate_reply(
             conversation_id=body.conversation,
             user=user_token,

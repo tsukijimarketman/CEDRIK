@@ -10,6 +10,7 @@ class AuditType(Enum):
   EDIT = "edit"
   DELETE = "delete"
   MESSAGE = "message"
+  FILTERED = "filtered"
 
 class Collections(Enum):
   USER = "user"
