@@ -119,64 +119,115 @@ export function ChatInterface() {
   // When collapsed on desktop, hide the sidebar entirely and remove left margin
   const contentMarginClass = isSidebarCollapsed ? "md:ml-0" : "md:ml-64";
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   return (
     <div className="relative h-screen bg-chat-background">
       <ChatSidebar
-      setMessages={setMessages}
+        setMessages={setMessages}
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onSelectConversation={handleOpenMessage}
+        setIsLoggedIn={setIsLoggedIn}
       />
 
-      <div
-        className={`flex flex-col h-full ${contentMarginClass} transition-all duration-300 min-w-0`}
-      >
-        {/* Header */}
-        <div className="border-b border-border bg-background">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center">
-              {isSidebarCollapsed && (
-                <button
-                  onClick={() => setIsSidebarCollapsed(false)}
-                  className="mr-4 p-2 hover:bg-muted rounded-md transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5"
+      {isLoggedIn ? (
+        <div
+          className={`flex flex-col h-full ${contentMarginClass} transition-all duration-300 min-w-0`}
+        >
+          {/* Header */}
+          <div className="border-b border-border bg-background">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center">
+                {isSidebarCollapsed && (
+                  <button
+                    onClick={() => setIsSidebarCollapsed(false)}
+                    className="mr-4 p-2 hover:bg-muted rounded-md transition-colors"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                    />
-                  </svg>
-                </button>
-              )}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <ThemeToggle />
             </div>
-            <ThemeToggle />
           </div>
-        </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto">
-          <WelcomeMessage />
-          {messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              role={message.role}
-              content={message.content}
-              timestamp={message.timestamp}
-            />
-          ))}
-        </div>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto">
+            <WelcomeMessage loggedOut={false}/>
+            {messages.map((message) => (
+              <ChatMessage
+                key={message.id}
+                role={message.role}
+                content={message.content}
+                timestamp={message.timestamp}
+              />
+            ))}
+          </div>
 
-        {/* Input */}
-        <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
-      </div>
+          {/* Input */}
+          <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
+        </div>
+      ) : (
+        <>
+          <div
+            className={`flex flex-col h-full ${contentMarginClass} transition-all duration-300 min-w-0`}
+          >
+            {/* Header */}
+            <div className="border-b border-border bg-background">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center">
+                  {isSidebarCollapsed && (
+                    <button
+                      onClick={() => setIsSidebarCollapsed(false)}
+                      className="mr-4 p-2 hover:bg-muted rounded-md transition-colors"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                <ThemeToggle />
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto">
+              <WelcomeMessage
+                loggedOut={true}
+              />
+            </div>
+
+            {/* Input */}
+            <ChatInput onSendMessage={null} disabled={true} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
