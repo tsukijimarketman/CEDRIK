@@ -21,6 +21,7 @@ interface EditUserDialogProps {
     username: string;
     email: string;
     role: string;
+    status: string;
   } | null;
   onUpdateUser: (id: string, username: string, email: string, role: string) => void;
   onUpdateUserSuccess?: () => void;
@@ -37,6 +38,7 @@ export function EditUserDialog({
     username: "",
     email: "",
     role: "user",
+    status: "active",
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -49,6 +51,7 @@ export function EditUserDialog({
         username: user.username,
         email: user.email,
         role: user.role,
+        status: user.status,
       });
     }
   }, [user]);
@@ -61,6 +64,9 @@ export function EditUserDialog({
   const handleRoleChange = (value: string) => {
     setFormData((prev) => ({ ...prev, role: value }));
   };
+  const handleStatusChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, status: value }));
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +79,7 @@ export function EditUserDialog({
         username: formData.username,
         email: formData.email,
         role: formData.role,
+        status: formData.status,
       });
 
       toast({
@@ -80,7 +87,7 @@ export function EditUserDialog({
         description: "User updated successfully!",
       });
 
-      onUpdateUser(user.id, formData.username, formData.email, formData.role);
+      onUpdateUser(user.id, formData.username, formData.email, formData.role, formData.status);
       onUpdateUserSuccess?.();
       onClose();
     } catch (error: any) {
@@ -135,9 +142,23 @@ export function EditUserDialog({
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" className="w-full">
-          Save Changes
-          </Button>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-status">Status</Label>
+            <Select value={formData.status} onValueChange={handleStatusChange}>
+              <SelectTrigger id="edit-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent >
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="InActive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="pt-4 flex justify-end">
+            <Button type="submit" className="w-full">
+              Save Changes
+            </Button></div>
         </form>
       </DialogContent>
     </Dialog>
