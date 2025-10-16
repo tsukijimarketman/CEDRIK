@@ -43,7 +43,7 @@ def login():
     Logger.log.info(f"LoginBody\n\t{str(req_login)}")
 
     try:
-        userQS = User.objects(email=req_login.email) # type: ignore
+        userQS = User.objects(email=req_login.email, is_active=True) # type: ignore
         if (len(userQS) == 0):
             raise UserDoesNotExist()
 
