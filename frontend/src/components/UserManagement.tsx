@@ -86,18 +86,18 @@ export function UserManagement() {
   );
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    const va1a = a[sortField];
+    const vala = a[sortField];
     const valb = b[sortField];
 
     if (sortField === 'createdAt') {
-      const dateA = new Date(va1a);
+      const dateA = new Date(vala);
       const dateB = new Date(valb);
       return sortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
     }
-    return sortOrder === 'asc' ? String(va1a).localeCompare(String(valb)) : String(valb).localeCompare(String(va1a));
+    return sortOrder === 'asc' ? String(vala).localeCompare(String(valb)) : String(valb).localeCompare(String(vala));
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / PAGE_SIZE));
 
   useEffect(() => {
     setCurrentPage((prev) => {
@@ -107,7 +107,7 @@ export function UserManagement() {
   }, [totalPages]);
 
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
-  const displayedUsers = filteredUsers.slice(
+  const displayedUsers = sortedUsers.slice(
     (safeCurrentPage - 1) * PAGE_SIZE,
     safeCurrentPage * PAGE_SIZE
   );
@@ -206,7 +206,7 @@ export function UserManagement() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
               <div className="h-4 w-4 bg-green-500 rounded-full" />
-            </CardHeader>
+            </CardHeader> 
             <CardContent>
               <div className="text-2xl font-bold">
                 {users.filter((u) => u.status === "active").length}
@@ -257,7 +257,7 @@ export function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedUsers.map((user) => (
+                {displayedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.username}</TableCell>
                     <TableCell>{user.email}</TableCell>
