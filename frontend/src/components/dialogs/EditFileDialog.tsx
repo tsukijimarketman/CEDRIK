@@ -27,16 +27,15 @@ interface EditFileDialogProps {
         title: string;
         description: string;
         category: string;
-        tag: string;
-        // Optional: If you allow file replacement, you can add `file?: File | null`
+        tags: string;
+
     } | null;
     onUpdateFile: (data: {
         id: string;
         title: string;
         description: string;
         category: string;
-        tag: string;
-        // Optional file if you allow file change
+        tags: string;
         file?: File | null;
     }) => void;
 }
@@ -46,7 +45,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
         title: "",
         description: "",
         category: "",
-        tag: "",
+        tags: "",
         file: null as File | null,
     });
 
@@ -60,7 +59,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
                 title: file.title,
                 description: file.description,
                 category: file.category,
-                tag: file.tag,
+                tags: file.tags,
                 file: null,
             });
         }
@@ -72,7 +71,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
     };
 
     const handleTagChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, tag: value }));
+        setFormData((prev) => ({ ...prev, tags: value }));
     };
     const handleCategoryChange = (value: string) => {
         setFormData((prev) => ({ ...prev, category: value }));
@@ -98,17 +97,16 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
         try {
             setIsLoading(true);
 
-            // Simulate update delay or replace with your API call
+
             await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            // Here you can handle file upload if file !== null, else just update metadata
 
             onUpdateFile({
                 id: file.id,
                 title: formData.title,
                 description: formData.description,
                 category: formData.category,
-                tag: formData.tag,
+                tags: formData.tags,
                 file: formData.file ?? undefined,
             });
 
@@ -172,10 +170,10 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="edit-tag">Tag</Label>
-                        <Select value={formData.tag} onValueChange={handleTagChange}>
-                            <SelectTrigger id="edit-tag">
-                                <SelectValue placeholder="Select tag" />
+                        <Label htmlFor="edit-tags">Tag</Label>
+                        <Select value={formData.tags} onValueChange={handleTagChange}>
+                            <SelectTrigger id="edit-tags">
+                                <SelectValue placeholder="Select tags" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="architecture">Architecture</SelectItem>

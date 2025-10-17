@@ -26,7 +26,7 @@ interface AddFileDialogProps {
         title: string;
         description: string;
         category: string;
-        tag: string;
+        tags: string;
         file: File | null;
     }) => void;
     onAddFileSuccess?: () => void;
@@ -88,7 +88,6 @@ export function AddFileDialog({
             uploadData.append("tag", formData.tag);
             uploadData.append("file", formData.file);
 
-            // await fileApi.upload(uploadData); // ← use your actual API
 
             toast({
                 title: "Success",
