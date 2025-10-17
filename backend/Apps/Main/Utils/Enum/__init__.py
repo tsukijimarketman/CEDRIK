@@ -4,12 +4,15 @@ class Role(Enum):
   USER = "user"
   ADMIN = "admin"
   SUPERADMIN = "superadmin"
+  ASSISTANT = "assistant"
 
 class AuditType(Enum):
   ADD = "add"
   EDIT = "edit"
   DELETE = "delete"
   MESSAGE = "message"
+  LOGIN = "login"
+  REGISTER = "register"
   FILTERED = "filtered"
 
 class Collections(Enum):

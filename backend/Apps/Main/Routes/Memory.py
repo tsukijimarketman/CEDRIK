@@ -6,6 +6,7 @@ from werkzeug.exceptions import NotAcceptable, HTTPException
 
 from backend.Apps.Main.Database import Transaction
 from backend.Apps.Main.Utils.Decorator import protect
+from backend.Apps.Main.Utils.UserToken import get_token
 from backend.Lib.Error import BadBody, HttpValidationError, TooManyFiles
 from backend.Lib.Logger import Logger
 from backend.Apps.Main.Service.Memory import create_memory, DCreateMemory # type: ignore
@@ -40,12 +41,15 @@ def create():
     Logger.log.error(e)
     raise BadBody(description=get_schema_of_dataclass(DCreateMemory)) # type: ignore
 
+  
+  user_token = get_token()
   try:
     with Transaction() as (session, db): # type: ignore
       col_mem = db.get_collection(Collections.MEMORY.value) # type: ignore
       col_audit = db.get_collection(Collections.AUDIT.value) # type: ignore
 
       create_memory(
+        user_token=user_token,
         session=session,
         col_audit=col_audit,
         col_memory=col_mem,

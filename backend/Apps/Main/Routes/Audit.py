@@ -7,8 +7,10 @@ from flask_jwt_extended import jwt_required
 from datetime import datetime
 from werkzeug.exceptions import BadRequest
 
+from backend.Apps.Main.Database.Models import User
 from backend.Apps.Main.Utils.Decorator import protect
 from backend.Apps.Main.Utils.Enum import AuditType, Role
+from backend.Lib.Config import AI_NAME
 from backend.Lib.Error import InvalidId
 from backend.Apps.Main.Database import Audit
 from backend.Apps.Main.Utils.UserToken import get_token
@@ -21,6 +23,7 @@ class AuditResult:
   id: str
   type: str
   data: dict
+  user: dict
   created_at: datetime | None
   updated_at: datetime | None
   deleted_at: datetime | None
@@ -48,10 +51,21 @@ def get():
           data_dict = audit.data.to_dict() # type: ignore
       else:
           data_dict = json.loads(json_util.dumps(audit.data)) if audit.data else {}
+
+      user = None
+      if hasattr(audit, "user") and audit.user != None:
+        user = User.to_dict_from(audit.user)
+      else:
+        user = User.to_dict_from({
+          "username": AI_NAME,
+          "role": Role.ASSISTANT.value
+        })
+
       results.append(
         AuditResult(
           id=str(audit.id), # type: ignore
           type=AuditType(audit.type).value,
+          user=user if user else {},
           data=data_dict,
           created_at=audit.created_at, # type: ignore
           updated_at=audit.updated_at, # type: ignore

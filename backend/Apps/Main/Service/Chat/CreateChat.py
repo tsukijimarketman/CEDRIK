@@ -173,6 +173,7 @@ def create_chat(
     conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
     col_audit.insert_one(Audit.audit_collection(
+      user_token=user_token,
       type=AuditType.ADD,
       collection=Collections.CONVERSATION,
       id=conv_id
@@ -186,6 +187,7 @@ def create_chat(
         conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
         col_audit.insert_one(Audit.audit_collection(
+          user_token=user_token,
           type=AuditType.ADD,
           collection=Collections.CONVERSATION,
           id=conv_id
@@ -215,6 +217,7 @@ def create_chat(
   messages_audits = []
   for iid in messages_id:
     ad = Audit.audit_collection(
+      user_token=user_token,
       type=AuditType.ADD,
       collection=Collections.CONVERSATION,
       id=iid
