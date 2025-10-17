@@ -91,6 +91,12 @@ export type ChatSidebarTitle = {
   created_at: Date;
 };
 
+export type ChatSidebarNewChat = {
+  conversation: string;
+  title: string;
+  created_at: Date;
+};
+
 export type ChatSidebarOpen = {
   text: string;
   created_at: Date;
@@ -114,6 +120,20 @@ export const sidebarConversationOpen = {
       ...x,
       created_at: new Date(x.created_at),
     }));
+    return res;
+  },
+};
+
+export const sidebarConversationCreate = {
+  newChat: async () => {
+    const res = await api.post<ChatSidebarNewChat>("/conversation/create");
+    return res;
+  },
+};
+
+export const sidebarConversationDelete = {
+  chatDelete: async (conversationId: string) => {
+    const res = await api.delete(`/conversation/delete/${conversationId}`);
     return res;
   },
 };

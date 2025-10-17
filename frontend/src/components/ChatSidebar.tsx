@@ -18,10 +18,16 @@ import { SignUpDialog } from "./dialogs/SignUpDialog";
 import { SettingsDialog } from "./dialogs/SettingsDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
 import { LogoutDialog } from "./dialogs/LogoutDialog";
-import { authApi, sidebarTitleApi } from "@/api/api";
+import {
+  authApi,
+  sidebarConversationCreate,
+  sidebarConversationDelete,
+  sidebarTitleApi,
+} from "@/api/api";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useChat } from "@/contexts/ChatContext";
+import { MessageSquarePlus } from "lucide-react";
 
 interface Chat {
   conversation: string;
@@ -63,7 +69,7 @@ export function ChatSidebar({
   useEffect(() => {
     if (user) handleChatTitle();
     else setChats([]);
-  }, [chats]);
+  }, [user]);
 
   // mockData; put this instead of res for checking
   // { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },
@@ -218,6 +224,61 @@ export function ChatSidebar({
     }
   };
 
+  const handleNewChat = async () => {
+    try {
+      // (1) Call your backend to create a new conversation
+      const res = await sidebarConversationCreate.newChat(); // You'll create this API if not yet existing
+
+      // (2) Update your chat list
+      const newChat = res.data; // Example: { conversation: "abc123", title: "New Chat", created_at: new Date() }
+      setChats((prev) => [newChat, ...prev]);
+
+      // (3) Make it the active chat
+      setActiveChatId(newChat.conversation);
+      onSelectConversation(newChat.conversation);
+
+      // (4) Reset the chat area
+      setMessages([]);
+
+      // (5) Close sidebar if on mobile
+      if (isMobile) setIsMobileMenuOpen(false);
+    } catch (error) {
+      toast({
+        title: "Failed to start a new chat",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteChat = async (conversationId: string) => {
+    try {
+      await sidebarConversationDelete.chatDelete(conversationId);
+
+      // Remove it from the local state
+      setChats((prev) =>
+        prev.filter((chat) => chat.conversation !== conversationId)
+      );
+
+      // If the deleted chat is the currently active one, reset the state
+      if (activeChat === conversationId) {
+        setActiveChatId(null);
+        setMessages([]);
+      }
+
+      toast({
+        title: "Chat deleted",
+        description: "The conversation has been removed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to delete chat",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Dialog helpers
   const openDialog = (
     type: "login" | "signup" | "settings" | "help" | "logout"
@@ -283,32 +344,70 @@ export function ChatSidebar({
             </Button>
           </div>
 
+          <div className="flex py-3 mb-1 flex justify-center align-center shadow">
+            <button
+              onClick={handleNewChat}
+              className="bg-stone-200 flex justify-center align-center gap-1 py-2 px-3 w-full mx-3 rounded text-sm"
+            >
+              <MessageSquarePlus className="w-5 h-5" /> New Chat
+            </button>
+          </div>
+
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
             {/* Chat List */}
             <div className="p-2">
               {chats.map((chat) => (
-                <button
+                <div
                   key={chat.conversation}
-                  onClick={() => {
-                    setActiveChatId(chat.conversation);
-                    setActiveChat(chat.conversation);
-                    onSelectConversation(chat.conversation);
-                    if (isMobile) setIsMobileMenuOpen(false);
-                  }}
                   className={cn(
-                    "w-full text-left p-3 rounded-lg transition-colors mb-1 text-foreground",
+                    "group flex items-center justify-between w-full p-3 rounded-lg mb-1 transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
                     activeChat === chat.conversation
                       ? "bg-accent text-accent-foreground"
                       : ""
                   )}
                 >
-                  <p className="font-medium text-sm">{chat.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {chat.created_at.toDateString()}
-                  </p>
-                </button>
+                  <button
+                    onClick={() => {
+                      setActiveChatId(chat.conversation);
+                      setActiveChat(chat.conversation);
+                      onSelectConversation(chat.conversation);
+                      if (isMobile) setIsMobileMenuOpen(false);
+                    }}
+                    className="flex-1 text-left"
+                  >
+                    <p className="font-medium text-sm truncate">{chat.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {chat.created_at.toDateString()}
+                    </p>
+                  </button>
+
+                  {/* Delete button (hidden until hover) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteChat(chat.conversation);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity ml-2"
+                    title="Delete chat"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           </div>
