@@ -100,6 +100,7 @@ export function ChatInterface() {
   const handleOpenMessage = async (conversation: string) => {
     try {
       const res = await sidebarConversationOpen.conversationOpen(conversation);
+      setIsLoggedIn(true);
       const fetchedMessages = res.data.map(
         (msg, index) =>
           ({
@@ -119,7 +120,7 @@ export function ChatInterface() {
   // When collapsed on desktop, hide the sidebar entirely and remove left margin
   const contentMarginClass = isSidebarCollapsed ? "md:ml-0" : "md:ml-64";
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(null);
 
   return (
     <div className="relative h-screen bg-chat-background">
@@ -167,7 +168,7 @@ export function ChatInterface() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto">
-            <WelcomeMessage loggedOut={false}/>
+            <WelcomeMessage loggedOut={false} />
             {messages.map((message) => (
               <ChatMessage
                 key={message.id}
@@ -218,9 +219,7 @@ export function ChatInterface() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto">
-              <WelcomeMessage
-                loggedOut={true}
-              />
+              <WelcomeMessage loggedOut={true} />
             </div>
 
             {/* Input */}
