@@ -26,7 +26,7 @@ interface EditFileDialogProps {
         id: string;
         title: string;
         description: string;
-        category: string;
+
         tags: string;
 
     } | null;
@@ -34,7 +34,7 @@ interface EditFileDialogProps {
         id: string;
         title: string;
         description: string;
-        category: string;
+
         tags: string;
         file?: File | null;
     }) => void;
@@ -44,7 +44,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
     const [formData, setFormData] = useState({
         title: "",
         description: "",
-        category: "",
+
         tags: "",
         file: null as File | null,
     });
@@ -58,7 +58,6 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
             setFormData({
                 title: file.title,
                 description: file.description,
-                category: file.category,
                 tags: file.tags,
                 file: null,
             });
@@ -72,9 +71,6 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
 
     const handleTagChange = (value: string) => {
         setFormData((prev) => ({ ...prev, tags: value }));
-    };
-    const handleCategoryChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, category: value }));
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,7 +101,6 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
                 id: file.id,
                 title: formData.title,
                 description: formData.description,
-                category: formData.category,
                 tags: formData.tags,
                 file: formData.file ?? undefined,
             });
@@ -155,20 +150,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
                             required
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select value={formData.category} onValueChange={handleCategoryChange}>
-                            <SelectTrigger id="category">
-                                <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Documentation">Documentation</SelectItem>
-                                <SelectItem value="API">API</SelectItem>
-                                <SelectItem value="Database">Database</SelectItem>
-                                <SelectItem value="Support">Support</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="edit-tags">Tag</Label>
                         <Select value={formData.tags} onValueChange={handleTagChange}>
