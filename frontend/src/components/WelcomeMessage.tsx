@@ -1,21 +1,22 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import "../custom-styles/WelcomeMessage.css";
 
 export function WelcomeMessage({ loggedOut }) {
   let messages = [];
 
   if (loggedOut) {
     messages = [
-      "👋😄 Hey there, friend! Please log in so we can start chatting! 💬✨",
-      "🤖💭 I’m all powered up and ready! Just log in to begin 🚀🗝️",
-      "🔒😅 Oops! Looks like you’re not logged in yet — fix that so we can talk! 💬❤️",
-      "🌟🙌 Welcome back! Log in and let’s make some awesome conversations 😍🔥",
-      "💌🫶 I’ve been waiting for you! Log in now so we can catch up 😄💬",
-      "😺👋 Meow! Even I can’t start chatting without you logging in 🐾🔐",
-      "🎉🤩 Let’s gooo! Just log in and I’ll show you something cool 💫💭",
-      "😇💭 Don’t leave me hanging — log in and let’s talk about everything! ☕💬",
-      "📱💡 Login required! Then we can chat, laugh, and share ideas 💭😂🔥",
-      "🧠🤖 I’ve got so much to tell you — log in to hear it all! 📚💬✨",
+      "Welcome! Please log in to continue our conversation.",
+      "Hi there! Log in to start chatting and access your account.",
+      "It looks like you’re not logged in yet. Please sign in to proceed.",
+      "Welcome back! Log in to resume where we left off.",
+      "Good to see you again! Please log in to continue.",
+      "Please log in to start your session and begin chatting.",
+      "You’re almost there! Log in to unlock your chat experience.",
+      "Access restricted — please log in to continue the conversation.",
+      "Let’s get started! Sign in to chat and explore more features.",
+      "I’m ready when you are. Log in to start your conversation.",
     ];
   } else {
     messages = [
@@ -41,23 +42,10 @@ export function WelcomeMessage({ loggedOut }) {
   }, []); // empty dependency array = runs only once per page load
 
   return (
-    <div className="flex w-full py-6 px-4 bg-chat-message-assistant">
-      <div className="flex w-full max-w-4xl mx-auto flex-row">
-        <div className="flex-shrink-0 w-10 h-10 mr-4">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center">
-            <img
-              src="/cedriklogo.png"
-              alt="CEDRIK"
-              className="w-10 h-10 rounded-full"
-            />
-          </div>
-        </div>
-
-        <div className="inline-block rounded-lg p-3 max-w-[70%] mr-5">
-          <div className="prose prose-sm max-w-none">
-            <p className="whitespace-pre-wrap break-words">{content}</p>
-          </div>
-        </div>
+    <div className="welcome-msg-container flex w-full gap-10 py-6 px-4 bg-chat-message-assistant">
+      <img src="/public/cedrik.png" className="cedrik-img" alt="" />
+      <div className="prose prose-sm max-w-none">
+        <p className="whitespace-pre-wrap break-words">{content}</p>
       </div>
     </div>
   );

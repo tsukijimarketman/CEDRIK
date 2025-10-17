@@ -63,7 +63,7 @@ export function ChatSidebar({
   useEffect(() => {
     if (user) handleChatTitle();
     else setChats([]);
-  }, [user]);
+  }, [chats]);
 
   // mockData; put this instead of res for checking
   // { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },

@@ -168,7 +168,6 @@ export function ChatInterface() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto">
-            <WelcomeMessage loggedOut={false} />
             {messages.map((message) => (
               <ChatMessage
                 key={message.id}
