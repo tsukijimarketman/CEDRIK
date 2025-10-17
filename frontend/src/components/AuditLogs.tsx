@@ -122,51 +122,6 @@ export function AuditLogs() {
           />
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Logs</CardTitle>
-              <div className="h-4 w-4 bg-blue-500 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{logs.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Success</CardTitle>
-              <div className="h-4 w-4 bg-green-500 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {logs.filter((l) => l.status === "success").length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Failed</CardTitle>
-              <div className="h-4 w-4 bg-red-500 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {logs.filter((l) => l.status === "failed").length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Warnings</CardTitle>
-              <div className="h-4 w-4 bg-yellow-500 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {logs.filter((l) => l.status === "warning").length}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Logs Table */}
         <Card>
@@ -183,10 +138,8 @@ export function AuditLogs() {
                   <TableHead>Timestamp</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Action</TableHead>
-                  <TableHead>Resource</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>IP Address</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">View</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -197,8 +150,6 @@ export function AuditLogs() {
                     </TableCell>
                     <TableCell className="font-medium">{log.user}</TableCell>
                     <TableCell>{log.action}</TableCell>
-                    <TableCell>{log.resource}</TableCell>
-                    <TableCell>{getStatusBadge(log.status)}</TableCell>
                     <TableCell className="font-mono text-sm">
                       {log.ipAddress}
                     </TableCell>
@@ -211,21 +162,6 @@ export function AuditLogs() {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-
-        {/* Log Details Card */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Log Details</CardTitle>
-            <CardDescription>
-              Detailed information about selected log entries.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center text-muted-foreground py-8">
-              <p>Select a log entry to view detailed information</p>
-            </div>
           </CardContent>
         </Card>
       </div>
