@@ -1,0 +1,11 @@
+.welcome-msg-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  height: 100% !important;
+  flex-direction: column;
+}
+
+.cedrik-img{
+  width: 30%;
+}
