@@ -21,10 +21,15 @@ import {
   Clock,
 } from "lucide-react";
 
+import { AddFileDialog } from "@/components/dialogs/NewFIleDialog";
+import { EditFileDialog } from "@/components/dialogs/EditFileDialog";
+
+
+
 interface KnowledgeBaseItem {
   id: string;
   title: string;
-  content: string;
+  description: string;
   category: string;
   tags: string[];
   author: string;
@@ -40,7 +45,7 @@ export function KnowledgeBase() {
     {
       id: "1",
       title: "System Architecture Overview",
-      content:
+      description:
         "This document provides a comprehensive overview of the system architecture, including component interactions, data flow, and integration points.",
       category: "Documentation",
       tags: ["architecture", "system", "overview"],
@@ -52,7 +57,7 @@ export function KnowledgeBase() {
     {
       id: "2",
       title: "API Authentication Guide",
-      content:
+      description:
         "Complete guide for implementing API authentication, including JWT token management, refresh tokens, and security best practices.",
       category: "API",
       tags: ["api", "authentication", "jwt", "security"],
@@ -64,7 +69,7 @@ export function KnowledgeBase() {
     {
       id: "3",
       title: "Database Schema Reference",
-      content:
+      description:
         "Detailed reference of all database tables, relationships, and constraints used in the system.",
       category: "Database",
       tags: ["database", "schema", "reference"],
@@ -76,7 +81,7 @@ export function KnowledgeBase() {
     {
       id: "4",
       title: "Troubleshooting Common Issues",
-      content:
+      description:
         "Collection of common issues and their solutions, including error messages, causes, and step-by-step resolution procedures.",
       category: "Support",
       tags: ["troubleshooting", "errors", "support"],
@@ -92,7 +97,7 @@ export function KnowledgeBase() {
   const filteredItems = knowledgeItems.filter((item) => {
     const matchesSearch =
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.tags.some((tag) =>
         tag.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -102,6 +107,15 @@ export function KnowledgeBase() {
 
     return matchesSearch && matchesCategory;
   });
+
+  const [files, setFiles] = useState<File[]>([]);
+  const [isAddFileOpen, setIsAddFileOpen] = useState(false);
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<KnowledgeBaseItem | null>(null);
+
+
+
 
   const getCategoryBadge = (category: string) => {
     const colors = {
@@ -133,10 +147,17 @@ export function KnowledgeBase() {
               Centralized documentation and reference materials
             </p>
           </div>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            New File
-          </Button>
+          <div className="flex gap-2">
+            <Button className="gap-2">
+              View Category
+            </Button>
+            <Button className="gap-2">
+              View Tags
+            </Button>
+            <Button className="gap-2" onClick={() => setIsAddFileOpen(true)}>
+              <Plus className="h-4 w-4" />
+              New File
+            </Button></div>
         </div>
 
         {/* Search and Filters */}
@@ -232,7 +253,7 @@ export function KnowledgeBase() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                  {item.content}
+                  {item.description}
                 </p>
 
                 <div className="flex flex-wrap gap-1 mb-4">
@@ -252,8 +273,11 @@ export function KnowledgeBase() {
                   <span className="text-xs text-muted-foreground">
                     Updated {item.updatedAt}
                   </span>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm">
+                  <div className="flex gap-1" >
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setSelectedFile(item);
+                      setIsEditOpen(true);
+                    }}>
                       <Edit className="h-3 w-3" />
                     </Button>
                     <Button
@@ -282,6 +306,54 @@ export function KnowledgeBase() {
           </Card>
         )}
       </div>
+
+      <AddFileDialog
+        open={isAddFileOpen}
+        onClose={() => setIsAddFileOpen(false)}
+        onAddFile={({ title, description, tag, file }) => {
+          interface UploadedFile {
+            id: string;
+            title: string;
+            description?: string;
+            tag?: string;
+            filename: string;
+            uploadedAt: string;
+            raw?: File; // keep original DOM File if needed
+          }
+
+          const [files, setFiles] = useState<UploadedFile[]>([]);
+          const newFile: UploadedFile = {
+            id: Date.now().toString(),
+            title,
+            description,
+            tag,
+            filename: file?.name ?? "unknown",
+            uploadedAt: new Date().toISOString(),
+            raw: file,
+          };
+
+          setFiles((prev) => [...prev, newFile]);
+        }}
+      />
+
+      {/* Edit File Dialog */}
+      <EditFileDialog
+        open={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          setSelectedFile(null);
+        }}
+        file={selectedFile}
+        onUpdateFile={(updatedFile) => {
+
+          console.log("Updated file:", updatedFile);
+        }}
+      />
+
+
     </div>
+
+
+
   );
 }

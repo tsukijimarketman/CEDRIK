@@ -54,6 +54,15 @@ def login():
         if not verify_password(str(user.password), req_login.password):
             raise UserDoesNotExist()
 
+        raw_is_active = getattr(user, "is_active", True)
+        if isinstance(raw_is_active, str):
+            user_is_active = raw_is_active.strip().lower() in {"true", "1", "yes"}
+        else:
+            user_is_active = bool(raw_is_active)
+
+        if not user_is_active:
+            raise Unauthorized(description="Account is inactive. Please contact support.")
+
         access_token = create_access_token(
             identity=str(user.id), # type: ignore
             expires_delta=timedelta(days=5),
@@ -61,7 +70,8 @@ def login():
                 "aud": Role(user.role).value,
                 "id": str(user.id), # type: ignore
                 "email": user.email,
-                "username": user.username
+                "username": user.username,
+                "is_active": user_is_active,
             },
         )
 
@@ -69,7 +79,9 @@ def login():
         resp = make_response(jsonify({
             "id": str(user.id), # type: ignore
             "email": user.email,
-            "username": user.username
+            "username": user.username,
+            "is_active": user_is_active,
+            "role": Role(user.role).value,
         }), 200)
         
         # handles Set-Cookie and other params based on app.config
@@ -218,7 +230,12 @@ def register():
 
     try:
         with Transaction() as (session, db):
-                user = User(email=req_register.email, username=req_register.username, password=req_register.password)
+                user = User(
+                    email=req_register.email,
+                    username=req_register.username,
+                    password=req_register.password,
+                    is_active=True,
+                )
 
                 col_user = db.get_collection(Collections.USER.value)
                 col_audit = db.get_collection(Collections.AUDIT.value)
@@ -244,3 +261,36 @@ def register():
         raise HTTPException(description=str(e))
 
     return "", 200
+
+
+@auth.route("/users", methods=["GET"])
+@jwt_required(optional=False)
+def list_users():
+    payload = get_token()
+    if payload is None:
+        return Unauthorized()
+
+    try:
+        users = User.objects()  # type: ignore
+        response_data = []
+        for user in users:
+            raw_is_active = getattr(user, "is_active", True)
+            if isinstance(raw_is_active, str):
+                user_is_active = raw_is_active.strip().lower() in {"true", "1", "yes"}
+            else:
+                user_is_active = bool(raw_is_active)
+
+            response_data.append({
+                "id": str(user.id),  # type: ignore
+                "email": user.email,
+                "username": user.username,
+                "role": user.role.value if isinstance(user.role, Role) else str(user.role),
+                "is_active": user_is_active,
+                "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
+                "updated_at": user.updated_at.isoformat() if getattr(user, "updated_at", None) else None,
+            })
+
+        return jsonify(response_data), 200
+    except Exception as e:
+        Logger.log.error(str(e))
+        raise InternalServerError()

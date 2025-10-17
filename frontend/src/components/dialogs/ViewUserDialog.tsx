@@ -15,6 +15,8 @@ interface ViewUserDialogProps {
     username: string;
     email: string;
     role: string;
+    status: string;
+    createdAt: string;
   } | null;
 }
 
@@ -39,6 +41,14 @@ export function ViewUserDialog({ open, onClose, user }: ViewUserDialogProps) {
           <div className="space-y-1">
             <Label>Role</Label>
             <p className="text-sm text-muted-foreground capitalize">{user.role}</p>
+          </div>
+          <div className="space-y-1">
+            <Label>Status</Label>
+            <p className="text-sm text-muted-foreground capitalize">{user.status}</p>
+          </div>
+          <div className="space-y-1">
+            <Label>Created Date</Label>
+            <p className="text-sm text-muted-foreground capitalize">{user.createdAt}</p>
           </div>
         </div>
         <div className="pt-4 flex justify-end">
