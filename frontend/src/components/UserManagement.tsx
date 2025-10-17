@@ -28,6 +28,8 @@ export function UserManagement() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -42,6 +44,8 @@ export function UserManagement() {
 
   useEffect(() => {
     const loadUsers = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
         const response = await authApi.listUsers();
         const fetchedUsers = response.data.map((user: UserRecord): User => {
@@ -64,11 +68,18 @@ export function UserManagement() {
         setUsers(fetchedUsers);
       } catch (error) {
         console.error("Failed to load users", error);
+        const message =
+          (typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+            ? error.message
+            : null) || "Failed to load users";
+        setError(message);
         toast({
           title: "Unable to fetch users",
           description: "Please try again later.",
           variant: "destructive",
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -257,7 +268,13 @@ export function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedUsers.map((user) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                      Loading users...
+                    </TableCell>
+                  </TableRow>
+                ) : displayedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.username}</TableCell>
                     <TableCell>{user.email}</TableCell>
@@ -287,7 +304,7 @@ export function UserManagement() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {displayedUsers.length === 0 && (
+                {!isLoading && displayedUsers.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
                       No users found.
@@ -296,6 +313,9 @@ export function UserManagement() {
                 )}
               </TableBody>
             </Table>
+            {error && (
+              <p className="mt-4 text-sm text-destructive">{error}</p>
+            )}
             <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-2">
                 <Button

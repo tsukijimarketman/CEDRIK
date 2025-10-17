@@ -161,6 +161,29 @@ export const aiApi = {
   },
 };
 
+export type AuditLogRecord = {
+  id: string;
+  type: string;
+  data: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  deleted_at: string | null;
+};
+
+export const auditApi = {
+  list: async (options?: { archive?: boolean }) => {
+    const params: Record<string, string> = {};
+    if (options?.archive !== undefined) {
+      params.archive = options.archive ? "true" : "false";
+    }
+    return api.get<AuditLogRecord[]>("/audit/get", {
+      params,
+    });
+  },
+};
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
