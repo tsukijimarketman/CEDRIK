@@ -72,7 +72,7 @@ def chat():
             Audit.audit_message(f"user {user_token.username} query {body.prompt.content} is filtered", AuditType.FILTERED).save()
             return jsonify({
                 "conversation": "",
-                "reply": FILTER_ERR_MSG[random.randint(0,len(FILTER_ERR_MSG))]
+                "reply": FILTER_ERR_MSG[random.randint(0,len(FILTER_ERR_MSG)-1)]
             }), 200
 
         # Generate Reply

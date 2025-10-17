@@ -3,64 +3,113 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, UserPlus, Edit, Trash2, Eye, Users } from "lucide-react";
 
 import { AddUserDialog } from "@/components/dialogs/AddUserDialog";
 import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
-import { DeleteUserDialog } from "@/components/dialogs/DeleteUserDialog";
 import { ViewUserDialog } from "@/components/dialogs/ViewUserDialog";
+import { ChevronUp, ChevronDown } from "lucide-react";
+import { authApi, type UserRecord } from "@/api/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface User {
   id: string;
   username: string;
   email: string;
   role: "user" | "admin" | "superadmin";
-  status: "active" | "inactive" | "suspended";
+  status: "active" | "inactive";
   createdAt: string;
 }
 
+const PAGE_SIZE = 10;
+
 export function UserManagement() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      username: "john_doe",
-      email: "john@example.com",
-      role: "user",
-      status: "active",
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "2",
-      username: "admin_user",
-      email: "admin@system.com",
-      role: "admin",
-      status: "active",
-      createdAt: "2024-01-10",
-    },
-    {
-      id: "3",
-      username: "superadmin",
-      email: "superadmin@system.com",
-      role: "superadmin",
-      status: "active",
-      createdAt: "2024-01-01",
-    },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+
+  const [sortField, setSortField] = useState<keyof User>('username');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const response = await authApi.listUsers();
+        const fetchedUsers = response.data.map((user: UserRecord): User => {
+          const rawRole = (user.role ?? "").toString().toLowerCase();
+          const normalizedRole: User["role"] = ["user", "admin", "superadmin"].includes(
+            rawRole
+          )
+            ? (rawRole as User["role"])
+            : "user";
+
+          return {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: normalizedRole,
+            status: user.is_active ? "active" : "inactive",
+            createdAt: user.created_at ? user.created_at.split("T")[0] : "—",
+          };
+        });
+        setUsers(fetchedUsers);
+      } catch (error) {
+        console.error("Failed to load users", error);
+        toast({
+          title: "Unable to fetch users",
+          description: "Please try again later.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadUsers();
+  }, [toast]);
+
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
 
   const filteredUsers = users.filter(
     (user) =>
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const vala = a[sortField];
+    const valb = b[sortField];
+
+    if (sortField === 'createdAt') {
+      const dateA = new Date(vala);
+      const dateB = new Date(valb);
+      return sortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+    }
+    return sortOrder === 'asc' ? String(vala).localeCompare(String(valb)) : String(valb).localeCompare(String(vala));
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / PAGE_SIZE));
+
+  useEffect(() => {
+    setCurrentPage((prev) => {
+      const clamped = Math.min(Math.max(prev, 1), totalPages);
+      return clamped;
+    });
+  }, [totalPages]);
+
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const displayedUsers = sortedUsers.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE
   );
 
   const getStatusBadge = (status: User["status"]) => {
@@ -69,8 +118,6 @@ export function UserManagement() {
         return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case "inactive":
         return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>;
-      case "suspended":
-        return <Badge className="bg-red-100 text-red-800">Suspended</Badge>;
     }
   };
 
@@ -85,20 +132,34 @@ export function UserManagement() {
     }
   };
 
-  // 🔹 Delete handler
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-    setDeleteLoading(true);
+  // Sort handler — just update state
+  const handleSort = (field: keyof User) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
-    try {
-      // simulate delete api call
-      await new Promise((res) => setTimeout(res, 1000));
+  const handleFirstPage = () => setCurrentPage(1);
+  const handleLastPage = () => setCurrentPage(totalPages);
+  const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const handleNextPage = () =>
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
-      setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
-      setIsDeleteOpen(false);
-      setSelectedUser(null);
-    } finally {
-      setDeleteLoading(false);
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setPageInput(value);
+
+    if (value === "") {
+      return;
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isNaN(numericValue)) {
+      const clamped = Math.min(Math.max(numericValue, 1), totalPages);
+      setCurrentPage(clamped);
     }
   };
 
@@ -122,7 +183,10 @@ export function UserManagement() {
           <Input
             placeholder="Search users by username or email..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="pl-10"
           />
         </div>
@@ -142,7 +206,7 @@ export function UserManagement() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
               <div className="h-4 w-4 bg-green-500 rounded-full" />
-            </CardHeader>
+            </CardHeader> 
             <CardContent>
               <div className="text-2xl font-bold">
                 {users.filter((u) => u.status === "active").length}
@@ -174,16 +238,26 @@ export function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead onClick={() => handleSort("username")} className="cursor-pointer">
+                    Username {sortField === "username" && (sortOrder === "asc")}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("email")} className="cursor-pointer">
+                    Email {sortField === "email" && (sortOrder === "asc")}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("role")} className="cursor-pointer">
+                    Role {sortField === "role" && (sortOrder === "asc")}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("status")} className="cursor-pointer">
+                    Status {sortField === "status" && (sortOrder === "asc")}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer">
+                    Created {sortField === "createdAt" && (sortOrder === "asc")}
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {displayedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.username}</TableCell>
                     <TableCell>{user.email}</TableCell>
@@ -193,9 +267,9 @@ export function UserManagement() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => {
-                            setSelectedUser(user);
-                            setIsViewOpen(true);
-                          }}>
+                          setSelectedUser(user);
+                          setIsViewOpen(true);
+                        }}>
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
@@ -208,23 +282,69 @@ export function UserManagement() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setIsDeleteOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
+                {displayedUsers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                      No users found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFirstPage}
+                  disabled={safeCurrentPage === 1}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={safeCurrentPage === 1}
+                >
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={safeCurrentPage === totalPages}
+                >
+                  Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLastPage}
+                  disabled={safeCurrentPage === totalPages}
+                >
+                  Last
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Page {safeCurrentPage} of {totalPages}
+                </span>
+                <Input
+                  type="text"
+                  value={pageInput}
+                  onChange={handlePageInputChange}
+                  className="w-20"
+                  placeholder="Go to"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -234,11 +354,17 @@ export function UserManagement() {
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onAddUser={(username, email, password, role) => {
+          const normalizedRole: User["role"] = ["user", "admin", "superadmin"].includes(
+            role.toLowerCase()
+          )
+            ? (role.toLowerCase() as User["role"])
+            : "user";
+
           const newUser: User = {
             id: Date.now().toString(),
             username,
             email,
-            role,
+            role: normalizedRole,
             status: "active",
             createdAt: new Date().toISOString().split("T")[0],
           };
@@ -255,21 +381,20 @@ export function UserManagement() {
         }}
         user={selectedUser}
         onUpdateUser={(id, username, email, role) => {
+          const normalizedRole: User["role"] = ["user", "admin", "superadmin"].includes(
+            role.toLowerCase()
+          )
+            ? (role.toLowerCase() as User["role"])
+            : "user";
+
           setUsers((prev) =>
             prev.map((u) =>
-              u.id === id ? { ...u, username, email, role } : u
+              u.id === id ? { ...u, username, email, role: normalizedRole } : u
             )
           );
         }}
       />
 
-      {/* Delete User Dialog */}
-      <DeleteUserDialog
-        open={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
-        onConfirm={handleDeleteUser}
-        isLoading={deleteLoading}
-      />
       {/* ✅ View User Dialog */}
       <ViewUserDialog
         open={isViewOpen}
@@ -282,4 +407,5 @@ export function UserManagement() {
     </div>
   );
 }
+
 //

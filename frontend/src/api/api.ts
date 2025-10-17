@@ -79,6 +79,19 @@ export const authApi = {
   updateMe: async (data: { username?: string; password?: string }) => {
     return api.put("/auth/me", data);
   },
+  listUsers: async () => {
+    return api.get<UserRecord[]>("/auth/users");
+  },
+};
+
+export type UserRecord = {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 //conversation
