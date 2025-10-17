@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState } from "react";
 import { Search, Download, Filter, Eye } from "lucide-react";
+import { ViewAuditLogDialog } from "@/components/dialogs/ViewAuditLogDialog";
 
 interface AuditLog {
   id: string;
@@ -80,6 +81,7 @@ export function AuditLogs() {
       log.details.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+
   const getStatusBadge = (status: AuditLog["status"]) => {
     switch (status) {
       case "success":
@@ -89,7 +91,13 @@ export function AuditLogs() {
       case "warning":
         return <Badge className="bg-yellow-100 text-yellow-800">Warning</Badge>;
     }
+
+
+
   };
+
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   return (
     <div className="flex-1 overflow-y-auto p-6">
@@ -154,7 +162,10 @@ export function AuditLogs() {
                       {log.ipAddress}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        setSelectedLog(log);
+                        setIsViewOpen(true);
+                      }}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -165,6 +176,18 @@ export function AuditLogs() {
           </CardContent>
         </Card>
       </div>
+
+      <ViewAuditLogDialog
+        open={isViewOpen}
+        onClose={() => {
+          setIsViewOpen(false);
+          setSelectedLog(null);
+        }}
+        log={selectedLog}
+      />
+
+
     </div>
+
   );
 }

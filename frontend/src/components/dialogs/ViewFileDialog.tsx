@@ -14,7 +14,6 @@ interface ViewFileDialogProps {
         id: string;
         title: string;
         description: string;
-        category: string;
         tags: string;
         author: string;
         createdAt: string;
@@ -40,11 +39,6 @@ export function ViewFileDialog({ open, onClose, file }: ViewFileDialogProps) {
                     <div>
                         <Label>Description</Label>
                         <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground capitalize">{file.description}</p>
-                    </div>
-
-                    <div>
-                        <Label>Category</Label>
-                        <p className="text-sm text-muted-foreground capitalize">{file.category}</p>
                     </div>
 
                     <div>

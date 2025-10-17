@@ -31,7 +31,6 @@ interface KnowledgeBaseItem {
   id: string;
   title: string;
   description: string;
-  category: string;
   tags: string[];
   author: string;
   createdAt: string;
@@ -48,7 +47,6 @@ export function KnowledgeBase() {
       title: "System Architecture Overview",
       description:
         "This document provides a comprehensive overview of the system architecture, including component interactions, data flow, and integration points.",
-      category: "Documentation",
       tags: ["architecture", "system", "overview"],
       author: "admin_user",
       createdAt: "2024-01-15",
@@ -60,7 +58,6 @@ export function KnowledgeBase() {
       title: "API Authentication Guide",
       description:
         "Complete guide for implementing API authentication, including JWT token management, refresh tokens, and security best practices.",
-      category: "API",
       tags: ["api", "authentication", "jwt", "security"],
       author: "tech_lead",
       createdAt: "2024-01-10",
@@ -72,7 +69,6 @@ export function KnowledgeBase() {
       title: "Database Schema Reference",
       description:
         "Detailed reference of all database tables, relationships, and constraints used in the system.",
-      category: "Database",
       tags: ["database", "schema", "reference"],
       author: "db_admin",
       createdAt: "2024-01-05",
@@ -84,7 +80,6 @@ export function KnowledgeBase() {
       title: "Troubleshooting Common Issues",
       description:
         "Collection of common issues and their solutions, including error messages, causes, and step-by-step resolution procedures.",
-      category: "Support",
       tags: ["troubleshooting", "errors", "support"],
       author: "support_team",
       createdAt: "2024-01-12",
@@ -178,8 +173,6 @@ export function KnowledgeBase() {
 
         </div>
 
-        {/* Stats Cards */}
-
 
         {/* Articles Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -191,9 +184,6 @@ export function KnowledgeBase() {
                     <CardTitle className="text-lg line-clamp-2">
                       {item.title}
                     </CardTitle>
-                    <CardDescription className="mt-2">
-                      {getCategoryBadge(item.category)}
-                    </CardDescription>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => {
                     setSelectedFile(item);
