@@ -12,6 +12,7 @@ class AuditType(Enum):
   DELETE = "delete"
   MESSAGE = "message"
   LOGIN = "login"
+  FAILED_LOGIN = "failed-login"
   REGISTER = "register"
   FILTERED = "filtered"
 

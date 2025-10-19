@@ -14,6 +14,7 @@ from backend.Apps.Main.RAG.Chunk import chunkify
 from backend.Apps.Main.RAG.Dataclass import FileInfo
 from backend.Apps.Main.RAG.Extract import extract
 from backend.Apps.Main.Utils import Collections, AuditType, UserToken, generate_embeddings
+from backend.Apps.Main.Utils.Audit import audit_collection
 from backend.Apps.Main.Utils.Enum import MemoryType, Permission
 from backend.Lib.Logger import Logger
 
@@ -113,8 +114,7 @@ def create_memory(
   if isinstance(res_insert, list):
     for inserted_id in res_insert:
       audits.append(
-        Audit.audit_collection(
-          user_token=user_token,
+        audit_collection(
           type=AuditType.ADD,
           collection=Collections.MEMORY,
           id=inserted_id
@@ -122,8 +122,7 @@ def create_memory(
       )
   else:
     audits.append(
-      Audit.audit_collection(
-        user_token=user_token,
+      audit_collection(
         type=AuditType.ADD,
         collection=Collections.MEMORY,
         id=res_insert,

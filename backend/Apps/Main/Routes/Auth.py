@@ -7,6 +7,7 @@ from mongoengine import ValidationError
 from pymongo.errors import DuplicateKeyError
 from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 
+from backend.Apps.Main.Utils.Audit import audit_collection, audit_message
 from backend.Lib.Error import BadBody, UserAlreadyExist, UserDoesNotExist, HttpValidationError
 from backend.Apps.Main.Hasher import verify_password, hash as hash_password
 from backend.Lib.Logger import Logger
@@ -43,15 +44,18 @@ def login():
     Logger.log.info(f"LoginBody\n\t{str(req_login)}")
 
     try:
-        userQS = User.objects(email=req_login.email, is_active=True) # type: ignore
+        userQS = User.objects(email=req_login.email) # type: ignore
         if (len(userQS) == 0):
+            audit_message(f"a user tried to login with email: \"{req_login.email}\"", AuditType.FAILED_LOGIN).save()
             raise UserDoesNotExist()
 
         user: User = userQS.first()
         if not isinstance(user, User):
+            audit_message(f"a user tried to login with email: \"{req_login.email}\"", AuditType.FAILED_LOGIN).save()
             raise UserDoesNotExist()
 
         if not verify_password(str(user.password), req_login.password):
+            audit_message(f"a user tried to login with email: \"{req_login.email}\"", AuditType.FAILED_LOGIN).save()
             raise UserDoesNotExist()
 
         raw_is_active = getattr(user, "is_active", True)
@@ -74,6 +78,7 @@ def login():
                 "is_active": user_is_active,
             },
         )
+        audit_message(f"User: {user.email} successfully logged in", AuditType.LOGIN).save()
 
         # Create response with user data
         resp = make_response(jsonify({
@@ -171,8 +176,7 @@ def update_me():
                 session=session,
             )
 
-            audit = Audit.audit_collection(
-                user_token=payload,
+            audit = audit_collection(
                 type=AuditType.EDIT,
                 collection=Collections.USER,
                 id=user_id,
@@ -244,16 +248,11 @@ def register():
                 user.validate()
                 user.hash_password()
                 res_insert = col_user.insert_one(user.to_mongo(), session=session).inserted_id
-                audit = Audit.audit_collection(
-                    user_token=UserToken({
-                        "id": str(res_insert),
-                        "aud": user.role,
-                        "username": user.username,
-                        "email": user.email
-                    }),
+                audit = audit_collection(
                     type=AuditType.REGISTER,
                     collection=Collections.USER,
                     id=res_insert,
+                    ip=request.remote_addr,
                     from_data=None,
                     to_data=None
                 )
