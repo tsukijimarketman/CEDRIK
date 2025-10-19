@@ -6,7 +6,7 @@ from urllib3.util.retry import Retry
 import json
 from backend.Lib.Logger import Logger
 from backend.Lib.Common import Prompt
-from backend.Lib.Config import ENCODER_SERVER, MODEL_SERVER
+from backend.Lib.Config import ENCODER_SERVER, MODEL_SERVER, FILTER_SERVER
 from typing import Any, List
 
 @dataclass
@@ -14,6 +14,36 @@ class Reply:
     prompt: Prompt
     embeddings: List[float]
     reply: str
+
+def classify_text(text: str) -> str:
+  try:
+    with requests.Session() as s:
+      retry = Retry(
+        total=3,
+        backoff_factor=0.3,
+        allowed_methods=["POST"],
+      )
+      adapter = HTTPAdapter(max_retries=retry)
+      adapter = HTTPAdapter(max_retries=retry)
+      s.mount("http://", adapter)
+      s.mount("https://", adapter)
+
+      response = s.post(
+          url=FILTER_SERVER,
+          data=json.dumps({
+              "context": [],
+              "prompt": asdict(Prompt(role="user", content=text))
+          }),
+          headers={ "Content-Type": "application/json" },
+          # timeout=10
+      )
+      response.raise_for_status()
+      d = response.json()
+
+      return d["reply"]
+  except Exception as e:
+      Logger.log.error(repr(e))
+      return ""
 
 def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
     try:

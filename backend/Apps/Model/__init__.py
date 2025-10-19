@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import List
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaServer, Qwen
+from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaServer, Qwen, ContentModerator
 from backend.Lib.Common import Prompt
 from backend.Lib.Logger import Logger
-from backend.Lib.Config import AI_MODEL, MAIN_SERVER
+from backend.Lib.Config import AI_MODEL, FILTER_MODE, MAIN_SERVER
 
 app = Flask(__name__)
 
@@ -27,8 +27,10 @@ class Model:
     """
     _engine: LLMEngine = LLMEngine("")
 
-    Logger.log.info(f"Model {AI_MODEL}")
-    if AI_MODEL == "deepseek-ai":
+    Logger.log.info(f"ai_model={AI_MODEL} filter_mode={FILTER_MODE}")
+    if FILTER_MODE:
+      _engine = ContentModerator()
+    elif AI_MODEL == "deepseek-ai":
       _engine = DeepSeekV3()
     elif AI_MODEL == "llama":
       _engine = LLamaServer()
@@ -76,8 +78,9 @@ def generate_reply():
     Logger.log.info(f"query {query}")
     reply = Model.generate(query)
 
+    Logger.log.info(f"reply {reply}")
     return jsonify({
       "reply": reply
-    }), 200;
+    }), 200
   except Exception as e:
     Logger.log.error(str(e))

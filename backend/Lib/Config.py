@@ -30,6 +30,7 @@ def _get_env_as_path(env_name: str):
 
 # Model
 AI_MODEL = str(_get_required_env("AI_MODEL"))
+FILTER_MODE = bool(_get_env_or_default("FILTER_MODE", False, lambda x: x != None and (x == '1' or x.lower() == "true")))
 SENTENCE_TRANSFORMER_MODEL = str(_get_required_env("SENTENCE_TRANSFORMER_MODEL"))
 # Pipeline Configuration
 PIPE_CONFIG = str(_get_env_as_path("PIPE_CONFIG"))
@@ -40,6 +41,7 @@ MAX_CONTEXT_SIZE = int(_get_env_or_default("MAX_CONTEXT_SIZE", 5, lambda x: int(
 MAIN_SERVER = str(_get_env_or_default("SERVER_MAIN", "http://localhost:5000"))
 ENCODER_SERVER = str( _get_env_or_default("SERVER_ENCODER" , "http://localhost:5001/encode") )
 MODEL_SERVER = str( _get_env_or_default("SERVER_MODEL", "http://localhost:5002/generate-reply") )
+FILTER_SERVER = str( _get_env_or_default("SERVER_FILTER", "http://localhost:5003/generate-reply") )
 FRONTEND_SERVER = str( _get_env_or_default("SERVER_FRONTEND", "http://localhost:5173") )
 DATABASE_URI = str(_get_required_env("CyberSync_DatabaseUri"))
 JWT_SECRET = str(_get_required_env("JWT_SECRET"))
