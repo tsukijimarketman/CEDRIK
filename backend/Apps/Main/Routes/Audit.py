@@ -11,6 +11,7 @@ from datetime import datetime
 from werkzeug.exceptions import BadRequest
 
 from backend.Apps.Main.Database.Models import User
+from backend.Apps.Main.Utils.Aggregate import Pagination, PaginationResults, match_exists, match_regex
 from backend.Apps.Main.Utils.Decorator import protect
 from backend.Apps.Main.Utils.Enum import AuditType, Collections, Role
 from backend.Lib.Config import AI_NAME
@@ -50,10 +51,7 @@ def get():
   if user_id == None:
     raise InvalidId()
 
-  is_archive = bool(request.args.get("archive", default=0, type=int))
-  offset = request.args.get("offset", default=0, type=int)
-  max_items = request.args.get("maxItems", default=30, type=int)
-  asc = bool(request.args.get("asc", default=0, type=int))
+  pagination = Pagination(request.args)
 
   jsonDict = request.get_json(silent=True)
   jsonDict = dict(jsonDict) if jsonDict != None else {}
@@ -64,6 +62,7 @@ def get():
   filters = []
   
   if len(_type) > 0:
+    filters.append(match_regex("type", _type))
     filters.append({
       "type": {
         '$regex': _type, 
@@ -71,25 +70,14 @@ def get():
       }
     })
   if len(ip) > 0:
-    filters.append({
-      'data.ip': {
-        '$regex': ip,
-        '$options': 'i'
-      }
-    })
+    filters.append(match_regex("data.ip", ip))
   if len(name) > 0:
     if name.lower() == AI_NAME.lower():
-      filters.append({
-        "user": { "$exists": False }
-      })
+      filters.append(match_exists("user", False))
     else:
-      filters.append({
-        "user.username": {
-            "$exists": True,
-            "$regex": name,
-            "$options": "i"
-          }
-      })
+      v = match_regex("user.username", name)
+      v["user.username"]["$exists"] = True
+      filters.append(v)
 
   try:
     audits = []
@@ -108,9 +96,7 @@ def get():
           'preserveNullAndEmptyArrays': True
         }
       },
-      {
-        "$match": { 'is_active': not is_archive },
-      }
+      pagination.build_archive_match()
     ]
 
     if len(filters) > 0:
@@ -127,15 +113,7 @@ def get():
 
     count_res: List[dict] = list(Audit.objects.aggregate(count_pipeline))
 
-    pipeline.extend([
-      {
-        '$sort': {
-          'updated_at': 1 if asc else -1
-        }
-      },
-      { '$skip': offset },
-      { '$limit': max_items }
-    ])
+    pipeline.extend(pagination.build_pagination())
 
     audits: List[dict] = list(Audit.objects.aggregate(pipeline))
 
@@ -166,11 +144,11 @@ def get():
         )
       )
 
-    return jsonify({
-      "total": count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
-      "page": offset + 1,
-      "items": [ asdict(i) for i in results]
-    }), 200
+    return jsonify(PaginationResults(
+      total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
+      page=pagination.offset + 1,
+      items=[ asdict(i) for i in results]
+    )), 200
   except Exception as e:
     # Logger.log.error(repr(e), traceback.format_exc())
     Logger.log.error(repr(e))

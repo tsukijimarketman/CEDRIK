@@ -55,6 +55,7 @@ def chat():
             "role": "user",
             "content": request.form.get("content", "")
         }
+        # TODO handle file
         json["file"] = request.files.get("file")
 
         body = ChatBody(**json)
