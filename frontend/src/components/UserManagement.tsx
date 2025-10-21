@@ -400,22 +400,31 @@ export function UserManagement() {
           setSelectedUser(null);
         }}
         user={selectedUser}
-        onUpdateUser={(id, username, email, role) => {
+        onUpdateUser={(id, username, email, role, status) => {
           const normalizedRole: User["role"] = ["user", "admin", "superadmin"].includes(
             role.toLowerCase()
           )
             ? (role.toLowerCase() as User["role"])
             : "user";
+          const normalizedStatus: User["status"] = status === "inactive" ? "inactive" : "active";
 
           setUsers((prev) =>
             prev.map((u) =>
-              u.id === id ? { ...u, username, email, role: normalizedRole } : u
+              u.id === id
+                ? {
+                    ...u,
+                    username,
+                    email,
+                    role: normalizedRole,
+                    status: normalizedStatus,
+                  }
+                : u
             )
           );
         }}
       />
 
-      {/* ✅ View User Dialog */}
+      {/* View User Dialog */}
       <ViewUserDialog
         open={isViewOpen}
         onClose={() => {
