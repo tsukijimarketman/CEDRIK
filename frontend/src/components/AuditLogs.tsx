@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, Download, Filter } from "lucide-react";
 import { auditApi, type AuditLogRecord } from "@/api/api";
 
@@ -53,27 +53,53 @@ export function AuditLogs() {
     setPageInput(String(currentPage));
   }, [currentPage]);
 
+  type NormalizedAuditLog = {
+    id: string;
+    type: string;
+    collection: string;
+    resourceId: string;
+    createdAt: string | null;
+    ipAddress: string;
+  };
+
+  const normalizedLogs = useMemo<NormalizedAuditLog[]>(() => {
+    return logs.map((log) => {
+      const collection =
+        log.data && typeof log.data["collection"] === "string"
+          ? (log.data["collection"] as string)
+          : "Unknown";
+      const resourceId =
+        log.data && log.data["id"] !== undefined
+          ? String(log.data["id"])
+          : "N/A";
+      const metadata = (log.metadata as Record<string, unknown> | null) ?? {};
+      const ipCandidates = [
+        typeof metadata["ip_address"] === "string" ? (metadata["ip_address"] as string) : null,
+        typeof metadata["ipAddress"] === "string" ? (metadata["ipAddress"] as string) : null,
+        log.data && typeof log.data["ip_address"] === "string" ? (log.data["ip_address"] as string) : null,
+        log.data && typeof log.data["ipAddress"] === "string" ? (log.data["ipAddress"] as string) : null,
+      ].filter(Boolean) as string[];
+
+      return {
+        id: log.id,
+        type: log.type ?? "Unknown",
+        collection,
+        resourceId,
+        createdAt: log.created_at,
+        ipAddress: ipCandidates[0] ?? "Not available",
+      };
+    });
+  }, [logs]);
+
   const normalizedSearch = searchTerm.trim().toLowerCase();
-  const filteredLogs = logs.filter((log) => {
-    const type = log.type?.toLowerCase() ?? "";
-    const collection =
-      log.data && typeof log.data["collection"] === "string"
-        ? (log.data["collection"] as string).toLowerCase()
-        : "";
-    const resourceId =
-      log.data && typeof log.data["id"] === "string" ? (log.data["id"] as string).toLowerCase() : "";
-    const user =
-      log.metadata && typeof log.metadata["user"] === "string"
-        ? (log.metadata["user"] as string).toLowerCase()
-        : "";
+  const filteredLogs = normalizedLogs.filter((log) => {
     if (!normalizedSearch) {
       return true;
     }
     return (
-      type.includes(normalizedSearch) ||
-      collection.includes(normalizedSearch) ||
-      resourceId.includes(normalizedSearch) ||
-      user.includes(normalizedSearch)
+      log.type.toLowerCase().includes(normalizedSearch) ||
+      log.collection.toLowerCase().includes(normalizedSearch) ||
+      log.resourceId.toLowerCase().includes(normalizedSearch)
     );
   });
 
@@ -136,7 +162,7 @@ export function AuditLogs() {
         <div className="relative mb-6">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search logs by user, action, resource, or details..."
+            placeholder="Search logs by action, collection, or resource id..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -161,8 +187,9 @@ export function AuditLogs() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
-                  <TableHead>User</TableHead>
                   <TableHead>Action</TableHead>
+                  <TableHead>Collection</TableHead>
+                  <TableHead>Resource ID</TableHead>
                   <TableHead>IP Address</TableHead>
                 </TableRow>
               </TableHeader>
@@ -181,25 +208,17 @@ export function AuditLogs() {
                   </TableRow>
                 ) : (
                   displayedLogs.map((log) => {
-                    const createdAt = log.created_at ? new Date(log.created_at).toLocaleString() : "N/A";
-                    const user =
-                      log.metadata && typeof log.metadata["user"] === "string"
-                        ? (log.metadata["user"] as string)
-                        : "N/A";
-                    const ipAddressCandidates = [
-                      log.metadata && typeof log.metadata["ip_address"] === "string" ? (log.metadata["ip_address"] as string) : null,
-                      log.metadata && typeof log.metadata["ipAddress"] === "string" ? (log.metadata["ipAddress"] as string) : null,
-                    ].filter(Boolean) as string[];
-                    const ipAddress = ipAddressCandidates[0] ?? "Not available";
+                    const createdAt = log.createdAt ? new Date(log.createdAt).toLocaleString() : "N/A";
                     return (
                       <TableRow key={log.id}>
                         <TableCell className="font-mono text-sm">
                           {createdAt}
                         </TableCell>
-                        <TableCell className="font-medium">{user}</TableCell>
                         <TableCell className="uppercase">{log.type || "Unknown"}</TableCell>
+                        <TableCell>{log.collection}</TableCell>
+                        <TableCell className="font-mono text-sm">{log.resourceId}</TableCell>
                         <TableCell className="font-mono text-sm">
-                          {ipAddress}
+                          {log.ipAddress}
                         </TableCell>
                       </TableRow>
                     );

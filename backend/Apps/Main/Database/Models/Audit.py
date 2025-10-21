@@ -7,6 +7,7 @@ from .BaseDocument import BaseDocument
 from bson import ObjectId
 
 class Audit(BaseDocument):
+    meta = {"allow_inheritance": True, "strict": False, "collection": "audit"}
     type = EnumField(AuditType, required=True)
     data = DictField()
 

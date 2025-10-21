@@ -64,6 +64,7 @@ export const authApi = {
     username: string;
     email: string;
     password: string;
+    role?: string;
   }) => {
     return api.post("/auth/register", userData);
   },
@@ -81,6 +82,17 @@ export const authApi = {
   },
   listUsers: async () => {
     return api.get<UserRecord[]>("/auth/users");
+  },
+  updateUser: async (
+    userId: string,
+    data: {
+      username?: string;
+      email?: string;
+      role?: string;
+      status?: "active" | "inactive";
+    }
+  ) => {
+    return api.put(`/auth/users/${userId}`, data);
   },
 };
 

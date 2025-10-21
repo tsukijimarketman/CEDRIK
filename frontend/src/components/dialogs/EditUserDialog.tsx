@@ -21,11 +21,24 @@ interface EditUserDialogProps {
     username: string;
     email: string;
     role: string;
-    status: string;
+    status: "active" | "inactive";
   } | null;
-  onUpdateUser: (id: string, username: string, email: string, role: string) => void;
+  onUpdateUser: (
+    id: string,
+    username: string,
+    email: string,
+    role: string,
+    status: "active" | "inactive"
+  ) => void;
   onUpdateUserSuccess?: () => void;
 }
+
+type UserFormState = {
+  username: string;
+  email: string;
+  role: string;
+  status: "active" | "inactive";
+};
 
 export function EditUserDialog({
   open,
@@ -34,7 +47,7 @@ export function EditUserDialog({
   onUpdateUser,
   onUpdateUserSuccess,
 }: EditUserDialogProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserFormState>({
     username: "",
     email: "",
     role: "user",
@@ -65,8 +78,9 @@ export function EditUserDialog({
     setFormData((prev) => ({ ...prev, role: value }));
   };
   const handleStatusChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, status: value }));
-  }
+    const normalized = value === "inactive" ? "inactive" : "active";
+    setFormData((prev) => ({ ...prev, status: normalized }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,13 +165,14 @@ export function EditUserDialog({
               </SelectTrigger>
               <SelectContent >
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="InActive">Inactive</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="pt-4 flex justify-end">
-            <Button type="submit" className="w-full">
-              Save Changes
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading ? "Saving..." : "Save Changes"}
             </Button></div>
         </form>
       </DialogContent>
