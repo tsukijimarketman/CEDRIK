@@ -64,6 +64,7 @@ export const authApi = {
     username: string;
     email: string;
     password: string;
+    role?: string;
   }) => {
     return api.post("/auth/register", userData);
   },

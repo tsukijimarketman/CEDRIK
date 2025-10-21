@@ -26,6 +26,7 @@ class ReqRegister:
     email: str
     username: str
     password: str
+    role: str | None = None
 
 @dataclass
 class ReqUpdateProfile:
@@ -236,6 +237,13 @@ def register():
                     password=req_register.password,
                     is_active=True,
                 )
+
+                requested_role = (req_register.role or "").strip().lower()
+                if requested_role:
+                    try:
+                        user.role = Role(requested_role)
+                    except ValueError:
+                        Logger.log.warning(f"Invalid role '{requested_role}' provided during registration. Defaulting to user role.")
 
                 col_user = db.get_collection(Collections.USER.value)
                 col_audit = db.get_collection(Collections.AUDIT.value)

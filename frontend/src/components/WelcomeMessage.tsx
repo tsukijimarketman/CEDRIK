@@ -43,7 +43,7 @@ export function WelcomeMessage({ loggedOut }) {
 
   return (
     <div className="welcome-msg-container flex w-full gap-10 py-6 px-4 bg-chat-message-assistant">
-      <img src="/public/cedrik.png" className="cedrik-img" alt="" />
+      <img src="/cedrik.png" className="cedrik-img" alt="" />
       <div className="prose prose-sm max-w-none">
         <p className="whitespace-pre-wrap break-words">{content}</p>
       </div>
