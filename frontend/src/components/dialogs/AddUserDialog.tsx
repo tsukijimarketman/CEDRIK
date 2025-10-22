@@ -55,6 +55,7 @@ export function AddUserDialog({
         username: formData.username,
         email: formData.email,
         password: formData.password,
+        role: formData.role,
       });
 
       toast({
@@ -132,9 +133,11 @@ export function AddUserDialog({
             </Select>
           </div>
           <div className="pt-4 flex justify-end">
-            <Button type="submit" className="w-full" >
-              Add User
-            </Button></div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading ? "Adding..." : "Add User"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

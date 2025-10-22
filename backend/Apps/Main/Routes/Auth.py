@@ -27,11 +27,19 @@ class ReqRegister:
     email: str
     username: str
     password: str
+    role: str | None = None
 
 @dataclass
 class ReqUpdateProfile:
     username: str | None = None
     password: str | None = None
+
+@dataclass
+class ReqAdminUpdateUser:
+    username: str | None = None
+    email: str | None = None
+    role: str | None = None
+    status: str | None = None
 
 @auth.route("/login", methods=["POST"])
 def login():
@@ -242,6 +250,13 @@ def register():
                     is_active=True,
                 )
 
+                requested_role = (req_register.role or "").strip().lower()
+                if requested_role:
+                    try:
+                        user.role = Role(requested_role)
+                    except ValueError:
+                        Logger.log.warning(f"Invalid role '{requested_role}' provided during registration. Defaulting to user role.")
+
                 col_user = db.get_collection(Collections.USER.value)
                 col_audit = db.get_collection(Collections.AUDIT.value)
 
@@ -267,6 +282,130 @@ def register():
         raise HTTPException(description=str(e))
 
     return "", 200
+
+
+@auth.route("/users/<user_id>", methods=["PUT"])
+@jwt_required(optional=False)
+def update_user(user_id: str):
+    payload = get_token()
+    if payload is None:
+        return Unauthorized()
+
+    aud = getattr(payload, "aud", "").strip().lower()
+    if aud not in {Role.ADMIN.value, Role.SUPERADMIN.value}:
+        raise Unauthorized(description="Insufficient permissions")
+
+    try:
+        json = request.get_json() or {}
+        req_update = ReqAdminUpdateUser(**json)
+    except Exception as _:
+        raise BadBody()
+
+    try:
+        with Transaction() as (session, db):
+            col_user = db.get_collection(Collections.USER.value)
+            col_audit = db.get_collection(Collections.AUDIT.value)
+
+            target_id = get_object_id(user_id)
+            existing = col_user.find_one({"_id": target_id}, session=session)
+            if existing is None:
+                raise UserDoesNotExist()
+
+            update_fields: dict = {}
+            ad_from: dict = {}
+            ad_to: dict = {}
+
+            if req_update.username is not None and req_update.username.strip() != "":
+                new_username = req_update.username.strip()
+                if new_username != existing.get("username"):
+                    validate_username(new_username)
+                    update_fields["username"] = new_username
+                    ad_from["username"] = existing.get("username")
+                    ad_to["username"] = new_username
+
+            if req_update.email is not None and req_update.email.strip() != "":
+                new_email = req_update.email.strip()
+                if new_email != existing.get("email"):
+                    update_fields["email"] = new_email
+                    ad_from["email"] = existing.get("email")
+                    ad_to["email"] = new_email
+
+            if req_update.role is not None and req_update.role.strip() != "":
+                normalized_role = req_update.role.strip().lower()
+                try:
+                    role_enum = Role(normalized_role)
+                    existing_role = existing.get("role")
+                    existing_role_value = existing_role.value if isinstance(existing_role, Role) else str(existing_role)
+                    if role_enum.value != existing_role_value:
+                        update_fields["role"] = role_enum.value
+                        ad_from["role"] = existing_role_value
+                        ad_to["role"] = role_enum.value
+                except ValueError:
+                    raise HttpValidationError({"role": ["Invalid role"]})
+
+            if req_update.status is not None and req_update.status.strip() != "":
+                normalized_status = req_update.status.strip().lower()
+                if normalized_status not in {"active", "inactive"}:
+                    raise HttpValidationError({"status": ["Invalid status"]})
+
+                raw_is_active = existing.get("is_active", True)
+                if isinstance(raw_is_active, str):
+                    existing_is_active = raw_is_active.strip().lower() in {"true", "1", "yes"}
+                else:
+                    existing_is_active = bool(raw_is_active)
+
+                desired_is_active = normalized_status == "active"
+                if desired_is_active != existing_is_active:
+                    update_fields["is_active"] = desired_is_active
+                    ad_from["is_active"] = existing_is_active
+                    ad_to["is_active"] = desired_is_active
+
+            if len(update_fields) == 0:
+                return jsonify({
+                    "id": str(existing.get("_id")),
+                    "email": existing.get("email"),
+                    "username": existing.get("username"),
+                    "role": existing.get("role"),
+                    "is_active": existing.get("is_active", True),
+                }), 200
+
+            col_user.update_one(
+                {"_id": target_id},
+                {"$set": update_fields},
+                session=session,
+            )
+
+            audit = Audit.audit_collection(
+                type=AuditType.EDIT,
+                collection=Collections.USER,
+                id=target_id,
+                from_data=ad_from if len(ad_from) > 0 else None,
+                to_data=ad_to if len(ad_to) > 0 else None
+            )
+            col_audit.insert_one(audit.to_mongo(), session=session)
+
+            updated = col_user.find_one({"_id": target_id}, session=session)
+
+            updated_role = updated.get("role") if updated else update_fields.get("role", existing.get("role"))
+
+            return jsonify({
+                "id": str(target_id),
+                "email": updated.get("email") if updated else update_fields.get("email", existing.get("email")),
+                "username": updated.get("username") if updated else update_fields.get("username", existing.get("username")),
+                "role": updated_role.value if isinstance(updated_role, Role) else str(updated_role),
+                "is_active": updated.get("is_active") if updated else update_fields.get("is_active", existing.get("is_active", True)),
+            }), 200
+
+    except DuplicateKeyError as e:
+        Logger.log.error(str(e))
+        raise UserAlreadyExist()
+    except ValidationError as e:
+        raise HttpValidationError(e.to_dict())  # type: ignore
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        Logger.log.error(str(e))
+        raise InternalServerError()
 
 
 @auth.route("/users", methods=["GET"])

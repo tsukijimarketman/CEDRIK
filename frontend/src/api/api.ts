@@ -64,6 +64,7 @@ export const authApi = {
     username: string;
     email: string;
     password: string;
+    role?: string;
   }) => {
     return api.post("/auth/register", userData);
   },
@@ -82,6 +83,17 @@ export const authApi = {
   listUsers: async () => {
     return api.get<UserRecord[]>("/auth/users");
   },
+  updateUser: async (
+    userId: string,
+    data: {
+      username?: string;
+      email?: string;
+      role?: string;
+      status?: "active" | "inactive";
+    }
+  ) => {
+    return api.put(`/auth/users/${userId}`, data);
+  },
 };
 
 export type UserRecord = {
@@ -99,6 +111,12 @@ export type UserRecord = {
 //created_at
 
 export type ChatSidebarTitle = {
+  conversation: string;
+  title: string;
+  created_at: Date;
+};
+
+export type ChatSidebarNewChat = {
   conversation: string;
   title: string;
   created_at: Date;
@@ -131,6 +149,20 @@ export const sidebarConversationOpen = {
   },
 };
 
+export const sidebarConversationCreate = {
+  newChat: async () => {
+    const res = await api.post<ChatSidebarNewChat>("/conversation/create");
+    return res;
+  },
+};
+
+export const sidebarConversationDelete = {
+  chatDelete: async (conversationId: string) => {
+    const res = await api.delete(`/conversation/delete/${conversationId}`);
+    return res;
+  },
+};
+
 // AI Chat API
 export type ChatPrompt = {
   role: string;
@@ -157,6 +189,29 @@ export const aiApi = {
       headers: {
         "Content-Type": undefined, // let axios set content-type
       },
+    });
+  },
+};
+
+export type AuditLogRecord = {
+  id: string;
+  type: string;
+  data: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  deleted_at: string | null;
+};
+
+export const auditApi = {
+  list: async (options?: { archive?: boolean }) => {
+    const params: Record<string, string> = {};
+    if (options?.archive !== undefined) {
+      params.archive = options.archive ? "true" : "false";
+    }
+    return api.get<AuditLogRecord[]>("/audit/get", {
+      params,
     });
   },
 };

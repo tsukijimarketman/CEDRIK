@@ -25,8 +25,7 @@ interface AddFileDialogProps {
     onAddFile: (data: {
         title: string;
         description: string;
-        category: string;
-        tag: string;
+        tags: string;
         file: File | null;
     }) => void;
     onAddFileSuccess?: () => void;
@@ -41,7 +40,6 @@ export function AddFileDialog({
     const [formData, setFormData] = useState({
         title: "",
         description: "",
-        category: "",
         tag: "system",
         file: null as File | null,
     });
@@ -56,9 +54,6 @@ export function AddFileDialog({
 
     const handleTagChange = (value: string) => {
         setFormData((prev) => ({ ...prev, tag: value }));
-    };
-    const handleCategoryChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, category: value }));
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,7 +83,6 @@ export function AddFileDialog({
             uploadData.append("tag", formData.tag);
             uploadData.append("file", formData.file);
 
-            // await fileApi.upload(uploadData); // ← use your actual API
 
             toast({
                 title: "Success",
@@ -98,8 +92,7 @@ export function AddFileDialog({
             onAddFile({
                 title: formData.title,
                 description: formData.description,
-                category: formData.category,
-                tag: formData.tag,
+                tags: formData.tag,
                 file: formData.file,
             });
 
@@ -145,20 +138,6 @@ export function AddFileDialog({
                             required
                             placeholder="Description"
                         />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select value={formData.category} onValueChange={handleCategoryChange}>
-                            <SelectTrigger id="category">
-                                <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="documentation">Documentation</SelectItem>
-                                <SelectItem value="api">API</SelectItem>
-                                <SelectItem value="database">Database</SelectItem>
-                                <SelectItem value="support">Support</SelectItem>
-                            </SelectContent>
-                        </Select>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="tag">Tags</Label>

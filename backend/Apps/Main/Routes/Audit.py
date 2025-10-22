@@ -7,7 +7,6 @@ from flask import json, jsonify, request
 from flask.blueprints import Blueprint
 from bson import json_util
 from flask_jwt_extended import jwt_required
-from datetime import datetime
 from werkzeug.exceptions import BadRequest
 
 from backend.Apps.Main.Database.Models import User
@@ -117,7 +116,7 @@ def get():
 
     audits: List[dict] = list(Audit.objects.aggregate(pipeline))
 
-    results: List[AuditResult] = []
+    results = []
 
     for audit in audits:
       # Logger.log.info(audit)

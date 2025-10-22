@@ -26,17 +26,16 @@ interface EditFileDialogProps {
         id: string;
         title: string;
         description: string;
-        category: string;
-        tag: string;
-        // Optional: If you allow file replacement, you can add `file?: File | null`
+
+        tags: string;
+
     } | null;
     onUpdateFile: (data: {
         id: string;
         title: string;
         description: string;
-        category: string;
-        tag: string;
-        // Optional file if you allow file change
+
+        tags: string;
         file?: File | null;
     }) => void;
 }
@@ -45,8 +44,8 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
     const [formData, setFormData] = useState({
         title: "",
         description: "",
-        category: "",
-        tag: "",
+
+        tags: "",
         file: null as File | null,
     });
 
@@ -59,8 +58,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
             setFormData({
                 title: file.title,
                 description: file.description,
-                category: file.category,
-                tag: file.tag,
+                tags: file.tags,
                 file: null,
             });
         }
@@ -72,10 +70,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
     };
 
     const handleTagChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, tag: value }));
-    };
-    const handleCategoryChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, category: value }));
+        setFormData((prev) => ({ ...prev, tags: value }));
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,17 +93,15 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
         try {
             setIsLoading(true);
 
-            // Simulate update delay or replace with your API call
+
             await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            // Here you can handle file upload if file !== null, else just update metadata
 
             onUpdateFile({
                 id: file.id,
                 title: formData.title,
                 description: formData.description,
-                category: formData.category,
-                tag: formData.tag,
+                tags: formData.tags,
                 file: formData.file ?? undefined,
             });
 
@@ -157,25 +150,12 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
                             required
                         />
                     </div>
+
                     <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select value={formData.category} onValueChange={handleCategoryChange}>
-                            <SelectTrigger id="category">
-                                <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Documentation">Documentation</SelectItem>
-                                <SelectItem value="API">API</SelectItem>
-                                <SelectItem value="Database">Database</SelectItem>
-                                <SelectItem value="Support">Support</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-tag">Tag</Label>
-                        <Select value={formData.tag} onValueChange={handleTagChange}>
-                            <SelectTrigger id="edit-tag">
-                                <SelectValue placeholder="Select tag" />
+                        <Label htmlFor="edit-tags">Tag</Label>
+                        <Select value={formData.tags} onValueChange={handleTagChange}>
+                            <SelectTrigger id="edit-tags">
+                                <SelectValue placeholder="Select tags" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="architecture">Architecture</SelectItem>

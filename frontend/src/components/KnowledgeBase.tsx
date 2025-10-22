@@ -23,6 +23,7 @@ import {
 
 import { AddFileDialog } from "@/components/dialogs/NewFIleDialog";
 import { EditFileDialog } from "@/components/dialogs/EditFileDialog";
+import { ViewFileDialog } from "@/components/dialogs/ViewFileDialog";
 
 
 
@@ -30,12 +31,11 @@ interface KnowledgeBaseItem {
   id: string;
   title: string;
   description: string;
-  category: string;
   tags: string[];
   author: string;
   createdAt: string;
   updatedAt: string;
-  views: number;
+  // views: number;
 }
 
 export function KnowledgeBase() {
@@ -47,52 +47,55 @@ export function KnowledgeBase() {
       title: "System Architecture Overview",
       description:
         "This document provides a comprehensive overview of the system architecture, including component interactions, data flow, and integration points.",
-      category: "Documentation",
       tags: ["architecture", "system", "overview"],
       author: "admin_user",
       createdAt: "2024-01-15",
       updatedAt: "2024-01-20",
-      views: 1250,
+      // views: 1250,
     },
     {
       id: "2",
       title: "API Authentication Guide",
       description:
         "Complete guide for implementing API authentication, including JWT token management, refresh tokens, and security best practices.",
-      category: "API",
       tags: ["api", "authentication", "jwt", "security"],
       author: "tech_lead",
       createdAt: "2024-01-10",
       updatedAt: "2024-01-18",
-      views: 890,
+      // views: 890,
     },
     {
       id: "3",
       title: "Database Schema Reference",
       description:
         "Detailed reference of all database tables, relationships, and constraints used in the system.",
-      category: "Database",
       tags: ["database", "schema", "reference"],
       author: "db_admin",
       createdAt: "2024-01-05",
       updatedAt: "2024-01-15",
-      views: 2100,
+      // views: 2100,
     },
     {
       id: "4",
       title: "Troubleshooting Common Issues",
       description:
         "Collection of common issues and their solutions, including error messages, causes, and step-by-step resolution procedures.",
-      category: "Support",
       tags: ["troubleshooting", "errors", "support"],
       author: "support_team",
       createdAt: "2024-01-12",
       updatedAt: "2024-01-19",
-      views: 3400,
+      // views: 3400,
     },
   ]);
 
   const categories = ["all", "Documentation", "API", "Database", "Support"];
+  const tags = [
+    "all",
+    "architecture", "system", "overview",
+    "api", "authentication", "jwt", "security",
+    "database", "schema", "reference",
+    "troubleshooting", "errors", "support"
+  ];
 
   const filteredItems = knowledgeItems.filter((item) => {
     const matchesSearch =
@@ -112,6 +115,7 @@ export function KnowledgeBase() {
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<KnowledgeBaseItem | null>(null);
 
 
@@ -148,12 +152,7 @@ export function KnowledgeBase() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button className="gap-2">
-              View Category
-            </Button>
-            <Button className="gap-2">
-              View Tags
-            </Button>
+
             <Button className="gap-2" onClick={() => setIsAddFileOpen(true)}>
               <Plus className="h-4 w-4" />
               New File
@@ -171,66 +170,9 @@ export function KnowledgeBase() {
               className="pl-10"
             />
           </div>
-          <div className="flex gap-2">
-            {categories.map((category) => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category)}
-                className="capitalize"
-              >
-                {category === "all" ? "All" : category}
-              </Button>
-            ))}
-          </div>
+
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Articles
-              </CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{knowledgeItems.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Views</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {knowledgeItems
-                  .reduce((sum, item) => sum + item.views, 0)
-                  .toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Categories</CardTitle>
-              <Tag className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{categories.length - 1}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Month</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">24</div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Articles Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -242,11 +184,11 @@ export function KnowledgeBase() {
                     <CardTitle className="text-lg line-clamp-2">
                       {item.title}
                     </CardTitle>
-                    <CardDescription className="mt-2">
-                      {getCategoryBadge(item.category)}
-                    </CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setSelectedFile(item);
+                    setIsViewOpen(true);
+                  }}>
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
@@ -264,10 +206,6 @@ export function KnowledgeBase() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>By {item.author}</span>
-                  <span>{item.views} views</span>
-                </div>
 
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-xs text-muted-foreground">
@@ -318,7 +256,7 @@ export function KnowledgeBase() {
             tag?: string;
             filename: string;
             uploadedAt: string;
-            raw?: File; // keep original DOM File if needed
+            raw?: File;
           }
 
           const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -348,6 +286,15 @@ export function KnowledgeBase() {
 
           console.log("Updated file:", updatedFile);
         }}
+      />
+      {/* View File Dialog */}
+      <ViewFileDialog
+        open={isViewOpen}
+        onClose={() => {
+          setIsViewOpen(false);
+          setSelectedFile(null);
+        }}
+        file={selectedFile}
       />
 
 
