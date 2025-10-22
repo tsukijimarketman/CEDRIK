@@ -1,3 +1,7 @@
+import re
+import traceback
+from mongoengine.queryset.visitor import Q
+from dataclasses import asdict, dataclass
 from typing import List
 from flask import json, jsonify, request
 from flask.blueprints import Blueprint
@@ -5,8 +9,11 @@ from bson import json_util
 from flask_jwt_extended import jwt_required
 from werkzeug.exceptions import BadRequest
 
+from backend.Apps.Main.Database.Models import User
+from backend.Apps.Main.Utils.Aggregate import Pagination, PaginationResults, match_exists, match_regex
 from backend.Apps.Main.Utils.Decorator import protect
-from backend.Apps.Main.Utils.Enum import AuditType, Role
+from backend.Apps.Main.Utils.Enum import AuditType, Collections, Role
+from backend.Lib.Config import AI_NAME
 from backend.Lib.Error import InvalidId
 from backend.Apps.Main.Database import Audit
 from backend.Apps.Main.Utils.UserToken import get_token
@@ -14,84 +21,141 @@ from backend.Lib.Logger import Logger
 
 b_audit = Blueprint("Audit", __name__)
 
+@dataclass
+class AuditResult:
+  id: str
+  type: str
+  data: dict
+  user: dict
+  created_at: datetime | None
+  updated_at: datetime | None
+  deleted_at: datetime | None
+
 @b_audit.route("/get")
 @jwt_required(optional=False)
 @protect(Role.ADMIN)
 def get():
+  """
+  Query Params
+    archive - 1 or 0 (default: 0)
+    offset - int (default: 0)
+    maxItems - int (default: 30)
+    asc - 1 or 0 (default: 0) (sorts by updated_at)
+  Body (application/json)
+    username: str
+    type: str
+    ip: str
+  """
   user_id = get_token()
   if user_id == None:
     raise InvalidId()
 
-  archive_param = request.args.get("archive", default="false")
-  is_archive = False
-  if isinstance(archive_param, str):
-    is_archive = archive_param.lower() in ("1", "true", "yes")
-  elif isinstance(archive_param, bool):
-    is_archive = archive_param
+  pagination = Pagination(request.args)
+
+  jsonDict = request.get_json(silent=True)
+  jsonDict = dict(jsonDict) if jsonDict != None else {}
+  name = str(re.escape(jsonDict.get("username", "")))
+  _type = jsonDict.get("type", "")
+  ip = str(re.escape(jsonDict.get("ip", "")))
+
+  filters = []
+  
+  if len(_type) > 0:
+    filters.append(match_regex("type", _type))
+    filters.append({
+      "type": {
+        '$regex': _type, 
+        '$options': 'i'
+      }
+    })
+  if len(ip) > 0:
+    filters.append(match_regex("data.ip", ip))
+  if len(name) > 0:
+    if name.lower() == AI_NAME.lower():
+      filters.append(match_exists("user", False))
+    else:
+      v = match_regex("user.username", name)
+      v["user.username"]["$exists"] = True
+      filters.append(v)
 
   try:
     audits = []
-    audits: List[Audit] = Audit.objects( # type: ignore
-      is_active=(not is_archive)
-    ).order_by('-created_at')
+    pipeline = [
+      {
+        '$lookup': {
+          'from': Collections.USER.value,
+          'localField': 'user', 
+          'foreignField': '_id', 
+          'as': 'user'
+        }
+      },
+      {
+        '$unwind': {
+          'path': '$user', 
+          'preserveNullAndEmptyArrays': True
+        }
+      },
+      pagination.build_archive_match()
+    ]
+
+    if len(filters) > 0:
+      pipeline.append({
+        "$match": {
+          "$or": filters
+        }
+      })
+
+    count_pipeline = [ i for i in pipeline ]
+    count_pipeline.append({
+      "$count": "total"
+    })
+
+    count_res: List[dict] = list(Audit.objects.aggregate(count_pipeline))
+
+    pipeline.extend(pagination.build_pagination())
+
+    audits: List[dict] = list(Audit.objects.aggregate(pipeline))
 
     results = []
 
     for audit in audits:
-      data_dict = {}
-      if hasattr(audit.data, "to_dict"):
-          data_dict = audit.data.to_dict() # type: ignore
-      else:
-          data_dict = json.loads(json_util.dumps(audit.data)) if audit.data else {}
-      metadata_dict = {}
-      if hasattr(audit.metadata, "to_dict"):
-          metadata_dict = audit.metadata.to_dict() # type: ignore
-      else:
-          metadata_dict = json.loads(json_util.dumps(audit.metadata)) if audit.metadata else {}
+      # Logger.log.info(audit)
+      data_dict = audit.get("data", {})
 
-      audit_type = audit.type.value if isinstance(audit.type, AuditType) else AuditType(audit.type).value
+      user = audit.get("user", None)
+      if user != None:
+        user = User.to_dict_from(user)
+      else:
+        user = User.to_dict_from({
+          "username": AI_NAME,
+          "role": Role.ASSISTANT.value
+        })
 
       results.append(
-        {
-          "id": str(audit.id),
-          "type": audit_type,
-          "data": data_dict,
-          "metadata": metadata_dict,
-          "is_active": audit.is_active,
-          "created_at": audit.created_at.isoformat() if getattr(audit, "created_at", None) else None,
-          "updated_at": audit.updated_at.isoformat() if getattr(audit, "updated_at", None) else None,
-          "deleted_at": audit.deleted_at.isoformat() if getattr(audit, "deleted_at", None) else None
-        }
+        AuditResult(
+          id=str(audit.get(id, "")), # type: ignore
+          type=AuditType(audit["type"]).value if audit.get("type", None) != None else AuditType.MESSAGE.value,
+          user=user if user else {},
+          data=data_dict,
+          created_at=audit.get("created_at", None), # type: ignore
+          updated_at=audit.get("updated_at", None), # type: ignore
+          deleted_at=audit.get("deleted_at", None), # type: ignore
+        )
       )
 
-
-    return jsonify(results), 200
+    return jsonify(PaginationResults(
+      total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
+      page=pagination.offset + 1,
+      items=[ asdict(i) for i in results]
+    )), 200
   except Exception as e:
+    # Logger.log.error(repr(e), traceback.format_exc())
     Logger.log.error(repr(e))
     return BadRequest()
 
-# @b_conversation.route("/get/<id>")
-# @jwt_required(optional=False)
-# def get_id(id: str):
-#   user_id = get_token()
-#   if user_id == None:
-#     raise InvalidId()
-
-#   try:
-#     messages: List[Message] = Message.objects( # type: ignore
-#       conversation=id
-#     ).only("id", "text", "created_at")
-
-#     results = []
-#     for msg in messages:
-#       results.append(
-#         MessageResult(
-#           text=str(msg.text),
-#           created_at=msg.created_at # type: ignore
-#         )
-#       )
-#     return jsonify([ asdict(i) for i in results]), 200
-
-#   except Exception as e:
-#     Logger.log.error(repr(e))
-#     return BadRequest()
+@b_audit.route("/types")
+@jwt_required(optional=False)
+@protect(Role.ADMIN)
+def get_audit_types():
+  values = [e.value for e in AuditType]
+  return jsonify(values), 200

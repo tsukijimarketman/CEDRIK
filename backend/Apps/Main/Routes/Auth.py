@@ -7,11 +7,12 @@ from mongoengine import ValidationError
 from pymongo.errors import DuplicateKeyError
 from werkzeug.exceptions import HTTPException, InternalServerError, Unauthorized
 
+from backend.Apps.Main.Utils.Audit import audit_collection, audit_message
 from backend.Lib.Error import BadBody, UserAlreadyExist, UserDoesNotExist, HttpValidationError
 from backend.Apps.Main.Hasher import verify_password, hash as hash_password
 from backend.Lib.Logger import Logger
 from backend.Apps.Main.Database import Transaction, Audit, User
-from backend.Apps.Main.Utils import get_token, Role, AuditType, Collections, get_object_id
+from backend.Apps.Main.Utils import UserToken, get_token, Role, AuditType, Collections, get_object_id
 from backend.Apps.Main.Validation import validate_username, validate_password
 
 auth = Blueprint("Auth", __name__)
@@ -51,15 +52,18 @@ def login():
     Logger.log.info(f"LoginBody\n\t{str(req_login)}")
 
     try:
-        userQS = User.objects(email=req_login.email, is_active=True) # type: ignore
+        userQS = User.objects(email=req_login.email) # type: ignore
         if (len(userQS) == 0):
+            audit_message(f"a user tried to login with email: \"{req_login.email}\"", AuditType.FAILED_LOGIN).save()
             raise UserDoesNotExist()
 
         user: User = userQS.first()
         if not isinstance(user, User):
+            audit_message(f"a user tried to login with email: \"{req_login.email}\"", AuditType.FAILED_LOGIN).save()
             raise UserDoesNotExist()
 
         if not verify_password(str(user.password), req_login.password):
+            audit_message(f"a user tried to login with email: \"{req_login.email}\"", AuditType.FAILED_LOGIN).save()
             raise UserDoesNotExist()
 
         raw_is_active = getattr(user, "is_active", True)
@@ -82,6 +86,7 @@ def login():
                 "is_active": user_is_active,
             },
         )
+        audit_message(f"User: {user.email} successfully logged in", AuditType.LOGIN).save()
 
         # Create response with user data
         resp = make_response(jsonify({
@@ -179,7 +184,7 @@ def update_me():
                 session=session,
             )
 
-            audit = Audit.audit_collection(
+            audit = audit_collection(
                 type=AuditType.EDIT,
                 collection=Collections.USER,
                 id=user_id,
@@ -257,11 +262,12 @@ def register():
 
                 user.validate()
                 user.hash_password()
-                res_insert = col_user.insert_one(user.to_mongo(), session=session)
-                audit = Audit.audit_collection(
-                    type=AuditType.ADD,
+                res_insert = col_user.insert_one(user.to_mongo(), session=session).inserted_id
+                audit = audit_collection(
+                    type=AuditType.REGISTER,
                     collection=Collections.USER,
-                    id=res_insert.inserted_id,
+                    id=res_insert,
+                    ip=request.remote_addr,
                     from_data=None,
                     to_data=None
                 )

@@ -13,7 +13,8 @@ from backend.Apps.Main.Database import Audit, Memory
 from backend.Apps.Main.RAG.Chunk import chunkify
 from backend.Apps.Main.RAG.Dataclass import FileInfo
 from backend.Apps.Main.RAG.Extract import extract
-from backend.Apps.Main.Utils import Collections, AuditType, generate_embeddings
+from backend.Apps.Main.Utils import Collections, AuditType, UserToken, generate_embeddings
+from backend.Apps.Main.Utils.Audit import audit_collection
 from backend.Apps.Main.Utils.Enum import MemoryType, Permission
 from backend.Lib.Logger import Logger
 
@@ -89,6 +90,7 @@ def _file_memory(data: DCreateMemory, session: ClientSession, col_memory: Collec
     raise
 
 def create_memory(
+  user_token: UserToken | None,
   session: ClientSession,
   col_audit: Collection, col_memory: Collection, # type: ignore
   data: DCreateMemory
@@ -112,7 +114,7 @@ def create_memory(
   if isinstance(res_insert, list):
     for inserted_id in res_insert:
       audits.append(
-        Audit.audit_collection(
+        audit_collection(
           type=AuditType.ADD,
           collection=Collections.MEMORY,
           id=inserted_id
@@ -120,7 +122,7 @@ def create_memory(
       )
   else:
     audits.append(
-      Audit.audit_collection(
+      audit_collection(
         type=AuditType.ADD,
         collection=Collections.MEMORY,
         id=res_insert,

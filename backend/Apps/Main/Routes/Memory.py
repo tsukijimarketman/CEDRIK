@@ -1,16 +1,24 @@
-from flask import request
+from dataclasses import asdict, dataclass
+from datetime import datetime
+import json
+import re
+from typing import List
+from flask import jsonify, request
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required # type: ignore
 from mongoengine import ValidationError
 from werkzeug.exceptions import NotAcceptable, HTTPException
 
 from backend.Apps.Main.Database import Transaction
+from backend.Apps.Main.Database.Models import Memory
+from backend.Apps.Main.Utils.Aggregate import Pagination, PaginationResults, match_list, match_regex
 from backend.Apps.Main.Utils.Decorator import protect
-from backend.Lib.Error import BadBody, HttpValidationError, TooManyFiles
+from backend.Apps.Main.Utils.UserToken import get_token
+from backend.Lib.Error import BadBody, HttpValidationError, InvalidId, TooManyFiles
 from backend.Lib.Logger import Logger
 from backend.Apps.Main.Service.Memory import create_memory, DCreateMemory # type: ignore
 from backend.Apps.Main.Utils import get_schema_of_dataclass, Collections # type: ignore
-from backend.Apps.Main.Utils.Enum import Role
+from backend.Apps.Main.Utils.Enum import MemoryType, Role
 
 memory = Blueprint("Memory", __name__)
 
@@ -40,12 +48,15 @@ def create():
     Logger.log.error(e)
     raise BadBody(description=get_schema_of_dataclass(DCreateMemory)) # type: ignore
 
+  
+  user_token = get_token()
   try:
     with Transaction() as (session, db): # type: ignore
       col_mem = db.get_collection(Collections.MEMORY.value) # type: ignore
       col_audit = db.get_collection(Collections.AUDIT.value) # type: ignore
 
       create_memory(
+        user_token=user_token,
         session=session,
         col_audit=col_audit,
         col_memory=col_mem,
@@ -58,3 +69,107 @@ def create():
     raise HTTPException(description=str(e))
 
   return "", 200
+
+@dataclass
+class MemoryResult:
+  id: str
+  title: str
+  mem_type: str
+  text: str
+  file_id: str
+  permission: List[str]
+  tags: List[str]
+  created_at: datetime | None
+  updated_at: datetime | None
+  deleted_at: datetime | None
+
+@memory.route("/get")
+@jwt_required(optional=False)
+@protect(role=Role.ADMIN)
+def get():
+  """
+  Query Params
+    archive - 1 or 0 (default: 0)
+    offset - int (default: 0)
+    maxItems - int (default: 30)
+    asc - 1 or 0 (default: 0) (sorts by updated_at)
+  Body (application/json)
+    title: str
+    mem_type: MemoryType
+    tags: List[str]
+  """
+  user_id = get_token()
+  if user_id == None:
+    raise InvalidId()
+
+  pagination = Pagination(request.args)
+
+  jsonDict = request.get_json(silent=True)
+  jsonDict = dict(jsonDict) if jsonDict != None else {}
+
+  title = str(re.escape(jsonDict.get("title", "")))
+  tags: List[str] = jsonDict.get("tags")
+  mem_type = str(re.escape(jsonDict.get("mem_type", "")))
+
+  filters = []
+  if len(title) > 0:
+    filters.append(match_regex("title", title))
+  if isinstance(tags, list) and len(tags) > 0:
+    tags = [ re.escape(i) for i in tags ]
+    filters.append(match_list("tags", tags))
+  if len(mem_type) > 0:
+    filters.append(match_regex("mem_type", mem_type))
+
+  try:
+    pipeline = [
+      pagination.build_archive_match()
+    ]
+
+    count_pipeline = [ i for i in pipeline ]
+    count_pipeline.append({
+      "$count": "total"
+    })
+
+    if len(filters) > 0:
+      pipeline.append({
+        "$match": {
+          "$or": filters
+        }
+      })
+
+    pipeline.extend(pagination.build_pagination())
+    q_results: List[dict] = list(Memory.objects.aggregate(pipeline))
+    results = []
+    for doc in q_results:
+      results.append(MemoryResult(
+        id=doc.get("id", ""),
+        title=doc.get("title", ""),
+        text=doc.get("text", ""),
+        mem_type=doc.get("mem_type", ""),
+        file_id=str(doc.get("file_id", "")),
+        permission=doc.get("permission", []),
+        tags=doc.get("tags", []),
+        created_at=doc.get("created_at", None),
+        updated_at=doc.get("updated_at", None),
+        deleted_at=doc.get("deleted_at", None)
+      ))
+
+
+    count_res = list(Memory.objects.aggregate(count_pipeline))
+
+    return jsonify(PaginationResults(
+      total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
+      page=pagination.offset+1,
+      items=results
+    )), 200
+  except ValidationError as e:
+    raise HttpValidationError(e.to_dict()) # type: ignore
+  except Exception as e:
+    raise HTTPException(description=str(e))
+
+@memory.route("/mem-types")
+@jwt_required(optional=False)
+@protect(role=Role.ADMIN)
+def get_mem_types():
+  values = [e.value for e in MemoryType]
+  return jsonify(values), 200

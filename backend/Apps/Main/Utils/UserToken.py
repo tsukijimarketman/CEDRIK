@@ -21,10 +21,14 @@ class UserToken:
             self.email = token.email
             return
 
-        self.id = token["id"]
-        self.aud = token["aud"]
-        self.username = token["username"]
-        self.email = token["email"]
+        if isinstance(token, dict):
+            self.id = token.get("id", None)
+            self.aud = token.get("aud", "")
+            self.username = token.get("username", "")
+            self.email = token.get("email", "")
+            return
+
+        raise TypeError("Invalid Type")
 
 def get_token():
     token = get_jwt()

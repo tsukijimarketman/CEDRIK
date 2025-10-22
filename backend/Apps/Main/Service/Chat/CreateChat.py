@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 
 from backend.Apps.Main.Database import Conversation, Message, Audit, Memory
+from backend.Apps.Main.Utils.Audit import audit_collection
 from backend.Lib.Logger import Logger
 from backend.Apps.Main.Utils import UserToken, get_object_id, Collections, AuditType, ObjectId
 from backend.Apps.Main.Utils.Enum import VectorIndex
@@ -172,7 +173,7 @@ def create_chat(
     conv.validate()
     conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
-    col_audit.insert_one(Audit.audit_collection(
+    col_audit.insert_one(audit_collection(
       type=AuditType.ADD,
       collection=Collections.CONVERSATION,
       id=conv_id
@@ -185,7 +186,7 @@ def create_chat(
         conv.validate()
         conv_id = col_conversation.insert_one(conv.to_mongo(), session=session).inserted_id
 
-        col_audit.insert_one(Audit.audit_collection(
+        col_audit.insert_one(audit_collection(
           type=AuditType.ADD,
           collection=Collections.CONVERSATION,
           id=conv_id
@@ -214,7 +215,7 @@ def create_chat(
   # Audit for Messages
   messages_audits = []
   for iid in messages_id:
-    ad = Audit.audit_collection(
+    ad = audit_collection(
       type=AuditType.ADD,
       collection=Collections.CONVERSATION,
       id=iid

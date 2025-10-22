@@ -33,4 +33,4 @@ def validate_password(password: str):
             specialCount+=1;
 
     if (numCount < 1) or (upperCount < 1) or (specialCount < 1):
-        ValidationError("Password Must contain at least 1 number, 1 uppercase character, and 1 special character")
+        raise ValidationError("Password Must contain at least 1 number, 1 uppercase character, and 1 special character")

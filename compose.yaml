@@ -84,6 +84,27 @@ services:
       DEBUG: --debug
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
+  filter-model:
+    image: cedrik-backend
+    pull_policy: never
+    volumes:
+      - ./backend/:/app/backend/
+      - ./log/:/app/log/
+      - ./.env:/app/.env:ro
+      - ./tokenizer_config.json:/app/tokenizer_config.json:ro
+      - ./pipe_config.json:/app/pipe_config.json:ro
+      - ./hf_cache:/app/hf_cache
+    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    ports:
+      - 5003:5003
+    environment:
+      FILTER_MODE: 1
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_RUN_PORT: 5003
+      FLASK_APP: backend.Apps.Model
+      DEBUG: --debug
+      NO_RELOAD: --no-reload
+      HF_HOME: /app/hf_cache
 
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan
