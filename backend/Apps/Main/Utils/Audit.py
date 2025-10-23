@@ -38,13 +38,17 @@ def audit_collection(
 
 def audit_message(
     msg: str,
-    type: AuditType = AuditType.MESSAGE
+    type: AuditType = AuditType.MESSAGE,
+    user_token_ov: UserToken | None = None
 ):
     user_id = None
     try:
-        user_token = get_token()
+        if user_token_ov != None:
+            user_token = user_token_ov
+        else:
+            user_token = get_token()
         if user_token != None:
-            user_id = get_object_id(user_token.id)
+            user_id = get_object_id(user_token.id) # type: ignore
     except Exception as _:
         pass
     return Audit(
