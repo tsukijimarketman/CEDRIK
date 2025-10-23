@@ -97,8 +97,8 @@ export const authApi = {
 };
 
 export const passwordApi = {
-  forgotPassword: async () => {
-    return api.post("/forgot-password");
+  forgotPassword: async (email: string) => {
+    return api.post("/forgot-password", { email });
   },
   getEmailContent: async () => {
     return api.get<string>("/get-email");
