@@ -9,14 +9,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import api, { passwordApi } from "@/api/api";
+import { passwordApi } from "@/api/api";
+import { ConfirmOtpDialog } from "@/components/dialogs/OtpDialog";
 
 interface ForgotPasswordDialogProps {
   open: boolean;
   onClose: () => void;
   onSwitchToSignIn: () => void;
 }
-//
+
 export function ForgotPasswordDialog({
   open,
   onClose,
@@ -25,6 +26,7 @@ export function ForgotPasswordDialog({
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otpDialogOpen, setOtpDialogOpen] = useState(false);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,36 +34,16 @@ export function ForgotPasswordDialog({
 
     try {
       await passwordApi.forgotPassword(email);
-      await passwordApi.getEmailContent();
       toast({
         title: "Email Sent",
-        description: "Check your inbox for a password reset link.",
+        description: "Check your inbox for the verification code.",
       });
-      onClose();
+      onClose(); // close forgot password dialog
+      setOtpDialogOpen(true); // open OTP dialog
     } catch (error: any) {
       toast({
         title: "Error",
-        description:
-          error?.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConfirmOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      await passwordApi.getOtp();
-      onClose();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description:
-          error?.message || "Something went wrong. Please try again.",
+        description: error?.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -70,38 +52,46 @@ export function ForgotPasswordDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Forgot Password</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSendOTP} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="forgot-email">Email</Label>
-            <Input
-              id="forgot-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@example.com"
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Sending..." : "Send Reset Link"}
-          </Button>
-          <div className="text-center text-sm text-muted-foreground">
-            Remembered your password?{" "}
-            <button
-              type="button"
-              className="text-primary hover:underline"
-              onClick={onSwitchToSignIn}
-            >
-              Back to Sign In
-            </button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Forgot Password</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSendOTP} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email</Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Sending..." : "Send Reset Link"}
+            </Button>
+            <div className="text-center text-sm text-muted-foreground">
+              Remembered your password?{" "}
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={onSwitchToSignIn}
+              >
+                Back to Sign In
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmOtpDialog
+        open={otpDialogOpen}
+        onClose={() => setOtpDialogOpen(false)}
+        email={email}
+      />
+    </>
   );
 }
