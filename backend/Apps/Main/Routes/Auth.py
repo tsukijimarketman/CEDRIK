@@ -86,7 +86,9 @@ def login():
                 "is_active": user_is_active,
             },
         )
-        audit_message(f"User: {user.email} successfully logged in", AuditType.LOGIN).save()
+        audit_message(f"User: {user.email} successfully logged in", AuditType.LOGIN, UserToken({
+            "id": str(user.id) # type: ignore
+        })).save()
 
         # Create response with user data
         resp = make_response(jsonify({
@@ -140,7 +142,7 @@ def update_me():
             col_user = db.get_collection(Collections.USER.value)
             col_audit = db.get_collection(Collections.AUDIT.value)
 
-            user_id = get_object_id(payload.id)
+            user_id = get_object_id(payload.id) # type: ignore
             existing = col_user.find_one({"_id": user_id}, session=session)
             if existing is None:
                 raise UserDoesNotExist()
