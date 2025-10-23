@@ -74,10 +74,8 @@ export function AuditLogs() {
           : "N/A";
       const metadata = (log.metadata as Record<string, unknown> | null) ?? {};
       const ipCandidates = [
-        typeof metadata["ip_address"] === "string" ? (metadata["ip_address"] as string) : null,
-        typeof metadata["ipAddress"] === "string" ? (metadata["ipAddress"] as string) : null,
-        log.data && typeof log.data["ip_address"] === "string" ? (log.data["ip_address"] as string) : null,
-        log.data && typeof log.data["ipAddress"] === "string" ? (log.data["ipAddress"] as string) : null,
+        typeof log.data["ip"] === "string" ? (log.data["ip"] as string) : null,
+        log.data && typeof log.data["ip"] === "string" ? (log.data["ip"] as string) : null,
       ].filter(Boolean) as string[];
 
  const username =
