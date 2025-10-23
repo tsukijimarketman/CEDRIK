@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 import traceback
 from mongoengine.queryset.visitor import Q
@@ -75,7 +76,7 @@ def get():
       filters.append(match_exists("user", False))
     else:
       v = match_regex("user.username", name)
-      v["user.username"]["$exists"] = True
+      v["user.username"]["$exists"] = True # type: ignore
       filters.append(v)
 
   try:
@@ -103,24 +104,27 @@ def get():
         "$match": {
           "$or": filters
         }
-      })
+      }) # type: ignore
 
     count_pipeline = [ i for i in pipeline ]
     count_pipeline.append({
       "$count": "total"
-    })
+    }) # type: ignore
 
-    count_res: List[dict] = list(Audit.objects.aggregate(count_pipeline))
+    count_res: List[dict] = list(Audit.objects.aggregate(count_pipeline)) # type: ignore
 
-    pipeline.extend(pagination.build_pagination())
+    pipeline.extend(pagination.build_pagination()) # type: ignore
 
-    audits: List[dict] = list(Audit.objects.aggregate(pipeline))
+    audits: List[dict] = list(Audit.objects.aggregate(pipeline)) # type: ignore
 
     results = []
 
     for audit in audits:
       # Logger.log.info(audit)
       data_dict = audit.get("data", {})
+      data_id = data_dict.get("id", "")
+      if not isinstance(data_id, str):
+        data_dict["id"] = str(data_id)
 
       user = audit.get("user", None)
       if user != None:
