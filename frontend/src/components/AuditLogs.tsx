@@ -57,7 +57,7 @@ export function AuditLogs() {
     id: string;
     type: string;
     collection: string;
-    resourceId: string;
+    user: string;
     createdAt: string | null;
     ipAddress: string;
   };
@@ -80,11 +80,14 @@ export function AuditLogs() {
         log.data && typeof log.data["ipAddress"] === "string" ? (log.data["ipAddress"] as string) : null,
       ].filter(Boolean) as string[];
 
+ const username =
+      (log.user && (log.user.username || log.user.email)) || "System";
+
       return {
         id: log.id,
         type: log.type ?? "Unknown",
         collection,
-        resourceId,
+        user:username,
         createdAt: log.created_at,
         ipAddress: ipCandidates[0] ?? "Not available",
       };
@@ -98,8 +101,8 @@ export function AuditLogs() {
     }
     return (
       log.type.toLowerCase().includes(normalizedSearch) ||
-      log.collection.toLowerCase().includes(normalizedSearch) ||
-      log.resourceId.toLowerCase().includes(normalizedSearch)
+      log.collection.toLowerCase().includes(normalizedSearch)
+     // log.resourceId.toLowerCase().includes(normalizedSearch)
     );
   });
 
@@ -216,7 +219,7 @@ export function AuditLogs() {
                         </TableCell>
                         <TableCell className="uppercase">{log.type || "Unknown"}</TableCell>
                         <TableCell>{log.collection}</TableCell>
-                        <TableCell className="font-mono text-sm">{log.resourceId}</TableCell>
+                        {/* <TableCell className="font-mono text-sm">{log.resourceId}</TableCell> */}
                         <TableCell className="font-mono text-sm">
                           {log.ipAddress}
                         </TableCell>
