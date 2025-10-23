@@ -59,6 +59,13 @@ api.interceptors.response.use(
   }
 );
 
+// Reusable pagination response type
+export type PaginatedResponse<T> = {
+  items: T[];
+  page: number;
+  total: number;
+};
+
 export const authApi = {
   register: async (userData: {
     username: string;
@@ -210,20 +217,13 @@ export const auditApi = {
     if (options?.archive !== undefined) {
       params.archive = options.archive ? "true" : "false";
     }
-    const res = await api.get<{ items: AuditLogRecord[]; page: number; total: number }>("/audit/get", {
+
+    const res = await api.get<PaginatedResponse<AuditLogRecord>>("/audit/get", {
       params,
     });
     return res;
   },
 };
-
-export type PaginatedResponse<T> = {
-  items: T[];
-  page: number;
-  total: number;
-};
-const res = await api.get<PaginatedResponse<AuditLogRecord>>("/audit/get", { params });
-
 
 
 api.interceptors.response.use(
