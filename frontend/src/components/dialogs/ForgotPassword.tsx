@@ -9,14 +9,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { authApi } from "@/api/api";
+import api, { passwordApi } from "@/api/api";
 
 interface ForgotPasswordDialogProps {
   open: boolean;
   onClose: () => void;
   onSwitchToSignIn: () => void;
 }
-
+//
 export function ForgotPasswordDialog({
   open,
   onClose,
@@ -26,12 +26,13 @@ export function ForgotPasswordDialog({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await authApi.post("/auth/forgot-password", { email });
+      await passwordApi.forgotPassword(email);
+      await passwordApi.getEmailContent();
       toast({
         title: "Email Sent",
         description: "Check your inbox for a password reset link.",
@@ -41,8 +42,26 @@ export function ForgotPasswordDialog({
       toast({
         title: "Error",
         description:
-          error?.response?.data?.message ||
-          "Something went wrong. Please try again.",
+          error?.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await passwordApi.getOtp();
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description:
+          error?.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -56,7 +75,7 @@ export function ForgotPasswordDialog({
         <DialogHeader>
           <DialogTitle>Forgot Password</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSendOTP} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="forgot-email">Email</Label>
             <Input
