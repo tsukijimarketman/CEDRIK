@@ -26,7 +26,7 @@ export function AuditLogs() {
         if (!active) {
           return;
         }
-        setLogs(response.data);
+        setLogs(response.data.items);
         setCurrentPage(1);
       } catch (err) {
         if (!active) {
