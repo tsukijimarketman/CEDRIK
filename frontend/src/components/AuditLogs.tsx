@@ -101,8 +101,8 @@ export function AuditLogs() {
     }
     return (
       log.type.toLowerCase().includes(normalizedSearch) ||
-      log.collection.toLowerCase().includes(normalizedSearch)
-     // log.resourceId.toLowerCase().includes(normalizedSearch)
+      log.collection.toLowerCase().includes(normalizedSearch) ||
+     log.user.toLowerCase().includes(normalizedSearch)
     );
   });
 
@@ -219,7 +219,7 @@ export function AuditLogs() {
                         </TableCell>
                         <TableCell className="uppercase">{log.type || "Unknown"}</TableCell>
                         <TableCell>{log.collection}</TableCell>
-                        {/* <TableCell className="font-mono text-sm">{log.resourceId}</TableCell> */}
+                        <TableCell className="font-mono text-sm">{log.user}</TableCell>
                         <TableCell className="font-mono text-sm">
                           {log.ipAddress}
                         </TableCell>
