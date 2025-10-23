@@ -83,6 +83,7 @@ export const authApi = {
   listUsers: async () => {
     return api.get<UserRecord[]>("/auth/users");
   },
+  
   updateUser: async (
     userId: string,
     data: {
@@ -93,6 +94,28 @@ export const authApi = {
     }
   ) => {
     return api.put(`/auth/users/${userId}`, data);
+  },
+};
+
+ //Create memory probably
+  export const memoryApi = {
+  create: async (data: { 
+    title: string; 
+    text?: string; 
+    file?: File | null; 
+    tags?: string[] | string;
+  }) => {
+    const formData = new FormData();
+    formData.append("title", data.title);
+    if (data.text) formData.append("text", data.text);
+    if (data.file) formData.append("file", data.file);
+    if (data.tags) formData.append("tags", Array.isArray(data.tags) ? JSON.stringify(data.tags) : data.tags);
+
+    return api.post("/memory/create", formData, {
+      headers: {
+        "Content-Type": undefined, // let axios handle it
+      },
+    });
   },
 };
 
@@ -181,7 +204,7 @@ export type ChatResponse = {
 
 export const aiApi = {
   chat: async (data: ChatRequest) => {
-    let formData = new FormData();
+    const formData = new FormData();
     formData.append("conversation", data.conversation || "");
     formData.append("content", data.content);
     formData.append("file", data.file);
