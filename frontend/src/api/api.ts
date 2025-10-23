@@ -210,11 +210,13 @@ export const auditApi = {
     if (options?.archive !== undefined) {
       params.archive = options.archive ? "true" : "false";
     }
-    return api.get<AuditLogRecord[]>("/audit/get", {
+    const res = await api.get<{ items: AuditLogRecord[]; page: number; total: number }>("/audit/get", {
       params,
     });
+    return res;
   },
 };
+
 
 api.interceptors.response.use(
   (response) => response,
