@@ -217,6 +217,14 @@ export const auditApi = {
   },
 };
 
+export type PaginatedResponse<T> = {
+  items: T[];
+  page: number;
+  total: number;
+};
+const res = await api.get<PaginatedResponse<AuditLogRecord>>("/audit/get", { params });
+
+
 
 api.interceptors.response.use(
   (response) => response,
