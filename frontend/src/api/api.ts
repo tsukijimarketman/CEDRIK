@@ -113,6 +113,9 @@ export const passwordApi = {
   getOtp: async () => {
     return api.get<string>("/get-otp");
   },
+  resetPassword: async (email: string, newPassword: string) => {
+    return api.post("/reset-password", { email, new_password: newPassword });
+  },
 };
 ////
 export type UserRecord = {
