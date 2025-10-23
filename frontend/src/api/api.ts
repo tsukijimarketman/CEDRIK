@@ -107,7 +107,7 @@ export const passwordApi = {
     return api.get<string>("/get-otp");
   },
 };
-
+////
 export type UserRecord = {
   id: string;
   email: string;

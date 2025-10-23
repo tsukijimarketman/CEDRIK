@@ -16,7 +16,7 @@ interface ForgotPasswordDialogProps {
   onClose: () => void;
   onSwitchToSignIn: () => void;
 }
-
+//
 export function ForgotPasswordDialog({
   open,
   onClose,
