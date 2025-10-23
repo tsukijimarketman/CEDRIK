@@ -9,8 +9,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { passwordApi } from "@/api/api";
 import { ConfirmOtpDialog } from "@/components/dialogs/OtpDialog";
+import emailjs from "@emailjs/browser";
+
 
 interface ForgotPasswordDialogProps {
   open: boolean;
@@ -33,7 +34,21 @@ export function ForgotPasswordDialog({
     setLoading(true);
 
     try {
-      await passwordApi.forgotPassword(email);
+
+
+      const templateParams = {
+        user_email: email,
+
+      };
+
+      // Send email using EmailJS
+      await emailjs.send(
+        "service_y4eazat",       // Your Service ID
+        "template_lf7k96h",      // Your Template ID
+        { email: email },       // template parameters
+        "qGqmEJpufN8ZsSFLq"     // Your Public Key
+      );
+
       toast({
         title: "Email Sent",
         description: "Check your inbox for the verification code.",
@@ -43,7 +58,7 @@ export function ForgotPasswordDialog({
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error?.message || "Something went wrong. Please try again.",
+        description: error?.text || error?.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
