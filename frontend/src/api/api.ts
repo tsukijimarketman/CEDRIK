@@ -59,6 +59,13 @@ api.interceptors.response.use(
   }
 );
 
+// Reusable pagination response type
+export type PaginatedResponse<T> = {
+  items: T[];
+  page: number;
+  total: number;
+};
+
 export const authApi = {
   register: async (userData: {
     username: string;
@@ -192,12 +199,17 @@ export const aiApi = {
     });
   },
 };
-
 export type AuditLogRecord = {
   id: string;
   type: string;
   data: Record<string, unknown> | null;
   metadata: Record<string, unknown> | null;
+  user?: {
+    id?: string;
+    username?: string;
+    email?: string;
+    role?: string;
+  } | null; // 👈 added this
   is_active: boolean;
   created_at: string | null;
   updated_at: string | null;
@@ -210,11 +222,14 @@ export const auditApi = {
     if (options?.archive !== undefined) {
       params.archive = options.archive ? "true" : "false";
     }
-    return api.get<AuditLogRecord[]>("/audit/get", {
+
+    const res = await api.get<PaginatedResponse<AuditLogRecord>>("/audit/get", {
       params,
     });
+    return res;
   },
 };
+
 
 api.interceptors.response.use(
   (response) => response,
