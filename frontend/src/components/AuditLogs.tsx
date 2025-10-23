@@ -189,7 +189,7 @@ export function AuditLogs() {
                   <TableHead>Timestamp</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Collection</TableHead>
-                  <TableHead>Resource ID</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>IP Address</TableHead>
                 </TableRow>
               </TableHeader>
