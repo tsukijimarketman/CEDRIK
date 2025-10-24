@@ -105,16 +105,14 @@ export const authApi = {
 
 export const passwordApi = {
   forgotPassword: async (email: string) => {
-    return api.post("/forgot-password", { email });
+    return api.post("/auth/forgot-password", { email });
   },
-  getEmailContent: async () => {
-    return api.get<string>("/get-email");
-  },
-  getOtp: async () => {
-    return api.get<string>("/get-otp");
-  },
+
   resetPassword: async (email: string, newPassword: string) => {
-    return api.post("/reset-password", { email, new_password: newPassword });
+    return api.post("/auth/reset-password", {
+      email,
+      new_password: newPassword,
+    });
   },
 };
 ////
@@ -244,7 +242,6 @@ export const auditApi = {
     return res;
   },
 };
-
 
 api.interceptors.response.use(
   (response) => response,
