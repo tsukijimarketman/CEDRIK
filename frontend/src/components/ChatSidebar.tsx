@@ -343,15 +343,18 @@ export function ChatSidebar({
               <ChevronLeft className="h-4 w-4" />
             </Button>
           </div>
+          
+{user && (
+  <div className="flex py-3 mb-1 justify-center items-center shadow">
+    <button
+      onClick={handleNewChat}
+      className="bg-stone-200 flex justify-center items-center gap-1 py-2 px-3 w-full mx-3 rounded text-sm"
+    >
+      <MessageSquarePlus className="w-5 h-5" /> New Chat
+    </button>
+  </div>
+)}
 
-          <div className="flex py-3 mb-1 flex justify-center align-center shadow">
-            <button
-              onClick={handleNewChat}
-              className="bg-stone-200 flex justify-center align-center gap-1 py-2 px-3 w-full mx-3 rounded text-sm"
-            >
-              <MessageSquarePlus className="w-5 h-5" /> New Chat
-            </button>
-          </div>
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
