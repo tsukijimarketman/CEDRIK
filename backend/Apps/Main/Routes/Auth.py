@@ -306,7 +306,6 @@ def register():
                     type=AuditType.REGISTER,
                     collection=Collections.USER,
                     id=res_insert,
-                    ip=request.remote_addr,
                     from_data=None,
                     to_data=None
                 )
@@ -414,7 +413,7 @@ def update_user(user_id: str):
                 session=session,
             )
 
-            audit = Audit.audit_collection(
+            audit = audit_collection(
                 type=AuditType.EDIT,
                 collection=Collections.USER,
                 id=target_id,
