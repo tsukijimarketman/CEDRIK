@@ -34,20 +34,10 @@ def get():
   try:
     conversations: List[Conversation] = Conversation.objects( # type: ignore
       owner=user_id.id
-    ).only("id", "title", "created_at")
-    # Logger.log.info(f"Conversations {conversations}")
-
+    ).only("id", "title", "created_at").order_by("-created_at")  # Sort by newest first
+    
     results: List[GetResult] = []
     for conv in conversations:
-      # messages = []
-      # if isIncludeMessages:
-      #   Logger.log.warning("TODO Optimize")
-      #   msgs: List[Message] = Message.objects(conversation=conv.id) # type: ignore
-      #   for m in msgs:
-      #     messages.append(
-      #       MessageResult(text=str(m.text))
-      #     )
-
       results.append(
         GetResult(
           conversation=str(conv.id), # type: ignore
@@ -61,6 +51,7 @@ def get():
     Logger.log.error(repr(e))
     return jsonify([]), 200
 
+
 @b_conversation.route("/get/<id>")
 @jwt_required(optional=False)
 def get_id(id: str):
@@ -69,9 +60,14 @@ def get_id(id: str):
     raise InvalidId()
 
   try:
+    # Verify the conversation belongs to the user
+    conversation = Conversation.objects(id=id, owner=user_id.id).first()
+    if not conversation:
+      return jsonify({"error": "Conversation not found"}), 404
+
     messages: List[Message] = Message.objects( # type: ignore
       conversation=id
-    ).only("id", "text", "created_at")
+    ).only("id", "text", "created_at").order_by("created_at")
 
     results = []
     for msg in messages:
@@ -86,3 +82,57 @@ def get_id(id: str):
   except Exception as e:
     Logger.log.error(repr(e))
     return BadRequest()
+
+
+@b_conversation.route("/create", methods=["POST"])
+@jwt_required(optional=False)
+def create():
+  user_id = get_token()
+  if user_id == None:
+    raise InvalidId()
+
+  try:
+    # Create new conversation with default title
+    new_conversation = Conversation(
+      owner=user_id.id,
+      title="New Chat",
+      created_at=datetime.utcnow()
+    )
+    new_conversation.save()
+
+    # Return the response that matches ChatSidebarNewChat type
+    return jsonify({
+      "conversation": str(new_conversation.id),
+      "title": str(new_conversation.title),
+      "created_at": new_conversation.created_at.isoformat()
+    }), 201
+
+  except Exception as e:
+    Logger.log.error(repr(e))
+    return jsonify({"error": "Failed to create conversation"}), 500
+
+
+@b_conversation.route("/delete/<id>", methods=["DELETE"])
+@jwt_required(optional=False)
+def delete(id: str):
+  user_id = get_token()
+  if user_id == None:
+    raise InvalidId()
+
+  try:
+    # Find conversation and verify ownership
+    conversation = Conversation.objects(id=id, owner=user_id.id).first()
+    if not conversation:
+      return jsonify({"error": "Conversation not found"}), 404
+
+    # Delete all messages in the conversation
+    Message.objects(conversation=id).delete()
+    
+    # Delete the conversation
+    conversation.delete()
+
+    return jsonify({"success": True, "message": "Conversation deleted"}), 200
+
+  except Exception as e:
+    Logger.log.error(repr(e))
+    return jsonify({"error": "Failed to delete conversation"}), 500
