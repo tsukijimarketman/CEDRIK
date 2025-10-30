@@ -21,7 +21,7 @@ def audit_collection(
     try:
         user_token = get_token()
         if user_token != None:
-            user_id = get_object_id(user_token.id)
+            user_id = get_object_id(user_token.id) # type: ignore
     except Exception as _:
         pass
     return Audit(

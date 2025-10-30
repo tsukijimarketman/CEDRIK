@@ -89,10 +89,7 @@ class MemoryResult:
 def get():
   """
   Query Params
-    archive - 1 or 0 (default: 0)
-    offset - int (default: 0)
-    maxItems - int (default: 30)
-    asc - 1 or 0 (default: 0) (sorts by updated_at)
+    refer to Pagination
   Body (application/json)
     title: str
     mem_type: MemoryType
@@ -108,37 +105,19 @@ def get():
   jsonDict = dict(jsonDict) if jsonDict != None else {}
 
   title = str(re.escape(jsonDict.get("title", "")))
-  tags: List[str] = jsonDict.get("tags")
+  tags: List[str] = jsonDict.get("tags", [])
   mem_type = str(re.escape(jsonDict.get("mem_type", "")))
 
-  filters = []
   if len(title) > 0:
-    filters.append(match_regex("title", title))
+    pagination.filters.append(match_regex("title", title))
   if isinstance(tags, list) and len(tags) > 0:
     tags = [ re.escape(i) for i in tags ]
-    filters.append(match_list("tags", tags))
+    pagination.filters.append(match_list("tags", tags))
   if len(mem_type) > 0:
-    filters.append(match_regex("mem_type", mem_type))
+    pagination.filters.append(match_regex("mem_type", mem_type))
 
   try:
-    pipeline = [
-      pagination.build_archive_match()
-    ]
-
-    count_pipeline = [ i for i in pipeline ]
-    count_pipeline.append({
-      "$count": "total"
-    })
-
-    if len(filters) > 0:
-      pipeline.append({
-        "$match": {
-          "$or": filters
-        }
-      })
-
-    pipeline.extend(pagination.build_pagination())
-    q_results: List[dict] = list(Memory.objects.aggregate(pipeline))
+    q_results: List[dict] = list(Memory.objects.aggregate(pagination.build())) # type: ignore
     results = []
     for doc in q_results:
       results.append(MemoryResult(
@@ -154,12 +133,9 @@ def get():
         deleted_at=doc.get("deleted_at", None)
       ))
 
-
-    count_res = list(Memory.objects.aggregate(count_pipeline))
-
     return jsonify(PaginationResults(
-      total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
-      page=pagination.offset+1,
+      total = q_results[0].get("total", len(q_results)) if len(q_results) > 0 else len(q_results),
+      page=pagination.page,
       items=results
     )), 200
   except ValidationError as e:

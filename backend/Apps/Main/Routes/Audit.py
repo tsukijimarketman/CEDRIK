@@ -38,10 +38,7 @@ class AuditResult:
 def get():
   """
   Query Params
-    archive - 1 or 0 (default: 0)
-    offset - int (default: 0)
-    maxItems - int (default: 30)
-    asc - 1 or 0 (default: 0) (sorts by updated_at)
+    refer to Pagination
   Body (application/json)
     username: str
     type: str
@@ -59,29 +56,27 @@ def get():
   _type = jsonDict.get("type", "")
   ip = str(re.escape(jsonDict.get("ip", "")))
 
-  filters = []
-  
   if len(_type) > 0:
-    filters.append(match_regex("type", _type))
-    filters.append({
-      "type": {
-        '$regex': _type, 
-        '$options': 'i'
-      }
-    })
+    pagination.filters.append(match_regex("type", _type))
+    # pagination.filters.append({
+    #   "type": {
+    #     '$regex': _type, 
+    #     '$options': 'i'
+    #   }
+    # })
   if len(ip) > 0:
-    filters.append(match_regex("data.ip", ip))
+    pagination.filters.append(match_regex("data.ip", ip))
   if len(name) > 0:
     if name.lower() == AI_NAME.lower():
-      filters.append(match_exists("user", False))
+      pagination.filters.append(match_exists("user", False))
     else:
       v = match_regex("user.username", name)
       v["user.username"]["$exists"] = True # type: ignore
-      filters.append(v)
+      pagination.filters.append(v)
 
   try:
     audits = []
-    pipeline = [
+    pagination.pipeline = [
       {
         '$lookup': {
           'from': Collections.USER.value,
@@ -95,32 +90,17 @@ def get():
           'path': '$user', 
           'preserveNullAndEmptyArrays': True
         }
-      },
-      pagination.build_archive_match()
+      }
     ]
 
-    if len(filters) > 0:
-      pipeline.append({
-        "$match": {
-          "$or": filters
-        }
-      }) # type: ignore
-
-    count_pipeline = [ i for i in pipeline ]
-    count_pipeline.append({
-      "$count": "total"
-    }) # type: ignore
-
-    count_res: List[dict] = list(Audit.objects.aggregate(count_pipeline)) # type: ignore
-
-    pipeline.extend(pagination.build_pagination()) # type: ignore
-
-    audits: List[dict] = list(Audit.objects.aggregate(pipeline)) # type: ignore
+    audits: List[dict] = list(Audit.objects.aggregate(pagination.build())) # type: ignore
 
     results = []
 
+    # Mapping
     for audit in audits:
       # Logger.log.info(audit)
+
       data_dict = audit.get("data", {})
       data_id = data_dict.get("id", "")
       if not isinstance(data_id, str):
@@ -147,15 +127,17 @@ def get():
         )
       )
 
+    total = audits[0].get("total", len(audits)) if len(audits) > 0 else len(audits)
+
     return jsonify(PaginationResults(
-      total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
-      page=pagination.offset + 1,
+      total=total,
+      page=pagination.page,
       items=[ asdict(i) for i in results]
     )), 200
   except Exception as e:
     # Logger.log.error(repr(e), traceback.format_exc())
     Logger.log.error(repr(e))
-    return BadRequest()
+    raise BadRequest()
 
 @b_audit.route("/types")
 @jwt_required(optional=False)

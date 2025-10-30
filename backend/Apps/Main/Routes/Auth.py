@@ -484,34 +484,34 @@ def update_user(user_id: str):
         raise InternalServerError()
 
 
-@auth.route("/users", methods=["GET"])
-@jwt_required(optional=False)
-def list_users():
-    payload = get_token()
-    if payload is None:
-        return Unauthorized()
+# @auth.route("/users", methods=["GET"])
+# @jwt_required(optional=False)
+# def list_users():
+#     payload = get_token()
+#     if payload is None:
+#         return Unauthorized()
 
-    try:
-        users = User.objects()  # type: ignore
-        response_data = []
-        for user in users:
-            raw_is_active = getattr(user, "is_active", True)
-            if isinstance(raw_is_active, str):
-                user_is_active = raw_is_active.strip().lower() in {"true", "1", "yes"}
-            else:
-                user_is_active = bool(raw_is_active)
+#     try:
+#         users = User.objects()  # type: ignore
+#         response_data = []
+#         for user in users:
+#             raw_is_active = getattr(user, "is_active", True)
+#             if isinstance(raw_is_active, str):
+#                 user_is_active = raw_is_active.strip().lower() in {"true", "1", "yes"}
+#             else:
+#                 user_is_active = bool(raw_is_active)
 
-            response_data.append({
-                "id": str(user.id),  # type: ignore
-                "email": user.email,
-                "username": user.username,
-                "role": user.role.value if isinstance(user.role, Role) else str(user.role),
-                "is_active": user_is_active,
-                "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
-                "updated_at": user.updated_at.isoformat() if getattr(user, "updated_at", None) else None,
-            })
+#             response_data.append({
+#                 "id": str(user.id),  # type: ignore
+#                 "email": user.email,
+#                 "username": user.username,
+#                 "role": user.role.value if isinstance(user.role, Role) else str(user.role),
+#                 "is_active": user_is_active,
+#                 "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
+#                 "updated_at": user.updated_at.isoformat() if getattr(user, "updated_at", None) else None,
+#             })
 
-        return jsonify(response_data), 200
-    except Exception as e:
-        Logger.log.error(str(e))
-        raise InternalServerError()
+#         return jsonify(response_data), 200
+#     except Exception as e:
+#         Logger.log.error(str(e))
+#         raise InternalServerError()
