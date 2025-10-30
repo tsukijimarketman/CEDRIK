@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmOtpDialog } from "@/components/dialogs/OtpDialog";
 import emailjs from "@emailjs/browser";
-
+import { passwordApi } from "@/api/api";
 
 interface ForgotPasswordDialogProps {
   open: boolean;
@@ -28,25 +28,30 @@ export function ForgotPasswordDialog({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpDialogOpen, setOtpDialogOpen] = useState(false);
+  const [otpass, setOtpass] = useState("");
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-
+      // Send email using EmailJS
+      const resOTP = await passwordApi.forgotPassword(email);
+      const otp = resOTP.data;
+      setOtpass(otp);
+      
+      
 
       const templateParams = {
-        user_email: email,
-
+        email: email,
+        otp: otp,
       };
 
-      // Send email using EmailJS
       await emailjs.send(
-        "service_y4eazat",       // Your Service ID
-        "template_lf7k96h",      // Your Template ID
-        { email: email },       // template parameters
-        "qGqmEJpufN8ZsSFLq"     // Your Public Key
+        import.meta.env.VITE_SERVICE_ID_EMAILJS, // Your Service ID
+        import.meta.env.VITE_TEMPLATE_ID_EMAILJS, // Your Template ID
+        templateParams, // template parameters
+        import.meta.env.VITE_PUBLIC_KEY_EMAILJS // Your Public Key
       );
 
       toast({
@@ -58,7 +63,10 @@ export function ForgotPasswordDialog({
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error?.text || error?.message || "Something went wrong. Please try again.",
+        description:
+          error?.text ||
+          error?.message ||
+          "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -103,6 +111,7 @@ export function ForgotPasswordDialog({
       </Dialog>
 
       <ConfirmOtpDialog
+        otpass={otpass}
         open={otpDialogOpen}
         onClose={() => setOtpDialogOpen(false)}
         email={email}
