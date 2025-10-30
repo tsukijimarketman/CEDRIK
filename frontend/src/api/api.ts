@@ -103,6 +103,13 @@ export const authApi = {
   },
 };
 
+// Dedicated OTP API for login flow (reuses the same backend endpoint for now)
+export const otpApi = {
+  loginOtp: async (email: string) => {
+    return api.post("/auth/login-otp", { email });
+  },
+};
+
 export const passwordApi = {
   forgotPassword: async (email: string) => {
     return api.post("/auth/forgot-password", { email });
