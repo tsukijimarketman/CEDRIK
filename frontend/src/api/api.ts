@@ -111,7 +111,7 @@ export const passwordApi = {
   resetPassword: async (email: string, newPassword: string) => {
     return api.post("/auth/reset-password", {
       email,
-      new_password: newPassword,
+      newPassword
     });
   },
 };
