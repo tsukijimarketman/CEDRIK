@@ -153,10 +153,8 @@ const handleSignUp = async (
 ) => {
   try {
     await authApi.register({ username, email, password });
-    setCurrentDialog({ type: null });
-    // Toast is now handled in SignUpDialog component
+    await handleLogin(email, password);
   } catch (error) {
-    // Re-throw the error so SignUpDialog can handle it
     throw error;
   }
 };
