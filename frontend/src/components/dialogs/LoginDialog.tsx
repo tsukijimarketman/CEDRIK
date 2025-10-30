@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { authApi, passwordApi } from "@/api/api";
+import { authApi, otpApi } from "@/api/api";
 import emailjs from "@emailjs/browser";
 
 interface LoginDialogProps {
@@ -66,6 +66,14 @@ export function LoginDialog({
       } catch (err: any) {
         let errorMessage = "Invalid email or password.";
         if (err?.error) errorMessage = err.error;
+      try {
+        await authApi.login({
+          email: formData.email,
+          password: formData.password,
+        });
+      } catch (err: any) {
+        let errorMessage = "Invalid email or password.";
+        if (err?.error) errorMessage = err.error;
         toast({
           title: "Login failed",
           description: errorMessage,
@@ -75,7 +83,7 @@ export function LoginDialog({
         return;
       }
 
-      const resOTP = await passwordApi.forgotPassword(formData.email);
+      const resOTP = await otpApi.loginOtp(formData.email);
       const code = resOTP.data;
       setOtpass(code);
 
