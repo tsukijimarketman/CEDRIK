@@ -6,7 +6,6 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  LogIn,
   ChevronLeft,
   Menu,
   ChevronDown,
@@ -59,40 +58,39 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const { user, loading, login, logout } = useUser();
   const [chats, setChats] = useState<Chat[]>([]);
-  // Chat data
-
-  const handleChatTitle = async () => {
-    const res = await sidebarTitleApi.sidebarConversationGetTitle();
-    setChats(res.data);
-  };
-
-  useEffect(() => {
-    if (user) handleChatTitle();
-    else setChats([]);
-  }, [user]);
-
-  // mockData; put this instead of res for checking
-  // { id: "1", title: "Getting started with CEDRIK", timestamp: "Today" },
-  // { id: "2", title: "React best practices", timestamp: "Yesterday" },
-  // { id: "3", title: "TypeScript configuration", timestamp: "2 days ago" },
-
-  // UI State
-  const [activeChat, setActiveChat] = useState("1");
+  const [activeChat, setActiveChat] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  // Dialog state
   const [currentDialog, setCurrentDialog] = useState<{
     type: "login" | "signup" | "settings" | "help" | "logout" | "forgot" | null;
   }>({ type: null });
 
-  // Responsive state
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1024
   );
   const isMobile = windowWidth < 768;
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { setActiveChatId } = useChat();
+
+  // FIXED: Load chats only when user changes, not when chats change
+  const handleChatTitle = async () => {
+    try {
+      const res = await sidebarTitleApi.sidebarConversationGetTitle();
+      setChats(res.data);
+    } catch (error) {
+      console.error("Failed to load chats:", error);
+    }
+  };
+
+  // FIXED: Only depend on user, not chats
+  useEffect(() => {
+    if (user) {
+      handleChatTitle();
+    } else {
+      setChats([]);
+    }
+  }, [user]); // Only re-run when user changes
 
   // Handle window resize
   useEffect(() => {
@@ -106,7 +104,6 @@ export function ChatSidebar({
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
 
-      // Close mobile menu when clicking outside on mobile
       if (isMobileMenuOpen && isMobile) {
         const sidebar = document.querySelector(".sidebar-container");
         const menuButton = document.querySelector(".mobile-menu-button");
@@ -121,7 +118,6 @@ export function ChatSidebar({
         }
       }
 
-      // Close profile dropdown when clicking outside
       if (
         isProfileOpen &&
         dropdownRef.current &&
@@ -139,18 +135,15 @@ export function ChatSidebar({
     setIsProfileOpen(!isProfileOpen);
   };
 
-  // Auth handlers
   const handleLogin = async (email: string, password: string) => {
     await login(email, password);
     setCurrentDialog({ type: null });
-    handleChatTitle();
+    await handleChatTitle(); // Reload chats after login
     setIsLoggedIn(true);
     toast({
       title: "Login successful",
       description: "Welcome back!",
     });
-    // do not try ... catch here
-    // catch inside handleSubmit of Signup
   };
 
   const handleSignUp = async (
@@ -164,8 +157,6 @@ export function ChatSidebar({
       title: "Account created",
       description: "Please log in with your new account.",
     });
-    // do not try ... catch here
-    // catch inside handleSubmit of Signup
   };
 
   const handleSaveSettings = async (username: string, password: string) => {
@@ -201,14 +192,13 @@ export function ChatSidebar({
     }
   };
 
-  const { setActiveChatId } = useChat();
-
   const handleLogout = async () => {
     try {
       await logout();
       setIsProfileOpen(false);
       setChats([]);
       setActiveChatId(null);
+      setActiveChat(null);
       setMessages([]);
       setIsLoggedIn(false);
       toast({
@@ -224,25 +214,38 @@ export function ChatSidebar({
     }
   };
 
+  // FIXED: New chat handler
   const handleNewChat = async () => {
     try {
-      // (1) Call your backend to create a new conversation
-      const res = await sidebarConversationCreate.newChat(); // You'll create this API if not yet existing
+      const res = await sidebarConversationCreate.newChat();
+      
+      // Create chat object with proper Date conversion
+      const newChat: Chat = {
+        conversation: res.data.conversation,
+        title: res.data.title,
+        created_at: new Date(res.data.created_at)
+      };
 
-      // (2) Update your chat list
-      const newChat = res.data; // Example: { conversation: "abc123", title: "New Chat", created_at: new Date() }
+      // Add to the beginning of the chat list
       setChats((prev) => [newChat, ...prev]);
 
-      // (3) Make it the active chat
+      // Set as active chat
+      setActiveChat(newChat.conversation);
       setActiveChatId(newChat.conversation);
       onSelectConversation(newChat.conversation);
 
-      // (4) Reset the chat area
+      // Clear messages
       setMessages([]);
 
-      // (5) Close sidebar if on mobile
+      // Close mobile menu if open
       if (isMobile) setIsMobileMenuOpen(false);
+
+      toast({
+        title: "New chat created",
+        description: "Start a new conversation!",
+      });
     } catch (error) {
+      console.error("Failed to create new chat:", error);
       toast({
         title: "Failed to start a new chat",
         description: "Please try again.",
@@ -251,18 +254,20 @@ export function ChatSidebar({
     }
   };
 
+  // FIXED: Delete chat handler
   const handleDeleteChat = async (conversationId: string) => {
     try {
       await sidebarConversationDelete.chatDelete(conversationId);
 
-      // Remove it from the local state
+      // Remove from local state
       setChats((prev) =>
         prev.filter((chat) => chat.conversation !== conversationId)
       );
 
-      // If the deleted chat is the currently active one, reset the state
+      // If deleted chat is active, reset
       if (activeChat === conversationId) {
         setActiveChatId(null);
+        setActiveChat(null);
         setMessages([]);
       }
 
@@ -271,6 +276,7 @@ export function ChatSidebar({
         description: "The conversation has been removed.",
       });
     } catch (error) {
+      console.error("Failed to delete chat:", error);
       toast({
         title: "Failed to delete chat",
         description: "Please try again.",
@@ -279,7 +285,6 @@ export function ChatSidebar({
     }
   };
 
-  // Dialog helpers
   const openDialog = (
     type: "login" | "signup" | "settings" | "help" | "logout"
   ) => {
@@ -293,7 +298,7 @@ export function ChatSidebar({
 
   return (
     <>
-      {/* Mobile Menu Button (only visible when menu is closed) */}
+      {/* Mobile Menu Button */}
       {!isMobileMenuOpen && (
         <button
           onClick={() => setIsMobileMenuOpen(true)}
@@ -308,11 +313,8 @@ export function ChatSidebar({
       <div
         className={cn(
           "sidebar-container fixed inset-y-0 left-0 z-30 flex h-full flex-col border-r bg-background transition-transform duration-300",
-          // Mobile: slide in/out using its own state
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-          // Desktop/Tablet: show or hide entirely based on collapsed state
           isCollapsed ? "md:-translate-x-full" : "md:translate-x-0",
-          // Fixed width when visible on md+
           "w-64 md:w-64"
         )}
         ref={dropdownRef}
@@ -321,7 +323,6 @@ export function ChatSidebar({
           {/* Header */}
           <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0 h-[69px]">
             <div className="flex items-center gap-2">
-              {/* Mobile close button */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -344,18 +345,20 @@ export function ChatSidebar({
             </Button>
           </div>
 
-          <div className="flex py-3 mb-1 justify-center align-center shadow">
-            <button
-              onClick={handleNewChat}
-              className="bg-stone-200 flex justify-center align-center gap-1 py-2 px-3 w-full mx-3 rounded text-sm"
-            >
-              <MessageSquarePlus className="w-5 h-5" /> New Chat
-            </button>
-          </div>
+          {/* New Chat Button */}
+          {user && (
+            <div className="flex py-3 mb-1 justify-center items-center shadow">
+              <button
+                onClick={handleNewChat}
+                className="bg-stone-200 hover:bg-stone-300 flex justify-center items-center gap-1 py-2 px-3 w-full mx-3 rounded text-sm transition-colors"
+              >
+                <MessageSquarePlus className="w-5 h-5" /> New Chat
+              </button>
+            </div>
+          )}
 
-          {/* Scrollable Content */}
+          {/* Chat List */}
           <div className="flex-1 overflow-y-auto">
-            {/* Chat List */}
             <div className="p-2">
               {chats.map((chat) => (
                 <div
@@ -379,11 +382,10 @@ export function ChatSidebar({
                   >
                     <p className="font-medium text-sm truncate">{chat.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {chat.created_at.toDateString()}
+                      {chat.created_at.toLocaleDateString()}
                     </p>
                   </button>
 
-                  {/* Delete button (hidden until hover) */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -412,7 +414,7 @@ export function ChatSidebar({
             </div>
           </div>
 
-          {/* User Profile & Auth Section - Fixed at bottom */}
+          {/* User Profile Section */}
           <div className="mt-auto border-t border-border bg-muted/30 h-[117px]">
             {loading ? (
               <div className="p-4">
@@ -475,7 +477,6 @@ export function ChatSidebar({
                     )}
                   </button>
 
-                  {/* Dropdown Menu */}
                   {isProfileOpen && (
                     <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover rounded-md shadow-lg border border-border overflow-hidden z-10">
                       <div className="px-4 py-2 text-sm text-muted-foreground border-b border-border">
