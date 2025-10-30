@@ -15,6 +15,7 @@ class AuditType(Enum):
   FAILED_LOGIN = "failed-login"
   REGISTER = "register"
   FILTERED = "filtered"
+  OTP = "otp"
 
 class Collections(Enum):
   USER = "user"
@@ -22,6 +23,7 @@ class Collections(Enum):
   MESSAGE = "message"
   CONVERSATION = "conversation"
   MEMORY = "memory"
+  OTP = "otp"
 
 class MemoryType(Enum):
   TEXT = "text"
