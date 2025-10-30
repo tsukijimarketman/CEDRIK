@@ -44,6 +44,44 @@ class ReqAdminUpdateUser:
     role: str | None = None
     status: str | None = None
 
+@auth.route("/reset-password", methods=["POST"])
+def reset_password():
+    try:
+
+        data = request.get_json()
+        if not data or "email" and "newPassword" not in data:
+            return jsonify({"error":"Email and Password is required"}), 400
+        
+        email = data["email"]
+        newPassword = data["newPassword"]
+        user = User.objects(email=email).first()
+        if not user:
+            return jsonify({"error":"User not found"})
+        
+        Logger.log.info(user)
+
+        user.password = newPassword
+        user.validate()
+        user.hash_password()
+        user.save()
+
+        audit = audit_message(
+            msg = f"Email {user} changed password",
+            type = AuditType.OTP
+        )
+
+        audit.save()
+        return jsonify(audit.data), 200
+    except ValidationError as e:
+        raise HttpValidationError(e.to_dict()) # type: ignore
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        Logger.log.error(str(e))
+        raise InternalServerError()
+    
+
+
 @auth.route("/forgot-password", methods=["POST"])
 def check_email():
     try:
