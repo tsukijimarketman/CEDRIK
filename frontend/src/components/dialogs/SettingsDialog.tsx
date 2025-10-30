@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -23,12 +24,29 @@ export function SettingsDialog({
     username: currentUsername,
     password: ''
   });
+  const [temperatureLevel, setTemperatureLevel] = useState(1);
 
   useEffect(() => {
     if (open) {
       setFormData({ username: currentUsername, password: '' });
     }
   }, [open, currentUsername]);
+
+  useEffect(() => {
+    if (open) {
+      try {
+        const saved = localStorage.getItem("ai_temperature_level");
+        const n = Number(saved);
+        if (!Number.isNaN(n) && n >= 0 && n <= 2) {
+          setTemperatureLevel(n);
+        } else {
+          setTemperatureLevel(1);
+        }
+      } catch {
+        setTemperatureLevel(1);
+      }
+    }
+  }, [open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -37,6 +55,10 @@ export function SettingsDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const clamped = Math.max(0, Math.min(2, temperatureLevel));
+    try {
+      localStorage.setItem("ai_temperature_level", String(clamped));
+    } catch {}
     onSave(formData.username, formData.password);
   };
 
@@ -85,6 +107,26 @@ export function SettingsDialog({
                 className="col-span-3"
                 placeholder="Leave empty to keep current"
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="temperature" className="text-right">
+                Response Style
+              </Label>
+              <div className="col-span-3 space-y-2">
+                <Slider
+                  value={[temperatureLevel]}
+                  onValueChange={(v) => setTemperatureLevel(Math.max(0, Math.min(2, v[0] ?? 1)))}
+                  min={0}
+                  max={2}
+                  step={1}
+                  aria-label="Temperature"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Balanced</span>
+                  <span className="font-medium">Deterministic</span>
+                  <span>Poetic</span>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
