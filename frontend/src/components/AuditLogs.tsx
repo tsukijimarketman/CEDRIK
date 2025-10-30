@@ -21,6 +21,8 @@ export function AuditLogs() {
   const [pageInput, setPageInput] = useState("1");
   const [selectedLog, setSelectedLog] = useState<AuditLogRecord | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [sortField, setSortField] = useState<keyof NormalizedAuditLog>('id');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     let active = true;
@@ -59,6 +61,7 @@ export function AuditLogs() {
     setPageInput(String(currentPage));
   }, [currentPage]);
 
+
   type NormalizedAuditLog = {
     id: string;
     type: string;
@@ -82,7 +85,16 @@ export function AuditLogs() {
       case "register":
         return <Badge className="bg-teal-100 text-teal-800">Register</Badge>;
       default:
-        return <Badge className="bg-gray-200 text-gray-800">Unknown</Badge>;
+        return <Badge className="bg-gray-200 text-gray-800">{action}</Badge>;
+    }
+  };
+
+  const handleSort = (field: keyof NormalizedAuditLog) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
     }
   };
 
@@ -117,7 +129,7 @@ export function AuditLogs() {
     });
   }, [logs]);
 
-  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const normalizedSearch = searchTerm.trim().toLowerCase(); // handle searchbar
   const filteredLogs = normalizedLogs.filter((log) => {
     if (!normalizedSearch) {
       return true;
@@ -126,10 +138,26 @@ export function AuditLogs() {
       log.type.toLowerCase().includes(normalizedSearch) ||
       log.collection.toLowerCase().includes(normalizedSearch) ||
       log.user.toLowerCase().includes(normalizedSearch)
+      // log.ipAddress.toLowerCase().includes(normalizedSearch)
     );
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE));
+
+
+  const sortedLogs = [...filteredLogs].sort((a, b) => {
+    const vala = a[sortField];
+    const valb = b[sortField];
+
+    if (sortField === 'createdAt') {
+      const dateA = new Date(vala);
+      const dateB = new Date(valb);
+      return sortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+    }
+    return sortOrder === 'asc' ? String(vala).localeCompare(String(valb)) : String(valb).localeCompare(String(vala));
+  });
+
+
+  const totalPages = Math.max(1, Math.ceil(sortedLogs.length / PAGE_SIZE));
 
   useEffect(() => {
     setCurrentPage((prev) => {
@@ -139,7 +167,7 @@ export function AuditLogs() {
   }, [totalPages]);
 
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
-  const displayedLogs = filteredLogs.slice(
+  const displayedLogs = sortedLogs.slice(
     (safeCurrentPage - 1) * PAGE_SIZE,
     safeCurrentPage * PAGE_SIZE
   );
@@ -212,11 +240,11 @@ export function AuditLogs() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer w-[250px]">Timestamp ↑↓</TableHead>
-                  <TableHead className="cursor-pointer w-[160px]">Action ↑↓</TableHead>
-                  <TableHead className="cursor-pointer w-[160px]">Collection ↑↓</TableHead>
-                  <TableHead className="cursor-pointer w-[170px]">User ↑↓</TableHead>
-                  <TableHead className="cursor-pointer w-[150px]">IP Address ↑↓</TableHead>
+                  <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer w-[250px]">Timestamp ↑↓ {sortField === "createdAt" && (sortOrder === "asc")} </TableHead>
+                  <TableHead className="cursor-pointer w-[160px]">Action </TableHead>
+                  <TableHead className="cursor-pointer w-[160px]">Collection</TableHead>
+                  <TableHead className="cursor-pointer w-[170px]">User</TableHead>
+                  <TableHead className="cursor-pointer w-[150px]">IP Address </TableHead>
                   <TableHead className="text-right w-[150px] pr-[65px]">View</TableHead>
                 </TableRow>
               </TableHeader>
