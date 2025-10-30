@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { authApi } from "@/api/api";
+
 import {
   Dialog,
   DialogContent,
@@ -12,13 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-//dito ako natapos
 interface SignUpDialogProps {
   open: boolean;
   onClose: () => void;
-  onSignUp: (username: string, email: string, password: string) => void;
+  onSignUp: (username: string, email: string, password: string) => Promise<void>;
   onSwitchToLogin: () => void;
-  onSignUpSuccess?: () => void;
 }
 
 export function SignUpDialog({
@@ -26,7 +24,6 @@ export function SignUpDialog({
   onClose,
   onSignUp,
   onSwitchToLogin,
-  onSignUpSuccess,
 }: SignUpDialogProps) {
   const [formData, setFormData] = useState({
     username: "",
@@ -35,7 +32,6 @@ export function SignUpDialog({
   });
 
   const [isLoading, setIsLoading] = useState(false);
-
   const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,17 +41,41 @@ export function SignUpDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
-      setIsLoading(true);
-
-      onSignUp(formData.username, formData.email, formData.password);
-      onSignUpSuccess?.();
-      onClose();
-    } catch (error) {
+      await onSignUp(formData.username, formData.email, formData.password);
+      
+      // Success toast
       toast({
-        title: "Error",
-        description: error.error.password || "Failed to create account",
+        title: "Account created successfully!",
+        description: "Please log in with your new account.",
+      });
+
+      // Reset form
+      setFormData({
+        username: "",
+        email: "",
+        password: "",
+      });
+
+      onClose();
+    } catch (error: any) {
+      // Error handling with proper toast
+      let errorMessage = "Failed to create account. Please try again.";
+      
+      if (error) {
+        errorMessage = error.error.password;
+      } else if (error?.response?.data?.validation_error) {
+        const validationErrors = error.response.data.validation_error;
+        errorMessage = Object.values(validationErrors).flat().join(", ");
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: "Sign up failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
