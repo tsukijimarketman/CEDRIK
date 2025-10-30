@@ -253,19 +253,21 @@ export function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead onClick={() => handleSort("username")} className="cursor-pointer w-[150px]">
+                  <TableHead onClick={() => handleSort("username")} className="cursor-pointer w-[180px]">
                     Username ↑↓ {sortField === "username" && (sortOrder === "asc")}
                   </TableHead>
-                  <TableHead onClick={() => handleSort("email")} className="cursor-pointer w-[330px]">
+                  <TableHead onClick={() => handleSort("email")} className="cursor-pointer w-[350px]">
                     Email ↑↓ {sortField === "email" && (sortOrder === "asc")}
                   </TableHead>
-                  <TableHead onClick={() => handleSort("role")} className="cursor-pointer w-[150px]">
+                  <TableHead onClick={() => handleSort("role")} className="cursor-pointer w-[150px] ">
                     Role ↑↓ {sortField === "role" && (sortOrder === "asc")}
                   </TableHead>
                   <TableHead onClick={() => handleSort("status")} className="cursor-pointer w-[150px]">
                     Status ↑↓ {sortField === "status" && (sortOrder === "asc")}
+                    Status ↑↓ {sortField === "status" && (sortOrder === "asc")}
                   </TableHead>
                   <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer w-[150px]">
+                    Created ↑↓ {sortField === "createdAt" && (sortOrder === "asc")}
                     Created ↑↓ {sortField === "createdAt" && (sortOrder === "asc")}
                   </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
