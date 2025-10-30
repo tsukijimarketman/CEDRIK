@@ -39,6 +39,8 @@ export function ForgotPasswordDialog({
       const resOTP = await passwordApi.forgotPassword(email);
       const otp = resOTP.data;
       setOtpass(otp);
+      
+      
 
       const templateParams = {
         email: email,
@@ -46,10 +48,10 @@ export function ForgotPasswordDialog({
       };
 
       await emailjs.send(
-        "service_y4eazat", // Your Service ID
-        "template_lf7k96h", // Your Template ID
+        import.meta.env.VITE_SERVICE_ID_EMAILJS, // Your Service ID
+        import.meta.env.VITE_TEMPLATE_ID_EMAILJS, // Your Template ID
         templateParams, // template parameters
-        "qGqmEJpufN8ZsSFLq" // Your Public Key
+        import.meta.env.VITE_PUBLIC_KEY_EMAILJS // Your Public Key
       );
 
       toast({

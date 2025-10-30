@@ -145,19 +145,19 @@ export function ChatSidebar({
       description: "Welcome back!",
     });
   };
-
-  const handleSignUp = async (
-    username: string,
-    email: string,
-    password: string
-  ) => {
+  
+const handleSignUp = async (
+  username: string,
+  email: string,
+  password: string
+) => {
+  try {
     await authApi.register({ username, email, password });
-    setCurrentDialog({ type: null });
-    toast({
-      title: "Account created",
-      description: "Please log in with your new account.",
-    });
-  };
+    await handleLogin(email, password);
+  } catch (error) {
+    throw error;
+  }
+};
 
   const handleSaveSettings = async (username: string, password: string) => {
     try {
