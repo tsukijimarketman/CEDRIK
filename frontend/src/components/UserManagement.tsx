@@ -267,7 +267,7 @@ export function UserManagement() {
                   </TableHead>
                   <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer w-[150px]">
                     Created ↑↓ {sortField === "createdAt" && (sortOrder === "asc")}
-                  </TableHead>//
+                  </TableHead>
 
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
