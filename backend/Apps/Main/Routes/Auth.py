@@ -116,6 +116,34 @@ def check_email():
     
 
 
+@auth.route("/login-otp", methods=["POST"])
+def login_otp():
+    try:
+
+        data = request.get_json()
+        if not data or "email" not in data:
+            return jsonify({"error":"Email is required"}), 400
+        
+        email = data["email"]
+        user = User.objects(email=email).first()
+        if not user:
+            return jsonify({"error":"User not found"})
+
+        generatedOTP = str(random.randint(100000, 999999))
+
+        audit_message(
+            msg = f"Email {user} Generated Login OTP",
+            type = AuditType.OTP
+        ).save()
+        return jsonify(generatedOTP), 200
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        Logger.log.error(str(e))
+        raise InternalServerError()
+
+
 @auth.route("/login", methods=["POST"])
 def login():
     try:
