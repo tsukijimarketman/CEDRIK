@@ -217,7 +217,7 @@ export function UserManagement() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
               <div className="h-4 w-4 bg-green-500 rounded-full" />
-            </CardHeader> 
+            </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 {users.filter((u) => u.status === "active").length}
@@ -249,20 +249,20 @@ export function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead onClick={() => handleSort("username")} className="cursor-pointer">
-                    Username {sortField === "username" && (sortOrder === "asc")}
+                  <TableHead onClick={() => handleSort("username")} className="cursor-pointer w-[150px]">
+                    Username ↑↓ {sortField === "username" && (sortOrder === "asc")}
                   </TableHead>
-                  <TableHead onClick={() => handleSort("email")} className="cursor-pointer">
-                    Email {sortField === "email" && (sortOrder === "asc")}
+                  <TableHead onClick={() => handleSort("email")} className="cursor-pointer w-[330px]">
+                    Email ↑↓ {sortField === "email" && (sortOrder === "asc")}
                   </TableHead>
-                  <TableHead onClick={() => handleSort("role")} className="cursor-pointer">
-                    Role {sortField === "role" && (sortOrder === "asc")}
+                  <TableHead onClick={() => handleSort("role")} className="cursor-pointer w-[150px]">
+                    Role ↑↓ {sortField === "role" && (sortOrder === "asc")}
                   </TableHead>
-                  <TableHead onClick={() => handleSort("status")} className="cursor-pointer">
-                    Status {sortField === "status" && (sortOrder === "asc")}
+                  <TableHead onClick={() => handleSort("status")} className="cursor-pointer w-[150px]">
+                    Status ↑↓ {sortField === "status" && (sortOrder === "asc")}
                   </TableHead>
-                  <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer">
-                    Created {sortField === "createdAt" && (sortOrder === "asc")}
+                  <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer w-[150px]">
+                    Created ↑↓ {sortField === "createdAt" && (sortOrder === "asc")}
                   </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -412,12 +412,12 @@ export function UserManagement() {
             prev.map((u) =>
               u.id === id
                 ? {
-                    ...u,
-                    username,
-                    email,
-                    role: normalizedRole,
-                    status: normalizedStatus,
-                  }
+                  ...u,
+                  username,
+                  email,
+                  role: normalizedRole,
+                  status: normalizedStatus,
+                }
                 : u
             )
           );
