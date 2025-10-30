@@ -11,9 +11,12 @@ from backend.Apps.Main.Utils.Audit import audit_collection, audit_message
 from backend.Lib.Error import BadBody, UserAlreadyExist, UserDoesNotExist, HttpValidationError
 from backend.Apps.Main.Hasher import verify_password, hash as hash_password
 from backend.Lib.Logger import Logger
-from backend.Apps.Main.Database import Transaction, Audit, User
+from backend.Apps.Main.Database import Transaction, Audit, User, Otp
 from backend.Apps.Main.Utils import UserToken, get_token, Role, AuditType, Collections, get_object_id
 from backend.Apps.Main.Validation import validate_username, validate_password
+
+from datetime import datetime, timedelta
+import random
 
 auth = Blueprint("Auth", __name__)
 
@@ -40,6 +43,40 @@ class ReqAdminUpdateUser:
     email: str | None = None
     role: str | None = None
     status: str | None = None
+
+@auth.route("/forgot-password", methods=["POST"])
+def check_email():
+    try:
+
+        data = request.get_json()
+        if not data or "email" not in data:
+            return jsonify({"error":"Email is required"}), 400
+        
+        email = data["email"]
+        user = User.objects(email=email).first()
+        if not user:
+            return jsonify({"error":"User not found"})
+
+
+        generatedOTP = str(random.randint(100000, 999999))
+        # expiration = datetime.now() + timedelta(minutes=5)
+        # otp = Otp(email = email, otp = generatedOTP, expires_at = expiration)
+        # otp.validate()
+        # otp.save()
+
+        audit_message(
+            msg = f"Email {user} Generated OTP",
+            type = AuditType.OTP
+        ).save()
+        return jsonify(generatedOTP), 200
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        Logger.log.error(str(e))
+        raise InternalServerError()
+    
+
 
 @auth.route("/login", methods=["POST"])
 def login():
@@ -269,7 +306,6 @@ def register():
                     type=AuditType.REGISTER,
                     collection=Collections.USER,
                     id=res_insert,
-                    ip=request.remote_addr,
                     from_data=None,
                     to_data=None
                 )
@@ -377,7 +413,7 @@ def update_user(user_id: str):
                 session=session,
             )
 
-            audit = Audit.audit_collection(
+            audit = audit_collection(
                 type=AuditType.EDIT,
                 collection=Collections.USER,
                 id=target_id,

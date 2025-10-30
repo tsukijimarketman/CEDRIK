@@ -24,6 +24,7 @@ import {
 import { AddFileDialog } from "@/components/dialogs/NewFIleDialog";
 import { EditFileDialog } from "@/components/dialogs/EditFileDialog";
 import { ViewFileDialog } from "@/components/dialogs/ViewFileDialog";
+import { DeleteFileDialog } from "@/components/dialogs/DeleteFileDialog";
 
 
 
@@ -41,7 +42,7 @@ interface KnowledgeBaseItem {
 export function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [knowledgeItems] = useState<KnowledgeBaseItem[]>([
+  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeBaseItem[]>([
     {
       id: "1",
       title: "System Architecture Overview",
@@ -116,7 +117,9 @@ export function KnowledgeBase() {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<KnowledgeBaseItem | null>(null);
+
 
 
 
@@ -222,7 +225,11 @@ export function KnowledgeBase() {
                       variant="ghost"
                       size="sm"
                       className="text-red-500 hover:text-red-700"
-                    >
+                      onClick={() => {
+                        setSelectedFile(item);
+                        setIsDeleteOpen(true);
+                      }}>
+
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
@@ -297,8 +304,25 @@ export function KnowledgeBase() {
         file={selectedFile}
       />
 
+      <DeleteFileDialog
+        open={isDeleteOpen}
+        onClose={() => {
+          setIsDeleteOpen(false);
+          setSelectedFile(null);
+        }}
+        onConfirm={() => {
+          if (selectedFile) {
+            setKnowledgeItems((prev) =>
+              prev.filter((item) => item.id !== selectedFile.id)
+            );
+          }
+          setIsDeleteOpen(false);
+          setSelectedFile(null);
+        }}
+      />
 
     </div>
+
 
 
 
