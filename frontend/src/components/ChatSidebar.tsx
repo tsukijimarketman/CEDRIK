@@ -344,7 +344,7 @@ export function ChatSidebar({
             </Button>
           </div>
 
-          <div className="flex py-3 mb-1 flex justify-center align-center shadow">
+          <div className="flex py-3 mb-1 justify-center align-center shadow">
             <button
               onClick={handleNewChat}
               className="bg-stone-200 flex justify-center align-center gap-1 py-2 px-3 w-full mx-3 rounded text-sm"
