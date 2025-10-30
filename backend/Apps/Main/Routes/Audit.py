@@ -137,7 +137,7 @@ def get():
 
       results.append(
         AuditResult(
-          id=str(audit.get(id, "")), # type: ignore
+          id=str(audit.get("_id", "")), # type: ignore
           type=AuditType(audit["type"]).value if audit.get("type", None) != None else AuditType.MESSAGE.value,
           user=user if user else {},
           data=data_dict,
