@@ -1,10 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Download, Filter } from "lucide-react";
+import { Search, Download, Filter, Eye } from "lucide-react";
 import { auditApi, type AuditLogRecord } from "@/api/api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
 
@@ -17,6 +19,8 @@ export function AuditLogs() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
+  const [selectedLog, setSelectedLog] = useState<AuditLogRecord | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -212,19 +216,20 @@ export function AuditLogs() {
                   <TableHead className="cursor-pointer w-[160px]">Action ↑↓</TableHead>
                   <TableHead className="cursor-pointer w-[160px]">Collection ↑↓</TableHead>
                   <TableHead className="cursor-pointer w-[170px]">User ↑↓</TableHead>
-                  <TableHead className="cursor-pointer w-[160px]">IP Address ↑↓</TableHead>
+                  <TableHead className="cursor-pointer w-[150px]">IP Address ↑↓</TableHead>
+                  <TableHead className="text-right w-[150px] pr-[65px]">View</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-sm">
+                    <TableCell colSpan={6} className="text-center text-sm">
                       Loading audit logs...
                     </TableCell>
                   </TableRow>
                 ) : filteredLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-sm">
+                    <TableCell colSpan={6} className="text-center text-sm">
                       No audit logs found.
                     </TableCell>
                   </TableRow>
@@ -242,6 +247,20 @@ export function AuditLogs() {
                         <TableCell className="font-mono text-sm">{log.user}</TableCell>
                         <TableCell className="font-mono text-sm">
                           {log.ipAddress}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const original = logs.find((l) => l.id === log.id) || null;
+                              setSelectedLog(original);
+                              setIsViewOpen(true);
+                            }}
+                            className=" mr-[50px]"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -301,7 +320,77 @@ export function AuditLogs() {
           </div>
         </div>
       </div>
-    </div>
+      <Dialog
+        open={isViewOpen && !!selectedLog}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setIsViewOpen(false);
+            setSelectedLog(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Audit Log Details</DialogTitle>
+          </DialogHeader>
+          {selectedLog && (
+            <div className="space-y-4 max-h-[70vh] overflow-auto">
+              <div className="space-y-1">
+                <Label>ID</Label>
+                <p className="text-sm text-muted-foreground font-mono">{selectedLog.id}</p>
+              </div>
+              <div className="space-y-1">
+                <Label>Action</Label>
+                <p className="text-sm text-muted-foreground uppercase">{selectedLog.type}</p>
+              </div>
+              <div className="space-y-1">
+                <Label>User</Label>
+                <p className="text-sm text-muted-foreground">
+                  {(selectedLog.user && (selectedLog.user.username || selectedLog.user.email)) || "System"}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label>Created At</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedLog.created_at ? new Date(selectedLog.created_at).toLocaleString() : "—"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <Label>Updated At</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedLog.updated_at ? new Date(selectedLog.updated_at).toLocaleString() : "—"}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>Data</Label>
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
+                  {JSON.stringify(selectedLog.data, null, 2)}
+                </pre>
+              </div>
+              <div className="space-y-1">
+                <Label>Metadata</Label>
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
+                  {JSON.stringify(selectedLog.metadata, null, 2)}
+                </pre>
+              </div>
+              <div className="space-y-1">
+                <Label>Raw Record</Label>
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
+                  {JSON.stringify(selectedLog, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+          <div className="pt-4 flex justify-end">
+            <Button variant="outline" onClick={() => { setIsViewOpen(false); setSelectedLog(null); }}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div >
 
   );
 }
