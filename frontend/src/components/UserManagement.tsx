@@ -264,12 +264,11 @@ export function UserManagement() {
                   </TableHead>
                   <TableHead onClick={() => handleSort("status")} className="cursor-pointer w-[150px]">
                     Status ↑↓ {sortField === "status" && (sortOrder === "asc")}
-                    Status ↑↓ {sortField === "status" && (sortOrder === "asc")}
                   </TableHead>
                   <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer w-[150px]">
                     Created ↑↓ {sortField === "createdAt" && (sortOrder === "asc")}
-                    Created ↑↓ {sortField === "createdAt" && (sortOrder === "asc")}
                   </TableHead>
+
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
