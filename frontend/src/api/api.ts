@@ -207,7 +207,7 @@ export const aiApi = {
     formData.append("file", data.file);
     return api.post<ChatResponse>("/ai/chat", formData, {
       headers: {
-        "Content-Type": undefined, // let axios set content-type
+        "Content-Type": undefined, 
       },
     });
   },
