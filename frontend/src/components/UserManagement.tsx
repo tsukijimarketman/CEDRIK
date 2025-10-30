@@ -93,7 +93,11 @@ export function UserManagement() {
   const filteredUsers = users.filter(
     (user) =>
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.status.toLowerCase().includes(searchTerm.toLocaleLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLocaleLowerCase())
+
+
   );
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
