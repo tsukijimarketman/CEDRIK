@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Search, Download, Filter, Eye } from "lucide-react";
 import { auditApi, type AuditLogRecord } from "@/api/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+
 
 const PAGE_SIZE = 10;
 
@@ -66,6 +68,25 @@ export function AuditLogs() {
     ipAddress: string;
   };
 
+
+  const getActionBadge = (action: string) => {
+    switch (action.toLowerCase()) {
+      case "login":
+        return <Badge className="bg-orange-100 text-orange-800">Login</Badge>;
+      case "add":
+        return <Badge className="bg-green-200 text-green-900">Add</Badge>;
+      case "message":
+        return <Badge className="bg-blue-100 text-blue-800">Message</Badge>;
+      case "edit":
+        return <Badge className="bg-yellow-200 text-yellow-900">Edit</Badge>;
+      case "register":
+        return <Badge className="bg-teal-100 text-teal-800">Register</Badge>;
+      default:
+        return <Badge className="bg-gray-200 text-gray-800">Unknown</Badge>;
+    }
+  };
+
+
   const normalizedLogs = useMemo<NormalizedAuditLog[]>(() => {
     return logs.map((log) => {
       const collection =
@@ -82,14 +103,14 @@ export function AuditLogs() {
         log.data && typeof log.data["ip"] === "string" ? (log.data["ip"] as string) : null,
       ].filter(Boolean) as string[];
 
- const username =
-      (log.user && (log.user.username || log.user.email)) || "System";
+      const username =
+        (log.user && (log.user.username || log.user.email)) || "System";
 
       return {
         id: log.id,
         type: log.type ?? "Unknown",
         collection,
-        user:username,
+        user: username,
         createdAt: log.created_at,
         ipAddress: ipCandidates[0] ?? "Not available",
       };
@@ -104,7 +125,7 @@ export function AuditLogs() {
     return (
       log.type.toLowerCase().includes(normalizedSearch) ||
       log.collection.toLowerCase().includes(normalizedSearch) ||
-     log.user.toLowerCase().includes(normalizedSearch)
+      log.user.toLowerCase().includes(normalizedSearch)
     );
   });
 
@@ -191,12 +212,12 @@ export function AuditLogs() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Collection</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>IP Address</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="cursor-pointer w-[250px]">Timestamp ↑↓</TableHead>
+                  <TableHead className="cursor-pointer w-[160px]">Action ↑↓</TableHead>
+                  <TableHead className="cursor-pointer w-[160px]">Collection ↑↓</TableHead>
+                  <TableHead className="cursor-pointer w-[170px]">User ↑↓</TableHead>
+                  <TableHead className="cursor-pointer w-[150px]">IP Address ↑↓</TableHead>
+                  <TableHead className="text-right w-[150px] pr-[65px]">View</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -220,7 +241,8 @@ export function AuditLogs() {
                         <TableCell className="font-mono text-sm">
                           {createdAt}
                         </TableCell>
-                        <TableCell className="uppercase">{log.type || "Unknown"}</TableCell>
+                        <TableCell className="uppercase">{getActionBadge(log.type || "Unknown")}</TableCell>
+                        {/* <TableCell className="uppercase">{log.type || "Unknown"}</TableCell> */}
                         <TableCell>{log.collection}</TableCell>
                         <TableCell className="font-mono text-sm">{log.user}</TableCell>
                         <TableCell className="font-mono text-sm">
@@ -235,6 +257,7 @@ export function AuditLogs() {
                               setSelectedLog(original);
                               setIsViewOpen(true);
                             }}
+                            className=" mr-[50px]"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -367,7 +390,7 @@ export function AuditLogs() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
 
   );
 }
