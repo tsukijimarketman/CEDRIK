@@ -66,6 +66,14 @@ export function LoginDialog({
       } catch (err: any) {
         let errorMessage = "Invalid email or password.";
         if (err?.error) errorMessage = err.error;
+      try {
+        await authApi.login({
+          email: formData.email,
+          password: formData.password,
+        });
+      } catch (err: any) {
+        let errorMessage = "Invalid email or password.";
+        if (err?.error) errorMessage = err.error;
         toast({
           title: "Login failed",
           description: errorMessage,
