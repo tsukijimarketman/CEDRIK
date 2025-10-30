@@ -55,7 +55,7 @@ export function SignUpDialog({
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create account",
+        description: error.error.password || "Failed to create account",
         variant: "destructive",
       });
     } finally {
