@@ -31,8 +31,8 @@ services:
       - ./.env:/app/.env:ro
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
-    # command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
     # command: [ "/bin/bash" ]
     # stdin_open: true
     # tty: true
