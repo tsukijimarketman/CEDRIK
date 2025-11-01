@@ -126,7 +126,11 @@ def generate_reply(
   Logger.log.info(f"context {sim_results}")
   context = [ i["text"] for i in sim_results ]
 
+  start = time.perf_counter()
   reply = generate_model_reply(prompt=prompt, context=context, overrides=overrides)
+  end = time.perf_counter()
+  elapsed = end - start
+  Logger.log.info(f"Reply Generation took {elapsed}ms")
 
   return Reply(
     reply=reply,
