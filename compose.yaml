@@ -32,6 +32,8 @@ services:
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    networks:
+        - internal
     ports:
       - 5000:5000
     environment:
@@ -55,8 +57,10 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    ports:
-      - 5001:5001
+    networks:
+        - internal
+    # ports:
+    #   - 5001:5001
     environment:
       FLASK_RUN_HOST: 0.0.0.0
       FLASK_RUN_PORT: 5001
@@ -75,8 +79,10 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    ports:
-      - 5002:5002
+    networks:
+      - internal
+    # ports:
+    #   - 5002:5002
     environment:
       FLASK_RUN_HOST: 0.0.0.0
       FLASK_RUN_PORT: 5002
@@ -95,8 +101,10 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    ports:
-      - 5003:5003
+    networks:
+      - internal
+    # ports:
+    #   - 5003:5003
     environment:
       FILTER_MODE: 1
       FLASK_RUN_HOST: 0.0.0.0
@@ -115,9 +123,14 @@ services:
     # tty: true
     volumes:
       - ./models/:/app/models/
-    ports:
-      - 8080:8080
+    networks:
+      - internal
+    # ports:
+    #   - 8080:8080
     environment:
       MODEL: /app/models/Qwen2.5-VL-7B-Instruct-UD-IQ1_M.gguf
       HOST: 0.0.0.0
       PORT: 8080
+
+networks:
+  internal:
