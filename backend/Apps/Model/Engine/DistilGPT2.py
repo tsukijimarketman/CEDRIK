@@ -15,7 +15,7 @@ class DistilGPT2(LLMEngine):
     )
     set_seed(int(time.time()))
   
-  def generate(self, query: List[Prompt]):
+  def generate(self, query: List[Prompt], overrides: dict = {}) -> str:
     try:
       config = load_json(PIPE_CONFIG)
     except Exception as _:

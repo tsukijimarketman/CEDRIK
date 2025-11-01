@@ -6,6 +6,7 @@ from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaSe
 from backend.Lib.Common import Prompt
 from backend.Lib.Logger import Logger
 from backend.Lib.Config import AI_MODEL, FILTER_MODE, MAIN_SERVER
+import traceback
 
 app = Flask(__name__)
 
@@ -45,13 +46,14 @@ class Model:
         raise Exception("Do not Instantiate Model")
     
     @classmethod
-    def generate(cls, query: List[Prompt]) -> str:
-        return cls._engine.generate(query)
+    def generate(cls, query: List[Prompt], overrides: dict = {}) -> str:
+        return cls._engine.generate(query, overrides)
 
 @dataclass
 class GenerateReplyBody:
     prompt: Prompt
     context: List[str]
+    overrides: dict | None = None
     def __post_init__(self):
         self.prompt = Prompt(**self.prompt)
 
@@ -74,15 +76,19 @@ def generate_reply():
   """
   try:
     body = GenerateReplyBody(**request.get_json())
+    if body.overrides == None:
+      body.overrides = {}
+
     query = [Prompt(role="system", content=i) for i in body.context]
     query.append(body.prompt)
 
     Logger.log.info(f"query {query}")
-    reply = Model.generate(query)
+    reply = Model.generate(query, body.overrides)
 
     Logger.log.info(f"reply {reply}")
     return jsonify({
       "reply": reply
     }), 200
   except Exception as e:
+    # Logger.log.error(repr(e), traceback.format_exc())
     Logger.log.error(repr(e))

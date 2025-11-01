@@ -5,5 +5,5 @@ class LLMEngine:
   def __init__(self, model):
     self.model = model
   
-  def generate(self, query: List[Prompt]) -> str:
+  def generate(self, query: List[Prompt], overrides: dict = {}) -> str:
     raise Exception("Do not use BaseClass")

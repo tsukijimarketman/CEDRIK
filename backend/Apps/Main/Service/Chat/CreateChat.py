@@ -89,7 +89,8 @@ def __get_last_message(
 def generate_reply(
   conversation_id: str,
   user: UserToken,
-  prompt: Prompt
+  prompt: Prompt,
+  overrides: dict
 ):
   query_embeddings = generate_embeddings([prompt.content])
 
@@ -125,7 +126,7 @@ def generate_reply(
   Logger.log.info(f"context {sim_results}")
   context = [ i["text"] for i in sim_results ]
 
-  reply = generate_model_reply(prompt=prompt, context=context)
+  reply = generate_model_reply(prompt=prompt, context=context, overrides=overrides)
 
   return Reply(
     reply=reply,

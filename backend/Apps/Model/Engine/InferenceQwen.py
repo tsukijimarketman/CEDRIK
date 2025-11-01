@@ -17,13 +17,13 @@ class InferenceQwen(LLMEngine):
       api_key=HF_TOKEN
     )
 
-  def generate(self, query: List[Prompt]) -> str:
+  def generate(self, query: List[Prompt], overrides: dict = {}) -> str:
     config: dict = load_json(TOKENIZER_CONFIG)
     # inference only takes these params
     config = {
-      "temperature": config["temperature"],
-      "top_p": config["top_p"],
-      "max_tokens": config["max_new_tokens"]
+      "temperature": overrides.get("temperature") if overrides.get("temperature", None) != None else config["temperature"],
+      "top_p": overrides.get("top_p") if overrides.get("top_p", None) != None else config["top_p"],
+      "max_tokens": overrides.get("max_new_tokens") if overrides.get("max_new_tokens", None) != None else config["max_new_tokens"],
     }
     completion = self.client.chat.completions.create(
       model=self.model,
