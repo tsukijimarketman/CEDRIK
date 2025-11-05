@@ -122,7 +122,8 @@ services:
       HF_HOME: /app/hf_cache
 
   llama-server:
-    image: maasuncion/cedrik-backend:1
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    profiles: ["llama"]
     # pull_policy: never
     entrypoint: "/bin/sh"
     command: [ "-c", "/app/llama-server -m $${MODEL} --host $${HOST} --port $${PORT} --threads 8 --n-gpu-layers 0 --ctx-size 1024" ]
