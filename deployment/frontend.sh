@@ -11,7 +11,7 @@ tar -xf ./frontend.tar
 
 echo "Moving /tmp/dist/ contents to /var/www/html/"
 chown -R 1000:1000 ./dist/
-sudo mv -r ./dist/* /var/www/html/
+sudo mv ./dist/* /var/www/html/
 
 echo "Cleaning up tmp files"
 rm -rf ./dist
