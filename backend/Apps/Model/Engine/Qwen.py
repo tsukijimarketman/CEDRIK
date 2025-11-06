@@ -16,7 +16,7 @@ class Qwen(LLMEngine):
       trust_remote_code=True
     )
 
-  def generate(self, query: List[Prompt]) -> str:
+  def generate(self, query: List[Prompt], overrides: dict = {}) -> str:
     config = load_json(TOKENIZER_CONFIG)
     inputs = self._processor.apply_chat_template(
         [asdict(i) for i in query],

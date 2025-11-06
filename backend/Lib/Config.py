@@ -51,6 +51,8 @@ LLAMA_SERVER = os.getenv("LLAMA_SERVER")
 if AI_MODEL == "llama" and (LLAMA_SERVER == None or len(LLAMA_SERVER) == 0):
   raise Exception("LLAMA_SERVER is not set but AI_MODEL is set to llama")
 
+HF_TOKEN = str(_get_env_or_default("HF_TOKEN", ""))
+
 CHUNK_SIZE_BYTES = int(_get_env_or_default("CHUNK_SIZE_BYTES", 256, lambda x:  int(x)))
 CHUNK_OFFSET_BYTES = int(_get_env_or_default("CHUNK_OFFSET_BYTES", 28, lambda x:  int(x)))
 DEBUG = bool(_get_env_or_default("DEBUG", False, lambda x: x != None or len(x) > 0))

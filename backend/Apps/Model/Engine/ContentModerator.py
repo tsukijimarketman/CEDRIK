@@ -13,7 +13,7 @@ class ContentModerator(LLMEngine):
     self._tokenizer = AutoTokenizer.from_pretrained(self.model, trust_remote_code=True)
     self._model = AutoModelForSequenceClassification.from_pretrained(self.model, trust_remote_code=True)
 
-  def generate(self, query: List[Prompt]) -> str:
+  def generate(self, query: List[Prompt], overrides: dict = {}) -> str:
     inputs = self._tokenizer("\n".join([ i.content for i in query]), return_tensors="pt")
     outputs = self._model(**inputs)
     probabilities = outputs.logits.softmax(dim=-1).squeeze()
