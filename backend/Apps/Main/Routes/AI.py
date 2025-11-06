@@ -18,6 +18,7 @@ from backend.Apps.Main.Service.Chat.CreateChat import generate_reply
 from backend.Apps.Main.Utils import get_token, Collections
 from backend.Apps.Main.Service import create_chat
 from backend.Lib.Common import Prompt
+import json as Js
 
 ai = Blueprint("Ai", __name__)
 
@@ -26,6 +27,7 @@ class ChatBody:
     conversation: str
     prompt: Prompt
     file: FileStorage | None = None
+    overrides: dict | None = None
     def __post_init__(self):
         self.prompt = Prompt(**self.prompt) # type: ignore
 
@@ -57,9 +59,11 @@ def chat():
         }
         # TODO handle file
         json["file"] = request.files.get("file")
+        json["overrides"] = Js.loads(request.form.get("overrides", "{}"))
 
         body = ChatBody(**json)
-        body.prompt.role = "user"
+        if body.overrides == None:
+          body.overrides = {}
     except Exception as _:
         raise BadBody()
     user_token = get_token()
@@ -84,7 +88,8 @@ def chat():
         model_reply = generate_reply(
             conversation_id=body.conversation,
             user=user_token,
-            prompt=body.prompt
+            prompt=body.prompt,
+            overrides=body.overrides
         )
         Logger.log.info(f"Reply {model_reply.reply} {model_reply.embeddings[:5]}")
         # ==============
