@@ -22,8 +22,8 @@ services:
       - 5173:5173
 
   main:
-    image: cedrik-backend
-    pull_policy: never
+    image: maasuncion/cedrik-backend:1
+    # pull_policy: never
     volumes:
       - ./Uploads/:/Uploads/
       - ./backend/:/app/backend/
@@ -32,6 +32,12 @@ services:
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    # command: [ "/bin/bash" ]
+    # stdin_open: true
+    # tty: true
+    networks:
+        - internal
     ports:
       - 5000:5000
     environment:
@@ -45,8 +51,8 @@ services:
         - path: ./backend/
           action: restart
   encoder:
-    image: cedrik-backend
-    pull_policy: never
+    image: maasuncion/cedrik-backend:1
+    # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
       - ./log/:/app/log/
@@ -55,8 +61,11 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    ports:
-      - 5001:5001
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    networks:
+        - internal
+    # ports:
+    #   - 5001:5001
     environment:
       FLASK_RUN_HOST: 0.0.0.0
       FLASK_RUN_PORT: 5001
@@ -65,8 +74,8 @@ services:
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
   model:
-    image: cedrik-backend
-    pull_policy: never
+    image: maasuncion/cedrik-backend:1
+    # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
       - ./log/:/app/log/
@@ -75,8 +84,11 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    ports:
-      - 5002:5002
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    networks:
+      - internal
+    # ports:
+    #   - 5002:5002
     environment:
       FLASK_RUN_HOST: 0.0.0.0
       FLASK_RUN_PORT: 5002
@@ -85,8 +97,8 @@ services:
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
   filter-model:
-    image: cedrik-backend
-    pull_policy: never
+    image: maasuncion/cedrik-backend:1
+    # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
       - ./log/:/app/log/
@@ -95,8 +107,11 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    ports:
-      - 5003:5003
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    networks:
+      - internal
+    # ports:
+    #   - 5003:5003
     environment:
       FILTER_MODE: 1
       FLASK_RUN_HOST: 0.0.0.0
@@ -109,15 +124,22 @@ services:
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan
     profiles: ["llama"]
+    # pull_policy: never
     entrypoint: "/bin/sh"
     command: [ "-c", "/app/llama-server -m $${MODEL} --host $${HOST} --port $${PORT} --threads 8 --n-gpu-layers 0 --ctx-size 1024" ]
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
     # stdin_open: true
     # tty: true
     volumes:
       - ./models/:/app/models/
-    ports:
-      - 8080:8080
+    networks:
+      - internal
+    # ports:
+    #   - 8080:8080
     environment:
       MODEL: /app/models/Qwen2.5-VL-7B-Instruct-UD-IQ1_M.gguf
       HOST: 0.0.0.0
       PORT: 8080
+
+networks:
+  internal:

@@ -45,7 +45,7 @@ def classify_text(text: str) -> str:
       Logger.log.error(repr(e))
       return ""
 
-def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
+def generate_model_reply(prompt: Prompt, context: List[str] = [], overrides: dict = {}) -> str:
     try:
       with requests.Session() as s:
         retry = Retry(
@@ -62,7 +62,8 @@ def generate_model_reply(prompt: Prompt, context: List[str] = []) -> str:
             url=MODEL_SERVER,
             data=json.dumps({
                 "context": context,
-                "prompt": asdict(prompt)
+                "prompt": asdict(prompt),
+                "overrides": overrides
             }),
             headers={ "Content-Type": "application/json" },
             # timeout=10
