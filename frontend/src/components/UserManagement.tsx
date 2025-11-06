@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useEffect, useState } from "react";
-import { Search, UserPlus, Edit, Trash2, Eye, Users } from "lucide-react";
+import { Search, UserPlus, Edit, Trash2, Eye, Users, Dice1 } from "lucide-react";
 
 import { AddUserDialog } from "@/components/dialogs/AddUserDialog";
+import { OtpToggleModal } from "@/components/dialogs/OTP";
+
 import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
 import { ViewUserDialog } from "@/components/dialogs/ViewUserDialog";
 import { ChevronUp, ChevronDown } from "lucide-react";
@@ -34,8 +36,13 @@ export function UserManagement() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  const [otpEnabled, setOtpEnabled] = useState(true); // default is ON
+
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+
+
 
   const [sortField, setSortField] = useState<keyof User>('username');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -244,11 +251,22 @@ export function UserManagement() {
         {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Users</CardTitle>
-            <CardDescription>
-              A list of all users in the system with their roles and status.
-            </CardDescription>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <CardTitle>Users</CardTitle>
+                <CardDescription>
+                  A list of all users in the system with their roles and status.
+                </CardDescription>
+              </div>
+
+
+              <Button className="gap-2" onClick={() => setShowOtpModal(true)}>
+                OTP : {otpEnabled ? "ON" : "OFF"}
+              </Button>
+
+            </div>
           </CardHeader>
+
           <CardContent>
             <Table>
               <TableHeader>
@@ -438,6 +456,15 @@ export function UserManagement() {
         }}
         user={selectedUser}
       />
+
+
+      <OtpToggleModal
+        open={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        otpEnabled={otpEnabled}
+        onToggleOtp={(enabled) => setOtpEnabled(enabled)}
+      />
+
     </div>
   );
 }
