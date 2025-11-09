@@ -8,7 +8,9 @@ RUN apt-get update && apt-get install -y \
 COPY ./requirements.txt ./
 RUN --mount=type=cache,mode=0755,target=/root/.cache/pip \
     pip install -r requirements.txt && \
-    pip install uwsgi
+    pip install groq>=0.4.0
+
+# ↑ Removed uwsgi install - you're not using it anyway!
 
 FROM python:3.13-slim-bookworm
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
@@ -34,7 +36,6 @@ RUN chown -R 1001:1001 /app
 
 USER appuser
 
-COPY ./backend ./backend
+#COPY --chown=appuser:appuser ./backend ./backend
 
-# !!! override CMD in compose
 CMD ["/bin/bash"]

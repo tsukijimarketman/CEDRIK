@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaServer, Qwen, ContentModerator, InferenceQwen
+from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaServer, Qwen, ContentModerator, InferenceQwen, GroqEngine
 from backend.Lib.Common import Prompt
 from backend.Lib.Logger import Logger
 from backend.Lib.Config import AI_MODEL, FILTER_MODE, MAIN_SERVER
@@ -30,7 +30,9 @@ class Model:
 
     Logger.log.info(f"ai_model={AI_MODEL} filter_mode={FILTER_MODE}")
     if FILTER_MODE:
-      _engine = ContentModerator()
+      _engine = ContentModerator()    
+    elif AI_MODEL == "groq":  
+      _engine = GroqEngine()
     elif AI_MODEL == "inference_qwen":
       _engine = InferenceQwen()
     elif AI_MODEL == "deepseek-ai":
