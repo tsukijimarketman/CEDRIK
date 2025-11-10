@@ -55,36 +55,45 @@ class Model:
 class GenerateReplyBody:
     prompt: Prompt
     context: List[str]
+    conversation_history: List[dict] = None  # ← NEW
     overrides: dict | None = None
+    
     def __post_init__(self):
         self.prompt = Prompt(**self.prompt)
+        if self.conversation_history is None:
+            self.conversation_history = []
 
 @app.route("/generate-reply", methods=["POST"])
 def generate_reply():
-  """
-  body format
-  {
-    context: List[str]
-    prompt: {
-      role: str,
-      content: str
-    }
-  }
-
-  returns
-  {
-    reply: str
-  }
-  """
   try:
     body = GenerateReplyBody(**request.get_json())
     if body.overrides == None:
       body.overrides = {}
 
-    query = [Prompt(role="system", content=i) for i in body.context]
+    query = []
+    
+    # 1. Add knowledge base context as system message
+    if body.context and len(body.context) > 0:
+      context_text = "\n\n".join([
+        f"Reference {i+1}: {text}" 
+        for i, text in enumerate(body.context)
+      ])
+      query.append(Prompt(
+        role="system", 
+        content=f"Relevant information from knowledge base:\n\n{context_text}"
+      ))
+    
+    # 2. Add conversation history (maintains flow)
+    for msg in body.conversation_history:
+      query.append(Prompt(
+        role=msg["role"],
+        content=msg["content"]
+      ))
+    
+    # 3. Add current user prompt
     query.append(body.prompt)
 
-    Logger.log.info(f"query {query}")
+    Logger.log.info(f"Full conversation query: {len(query)} messages")
     reply = Model.generate(query, body.overrides)
 
     Logger.log.info(f"reply {reply}")
@@ -92,5 +101,5 @@ def generate_reply():
       "reply": reply
     }), 200
   except Exception as e:
-    # Logger.log.error(repr(e), traceback.format_exc())
     Logger.log.error(repr(e))
+    return jsonify({"error": str(e)}), 500

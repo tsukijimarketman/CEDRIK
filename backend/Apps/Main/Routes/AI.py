@@ -24,7 +24,7 @@ ai = Blueprint("Ai", __name__)
 
 @dataclass
 class ChatBody:
-    conversation: str
+    conversation: str | None
     prompt: Prompt
     file: FileStorage | None = None
     overrides: dict | None = None
@@ -52,7 +52,10 @@ def chat():
 
     try:
         json = {}
-        json["conversation"] = request.form.get("conversation", "")
+        # FIX: Handle empty conversation as None
+        conversation = request.form.get("conversation", "")
+        json["conversation"] = conversation if conversation and len(conversation.strip()) > 0 else None
+        
         json["prompt"] = {
             "role": "user",
             "content": request.form.get("content", "")
@@ -64,7 +67,8 @@ def chat():
         body = ChatBody(**json)
         if body.overrides == None:
           body.overrides = {}
-    except Exception as _:
+    except Exception as e:
+        Logger.log.error(f"Error parsing chat body: {repr(e)}")  # DEBUG
         raise BadBody()
     user_token = get_token()
     if (user_token == None): raise HttpInvalidId()

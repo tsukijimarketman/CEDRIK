@@ -203,12 +203,13 @@ export type ChatRequest = {
 };
 
 export type ChatResponse = {
+  conversation: string;
   reply: string;
 };
 
 export const aiApi = {
   chat: async (data: ChatRequest) => {
-    let formData = new FormData();
+    const formData = new FormData();
     formData.append("conversation", data.conversation || "");
     formData.append("content", data.content);
     formData.append("file", data.file);

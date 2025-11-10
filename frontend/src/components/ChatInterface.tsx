@@ -34,7 +34,7 @@ export function ChatInterface() {
   const { user } = useUser();
   const [conversationId, setConversationId] = useState<string | null>(null);
 
-  const { activeChatId } = useChat(); // ✅ get the ID from context
+  const { activeChatId, setActiveChatId } = useChat(); // ✅ get the ID from context
 
   const handleSendMessage = (content: string) => {
     const userMessage: Message = {
@@ -67,6 +67,13 @@ export function ChatInterface() {
       })
       .then((res) => {
         const reply = res.data.reply ?? "";
+        const returnedConvId = res.data.conversation;
+
+        //  Update the conversation ID if this was a new chat
+      if (returnedConvId && !activeChatId) {
+        setActiveChatId(returnedConvId);
+        console.log("Set conversation ID:", returnedConvId);
+      }
 
         setMessages((prev) =>
           prev.map((m) =>
@@ -87,7 +94,7 @@ export function ChatInterface() {
             m.id === thinkingId
               ? {
                   ...m,
-                  content: `Login ka muna HSHAHSHA`,
+                  content: `Please Login First`,
                   timestamp: new Date().toLocaleTimeString(),
                 }
               : m
