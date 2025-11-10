@@ -78,7 +78,7 @@ Remember: You are {AI_NAME}, a patient teacher focused on building cybersecurity
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=overrides.get("temperature", 0.7),
+                temperature=overrides.get("temperature", 0.3),
                 max_tokens=overrides.get("max_new_tokens", 1024),
                 top_p=overrides.get("top_p", 0.9),
                 stream=False
