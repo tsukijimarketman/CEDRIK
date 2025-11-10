@@ -217,22 +217,24 @@ const handleSignUp = async (
   // FIXED: New chat handler
   const handleNewChat = async () => {
     try {
-      const res = await sidebarConversationCreate.newChat();
+      // const res = await sidebarConversationCreate.newChat();
       
       // Create chat object with proper Date conversion
-      const newChat: Chat = {
-        conversation: res.data.conversation,
-        title: res.data.title,
-        created_at: new Date(res.data.created_at)
-      };
+      // const newChat: Chat = {
+      //   conversation: res.data.conversation,
+      //   title: res.data.title,
+      //   created_at: new Date(res.data.created_at)
+      // };
 
       // Add to the beginning of the chat list
-      setChats((prev) => [newChat, ...prev]);
+      // setChats((prev) => [newChat, ...prev]);
 
       // Set as active chat
-      setActiveChat(newChat.conversation);
-      setActiveChatId(newChat.conversation);
-      onSelectConversation(newChat.conversation);
+      // setActiveChat(newChat.conversation);
+      // setActiveChatId(newChat.conversation);
+      // onSelectConversation(newChat.conversation);
+      setActiveChat(null);
+      setActiveChatId(null);
 
       // Clear messages
       setMessages([]);

@@ -27,14 +27,18 @@ function getErrorMessage(err: unknown): string {
   return "An error occurred while getting a response.";
 }
 
+
+
 export function ChatInterface() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
   const [conversationId, setConversationId] = useState<string | null>(null);
-
+  
   const { activeChatId, setActiveChatId } = useChat(); // ✅ get the ID from context
+
+  
 
   const handleSendMessage = (content: string) => {
     const userMessage: Message = {
@@ -71,9 +75,12 @@ export function ChatInterface() {
 
         //  Update the conversation ID if this was a new chat
       if (returnedConvId && !activeChatId) {
-        setActiveChatId(returnedConvId);
-        console.log("Set conversation ID:", returnedConvId);
-      }
+          setActiveChatId(returnedConvId);
+          console.log("Set conversation ID:", returnedConvId);
+          //  Trigger sidebar refresh via a custom event
+          window.dispatchEvent(new CustomEvent('refreshSidebar'));
+          
+        }
 
         setMessages((prev) =>
           prev.map((m) =>
@@ -137,6 +144,7 @@ export function ChatInterface() {
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onSelectConversation={handleOpenMessage}
         setIsLoggedIn={setIsLoggedIn}
+        
       />
 
       {isLoggedIn ? (
