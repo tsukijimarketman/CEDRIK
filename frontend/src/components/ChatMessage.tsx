@@ -469,10 +469,12 @@ export function ChatMessage({
     <div
       ref={messageRef}
       className={cn(
-        "flex w-full py-6 px-4",
-        isUser
-          ? "bg-blue-100/50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800/40"
-          : "bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700"
+        // "flex w-full py-6 px-4",
+        // isUser
+        //   ? "bg-blue-100/50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800/40"
+        //   : "bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700"
+        "flex w-full py-6 px-4 bg-blue-100/50 dark:bg-blue-900/20"
+        // Removes the color difference for user and response
       )}
     >
       <div
