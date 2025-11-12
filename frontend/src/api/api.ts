@@ -118,7 +118,7 @@ export const passwordApi = {
   resetPassword: async (email: string, newPassword: string) => {
     return api.post("/auth/reset-password", {
       email,
-      newPassword
+      newPassword,
     });
   },
 };
@@ -205,6 +205,7 @@ export type ChatRequest = {
 export type ChatResponse = {
   conversation: string;
   reply: string;
+  title?: string;
 };
 
 export const aiApi = {
@@ -215,7 +216,7 @@ export const aiApi = {
     formData.append("file", data.file);
     return api.post<ChatResponse>("/ai/chat", formData, {
       headers: {
-        "Content-Type": undefined, 
+        "Content-Type": undefined,
       },
     });
   },
