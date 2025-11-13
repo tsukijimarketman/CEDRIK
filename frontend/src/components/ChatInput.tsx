@@ -78,7 +78,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
                 title={
                   disabled
                     ? "Please log in to use this feature"
-                    : "Connect to Kali GPT"
+                    : "Connect to CEDRIK Labs"
                 }
               >
                 <svg
