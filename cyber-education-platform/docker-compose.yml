@@ -1,0 +1,185 @@
+services:
+  # FIXED: Now builds from custom Dockerfile instead of installing on every startup
+  kali-workstation:
+    build: ./kali-custom
+    container_name: kali-workstation
+    hostname: kali-workstation
+    environment:
+      - DISPLAY=:1
+      - VNC_PASSWORD=${VNC_PASSWORD}
+    volumes:
+      - kali-home:/root
+      - ./shared:/shared
+    networks:
+      - hack-lab-network
+    ports:
+      - "5901:5901"
+    restart: unless-stopped
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+  novnc:
+    build: ./novnc-custom
+    container_name: novnc
+    ports:
+      - "6080:6080"
+    networks:
+      - hack-lab-network
+    depends_on:
+      - kali-workstation
+    restart: unless-stopped
+
+  # Scenario 1: Web Application Security (DVWA)
+  scenario-webapp:
+    image: vulnerables/web-dvwa
+    container_name: scenario-webapp
+    hostname: dvwa.lab
+    networks:
+      - hack-lab-network
+    ports:
+      - "8081:80"
+    environment:
+      - MYSQL_ROOT_PASSWORD=dvwa
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+    restart: unless-stopped
+
+  # Scenario 2: SQL Injection Lab
+  scenario-sqli:
+    image: acgpiano/sqli-labs
+    container_name: scenario-sqli
+    hostname: sqli.lab
+    networks:
+      - hack-lab-network
+    ports:
+      - "8082:80"
+    restart: unless-stopped
+
+  # Scenario 3: Vulnerable WordPress
+  scenario-wordpress:
+    image: eystsen/vulnerablewordpress
+    container_name: scenario-wordpress
+    hostname: wordpress.lab
+    networks:
+      - hack-lab-network
+    ports:
+      - "8083:80"
+      - "3306:3306"
+    restart: unless-stopped
+
+  # Scenario 4: Metasploitable (Vulnerable Linux)
+  scenario-metasploitable:
+    image: tleemcjr/metasploitable2
+    container_name: scenario-metasploitable
+    hostname: metasploitable.lab
+    networks:
+      - hack-lab-network
+    ports:
+      - "2222:22"
+      - "8084:80"
+      - "21:21"
+      - "23:23"
+    restart: unless-stopped
+
+  # Scenario 5: WebGoat (OWASP)
+  scenario-webgoat:
+    image: webgoat/webgoat-8.0
+    container_name: scenario-webgoat
+    hostname: webgoat.lab
+    networks:
+      - hack-lab-network
+    ports:
+      - "8085:8080"
+    environment:
+      - WEBGOAT_HOST=0.0.0.0
+      - WEBGOAT_PORT=8080
+    restart: unless-stopped
+
+  # Scenario 6: Juice Shop (Modern Web App)
+  scenario-juiceshop:
+    image: bkimminich/juice-shop
+    container_name: scenario-juiceshop
+    hostname: juiceshop.lab
+    networks:
+      - hack-lab-network
+    ports:
+      - "8086:3000"
+    restart: unless-stopped
+
+  # Database for user progress
+  postgres:
+    image: postgres:15-alpine
+    container_name: cyber-db
+    environment:
+      - POSTGRES_DB=cyber_education
+      - POSTGRES_USER=cyber_admin
+      - POSTGRES_PASSWORD=secure_pass_123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - hack-lab-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyber_admin -d cyber_education"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Enhanced Bridge Server with AI Integration
+  bridge-server:
+    build: ./bridge-server
+    container_name: cyber-bridge
+    ports:
+      - "3000:3000"
+    networks:
+      - hack-lab-network
+    environment:
+      - KALI_CONTAINER=kali-workstation
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - DATABASE_URL=postgresql://cyber_admin:secure_pass_123@postgres:5432/cyber_education
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - JWT_SECRET=your-secret-key-change-this
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./shared:/shared
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    depends_on:
+      kali-workstation:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Web UI for scenario selection
+  web-ui:
+    build: ./web-ui
+    container_name: cyber-web-ui
+    ports:
+      - "8069:80"
+    networks:
+      - hack-lab-network
+    environment:
+      - API_URL=http://bridge-server:3000
+      - VNC_URL=http://novnc:8080
+    depends_on:
+      - bridge-server
+    restart: unless-stopped
+
+networks:
+  hack-lab-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  kali-home:
+  postgres-data:
+
