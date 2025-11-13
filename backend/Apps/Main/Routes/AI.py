@@ -22,6 +22,7 @@ import json as Js
 
 ai = Blueprint("Ai", __name__)
 
+
 @dataclass
 class ChatBody:
     conversation: str | None
@@ -49,6 +50,7 @@ def chat():
         raise NotAcceptable(description="Content-Type must be multipart/form-data")
     if len(request.files.getlist("file")) > 1:
         raise TooManyFiles()
+    agent = request.form.get("agent", "professor")
 
     try:
         json = {}
@@ -67,11 +69,13 @@ def chat():
         body = ChatBody(**json)
         if body.overrides == None:
           body.overrides = {}
+        body.overrides["agent"] = agent
     except Exception as e:
         Logger.log.error(f"Error parsing chat body: {repr(e)}")  # DEBUG
         raise BadBody()
     user_token = get_token()
     if (user_token == None): raise HttpInvalidId()
+    
 
     try:
         audit_message(f"user: {user_token.username}\nquery: \"{body.prompt.content}\"").save()
@@ -93,6 +97,7 @@ def chat():
             conversation_id=body.conversation,
             user=user_token,
             prompt=body.prompt,
+            
             overrides=body.overrides
         )
         Logger.log.info(f"Reply {model_reply.reply} {model_reply.embeddings[:5]}")

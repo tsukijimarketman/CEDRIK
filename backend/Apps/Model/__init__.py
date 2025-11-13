@@ -6,6 +6,7 @@ from backend.Apps.Model.Engine import DeepSeekV3, DistilGPT2, LLMEngine, LLamaSe
 from backend.Lib.Common import Prompt
 from backend.Lib.Logger import Logger
 from backend.Lib.Config import AI_MODEL, FILTER_MODE, MAIN_SERVER
+from dataclasses import dataclass, field
 import traceback
 
 app = Flask(__name__)
@@ -55,7 +56,7 @@ class Model:
 class GenerateReplyBody:
     prompt: Prompt
     context: List[str]
-    conversation_history: List[dict] = None  # ← NEW
+    conversation_history: List[dict] = field(default_factory=list)
     overrides: dict | None = None
     
     def __post_init__(self):
@@ -69,8 +70,13 @@ def generate_reply():
     body = GenerateReplyBody(**request.get_json())
     if body.overrides == None:
       body.overrides = {}
+      
+  
+  
 
     query = []
+    Logger.log.info(f"🔍 DEBUG - Received overrides: {body.overrides}")
+    Logger.log.info(f"🔍 DEBUG - Agent from overrides: {body.overrides.get('agent', 'NOT SET')}")
     
     # 1. Add knowledge base context as system message
     if body.context and len(body.context) > 0:

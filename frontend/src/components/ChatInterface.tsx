@@ -11,6 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AgentSwitcher } from "./AgentSwitcher";
+import { useAgent } from "@/contexts/AgentContext";
 
 interface Message {
   id: string;
@@ -67,6 +69,7 @@ export function ChatInterface() {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const { currentAgent } = useAgent();
 
   const { activeChatId, setActiveChatId } = useChat();
 
@@ -247,6 +250,7 @@ export function ChatInterface() {
         conversation: activeChatId,
         content: userMessage.content,
         file: null,
+        agent: currentAgent, 
       });
 
       const reply = res.data.reply ?? "";
@@ -326,6 +330,7 @@ export function ChatInterface() {
         conversation: activeChatId,
         content: content,
         file: null,
+        agent: currentAgent,
       })
       .then((res) => {
         const reply = res.data.reply ?? "";
@@ -424,62 +429,61 @@ export function ChatInterface() {
   }
 
   const renderHeader = () => (
+  <div
+    className={`fixed top-0 left-0 right-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30 ${contentMarginClass} transition-all duration-300`}
+  >
     <div
-      className={`fixed top-0 left-0 right-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30 ${contentMarginClass} transition-all duration-300`}
+      className={cn(
+        "flex items-center justify-between p-4",
+        isSidebarCollapsed ? "max-w-4xl mx-auto" : "w-full px-6"
+      )}
     >
-      <div
-        className={cn(
-          "flex items-center justify-between p-4",
-          isSidebarCollapsed ? "max-w-4xl mx-auto" : "w-full px-6"
-        )}
-      >
-        {/* Left section - Hamburger and Logo */}
-        <div className="flex items-center gap-4">
-          {isSidebarCollapsed ? (
-            // When sidebar is closed - show hamburger and logo
-            <>
-              <button
-                onClick={() => setIsSidebarCollapsed(false)}
-                className="p-2 hover:bg-muted rounded-md transition-colors"
-                title="Open sidebar"
+      {/* Left section - Hamburger and Logo */}
+      <div className="flex items-center gap-4">
+        {isSidebarCollapsed ? (
+          <>
+            <button
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="p-2 hover:bg-muted rounded-md transition-colors"
+              title="Open sidebar"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                  />
-                </svg>
-              </button>
-              <img src="/cedriklogo.png" alt="CEDRIK" className="h-8 w-auto" />
-            </>
-          ) : (
-            // When sidebar is open - only show logo
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
+              </svg>
+            </button>
             <img src="/cedriklogo.png" alt="CEDRIK" className="h-8 w-auto" />
-          )}
-        </div>
+          </>
+        ) : (
+          <img src="/cedriklogo.png" alt="CEDRIK" className="h-8 w-auto" />
+        )}
+      </div>
 
-        {/* Centered Chat Title - Always centered */}
-        <div className="flex-1 flex justify-center">
-          <h1 className="text-lg font-semibold text-foreground truncate max-w-md">
-            {currentChatTitle || "New Chat"}
-          </h1>
-        </div>
+      {/* Centered Chat Title */}
+      <div className="flex-1 flex justify-center">
+        <h1 className="text-lg font-semibold text-foreground truncate max-w-md">
+          {currentChatTitle || "New Chat"}
+        </h1>
+      </div>
 
-        {/* Right section - Theme toggle */}
-        <div className="flex items-center">
-          <ThemeToggle />
-        </div>
+      {/* Right section - Agent Switcher + Theme toggle */}
+      <div className="flex items-center gap-2">
+        <AgentSwitcher />  {/* ← NEW! */}
+        <ThemeToggle />
       </div>
     </div>
-  );
+  </div>
+);
 
   const renderMessages = () => (
     <ScrollArea className="flex-1" ref={scrollAreaRef}>

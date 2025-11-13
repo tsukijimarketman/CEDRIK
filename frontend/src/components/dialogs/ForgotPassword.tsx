@@ -49,7 +49,7 @@ export function ForgotPasswordDialog({
 
       await emailjs.send(
         import.meta.env.VITE_SERVICE_ID_EMAILJS, // Your Service ID
-        import.meta.env.VITE_TEMPLATE_ID_EMAILJS, // Your Template ID
+        import.meta.env.VITE_FORGOT_PASSWORD_TEMPLATE_ID_EMAILJS, // Your Template ID
         templateParams, // template parameters
         import.meta.env.VITE_PUBLIC_KEY_EMAILJS // Your Public Key
       );

@@ -290,6 +290,7 @@ export type ChatRequest = {
   conversation?: string | null;
   content: string;
   file: File | null;
+  agent?: 'professor' | 'hacker';
 };
 
 export type ChatResponse = {
@@ -303,14 +304,29 @@ export const aiApi = {
     const formData = new FormData();
     formData.append("conversation", data.conversation || "");
     formData.append("content", data.content);
-    formData.append("file", data.file);
+    
+    // Only append file if it exists (not null)
+    if (data.file) {
+      formData.append("file", data.file);
+    }
+    
+    // ✅ Send agent parameter to backend
+    if (data.agent) {
+      formData.append("agent", data.agent);
+    }
+    
+    // ✅ Send overrides as JSON string
+    const overrides = {};
+    formData.append("overrides", JSON.stringify(overrides));
+    
     return api.post<ChatResponse>("/ai/chat", formData, {
       headers: {
-        "Content-Type": undefined,
+        "Content-Type": "multipart/form-data",
       },
     });
   },
 };
+
 export type AuditLogRecord = {
   id: string;
   type: string;
