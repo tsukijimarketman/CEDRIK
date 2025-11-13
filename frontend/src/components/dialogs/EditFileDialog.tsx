@@ -10,13 +10,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 interface EditFileDialogProps {
@@ -26,16 +19,13 @@ interface EditFileDialogProps {
         id: string;
         title: string;
         description: string;
-
-        tags: string;
-
+        tags: string[]; // Changed from string to string[]
     } | null;
     onUpdateFile: (data: {
         id: string;
         title: string;
         description: string;
-
-        tags: string;
+        tags: string[];
         file?: File | null;
     }) => void;
 }
@@ -44,7 +34,6 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
     const [formData, setFormData] = useState({
         title: "",
         description: "",
-
         tags: "",
         file: null as File | null,
     });
@@ -58,7 +47,8 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
             setFormData({
                 title: file.title,
                 description: file.description,
-                tags: file.tags,
+                // Convert array to comma-separated string
+                tags: Array.isArray(file.tags) ? file.tags.join(", ") : file.tags,
                 file: null,
             });
         }
@@ -67,10 +57,6 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleTagChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, tags: value }));
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,15 +79,19 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
         try {
             setIsLoading(true);
 
+            // Parse tags from comma-separated string to array
+            const tagsArray = formData.tags
+                .split(",")
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0);
 
             await new Promise((resolve) => setTimeout(resolve, 1000));
-
 
             onUpdateFile({
                 id: file.id,
                 title: formData.title,
                 description: formData.description,
-                tags: formData.tags,
+                tags: tagsArray,
                 file: formData.file ?? undefined,
             });
 
@@ -126,7 +116,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
         <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Edit File</DialogTitle>
+                    <DialogTitle>Edit Memory</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
@@ -152,23 +142,24 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="edit-tags">Tag</Label>
-                        <Select value={formData.tags} onValueChange={handleTagChange}>
-                            <SelectTrigger id="edit-tags">
-                                <SelectValue placeholder="Select tags" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="architecture">Architecture</SelectItem>
-                                <SelectItem value="system">System</SelectItem>
-                                <SelectItem value="overview">Overview</SelectItem>
-                                <SelectItem value="jwt">JWT</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Label htmlFor="edit-tags">Tags</Label>
+                        <Input
+                            id="edit-tags"
+                            name="tags"
+                            value={formData.tags}
+                            onChange={handleChange}
+                            placeholder="e.g. system, architecture, documentation"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Separate multiple tags with commas
+                        </p>
                     </div>
+                    
                     <div className="space-y-2">
                         <Label htmlFor="file">Replace File (optional)</Label>
                         <Input id="file" name="file" type="file" onChange={handleFileChange} />
                     </div>
+                    
                     <div className="pt-4 flex justify-end space-x-2">
                         <Button variant="outline" onClick={onClose} disabled={isLoading}>
                             Cancel
