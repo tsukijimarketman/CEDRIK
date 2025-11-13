@@ -2,12 +2,13 @@ from backend.Apps.Main.Filter import FilterExtension
 from backend.Lib.Config import JWT_SECRET
 from werkzeug.exceptions import HTTPException, InternalServerError
 from backend.Lib.Error import ErrHTTPExceptionHandler
-from flask import Flask, jsonify, redirect
+from flask import Flask, jsonify, redirect, request
 from backend.Apps.Main.Database import db_connection_init
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from backend.Apps.Main.Routes import ROUTES
 from backend.Lib.Config import RESOURCE_DIR, MAX_CONTENT_LENGTH, FRONTEND_SERVER
+from werkzeug.middleware.proxy_fix import ProxyFix
 import os
 from backend.Lib.Logger import Logger
 
@@ -29,6 +30,14 @@ app.config["JWT_COOKIE_SAMESITE"] = "Lax"
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
 FilterExtension(app)
+
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=1,
+    x_proto=1,
+    x_host=1,
+    x_prefix=1
+)
 
 # Configure CORS with all necessary settings
 cors = CORS(
@@ -63,6 +72,7 @@ def Health():
         }
 
     return jsonify({
+      "ip": request.remote_addr,
         "type": "ok",
         "message": "No problems",
         "api_map": endpoints
