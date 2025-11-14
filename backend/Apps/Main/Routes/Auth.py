@@ -116,8 +116,8 @@ def check_email():
     
 
 
-@auth.route("/login-otp", methods=["POST"])
-def login_otp():
+@auth.route("/signup-otp", methods=["POST"])
+def signup_otp():
     try:
 
         data = request.get_json()
@@ -132,7 +132,7 @@ def login_otp():
         generatedOTP = str(random.randint(100000, 999999))
 
         audit_message(
-            msg = f"Email {user} Generated Login OTP",
+            msg = f"Email {user} Generated Signup OTP",
             type = AuditType.OTP
         ).save()
         return jsonify(generatedOTP), 200

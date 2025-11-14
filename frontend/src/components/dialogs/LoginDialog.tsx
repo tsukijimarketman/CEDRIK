@@ -9,8 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { authApi, otpApi } from "@/api/api";
-import emailjs from "@emailjs/browser";
+import { useUser } from "@/contexts/UserContext";
 
 interface LoginDialogProps {
   open: boolean;
@@ -32,12 +31,8 @@ export function LoginDialog({
   const [formData, setFormData] = useState({ email: "", password: "" });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [otpDialogOpen, setOtpDialogOpen] = useState(false);
-  const [otpass, setOtpass] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
-
   const { toast } = useToast();
+  const { login } = useUser();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -58,51 +53,15 @@ export function LoginDialog({
 
     try {
       setIsLoading(true);
-      try {
-        await authApi.login({
-          email: formData.email,
-          password: formData.password,
-        });
-      } catch (err: any) {
-        let errorMessage = "Invalid email or password.";
-        if (err?.error) errorMessage = err.error;
-        toast({
-          title: "Login failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const resOTP = await otpApi.loginOtp(formData.email);
-      const code = resOTP.data;
-      setOtpass(code);
-
-      const templateParams = {
-        email: formData.email,
-        otp: code,
-      };
-
-      await emailjs.send(
-        import.meta.env.VITE_SERVICE_ID_EMAILJS,
-        import.meta.env.VITE_SIGN_UP_TEMPLATE_ID_EMAILJS,
-        templateParams,
-        import.meta.env.VITE_PUBLIC_KEY_EMAILJS
-      );
-
-      toast({
-        title: "OTP Sent",
-        description: "Please check your email for the verification code.",
-      });
+      await login(formData.email, formData.password);
       onClose();
-      setOtpDialogOpen(true);
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
     } catch (error: any) {
-      console.error("OTP send error:", error);
-      let errorMessage = "Failed to send OTP. Please try again.";
-      if (error?.message) errorMessage = error.message;
+      const errorMessage = error?.response?.data?.error || "Login failed. Please try again.";
       toast({
-        title: "Error",
+        title: "Login failed",
         description: errorMessage,
         variant: "destructive",
       });
@@ -151,7 +110,7 @@ export function LoginDialog({
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Sending OTP..." : "Sign In"}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
@@ -167,7 +126,7 @@ export function LoginDialog({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={otpDialogOpen} onOpenChange={(isOpen) => !isOpen && setOtpDialogOpen(false)}>
+      {/* <Dialog open={otpDialogOpen} onOpenChange={(isOpen) => !isOpen && setOtpDialogOpen(false)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Enter OTP</DialogTitle>
@@ -216,7 +175,7 @@ export function LoginDialog({
             </Button>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </>
   );
 }
