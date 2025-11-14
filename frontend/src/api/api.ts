@@ -193,10 +193,10 @@ export const memoryApi = {
   },
 };
 
-// Dedicated OTP API for login flow (reuses the same backend endpoint for now)
+// Dedicated OTP API for signup flow (reuses the same backend endpoint for now)
 export const otpApi = {
-  loginOtp: async (email: string) => {
-    return api.post("/auth/login-otp", { email });
+  signupOtp: async (email: string) => {
+    return api.post("/auth/signup-otp", { email });
   },
 };
 
