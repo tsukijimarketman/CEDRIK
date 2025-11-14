@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import TrueOrFalse from "./components/sandbox/TrueOrFalse";
 import MultipleChoices from "./components/sandbox/MultipleChoices";
 import { ChatProvider } from "./contexts/ChatContext";
+import { AgentProvider } from './contexts/AgentContext';
 
 const queryClient = new QueryClient();
 
@@ -64,24 +65,27 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ChatProvider>
-      <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <UserProvider>
-              <AppRoutes />
-            </UserProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </ThemeProvider>
-    </ChatProvider>
+    <ThemeProvider defaultTheme="light">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          {/* ✅ All providers that need routing go INSIDE BrowserRouter */}
+          <UserProvider>
+            <AgentProvider>
+              <ChatProvider>
+                <AppRoutes />
+              </ChatProvider>
+            </AgentProvider>
+          </UserProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

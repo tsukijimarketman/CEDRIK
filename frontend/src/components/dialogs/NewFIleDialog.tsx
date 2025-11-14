@@ -10,37 +10,24 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea"; // assuming you have this
+import { Textarea } from "@/components/ui/textarea";
+import { memoryApi } from "@/api/api"; 
 
 interface AddFileDialogProps {
     open: boolean;
     onClose: () => void;
-    onAddFile: (data: {
-        title: string;
-        description: string;
-        tags: string;
-        file: File | null;
-    }) => void;
     onAddFileSuccess?: () => void;
 }
 
 export function AddFileDialog({
     open,
     onClose,
-    onAddFile,
     onAddFileSuccess,
 }: AddFileDialogProps) {
     const [formData, setFormData] = useState({
         title: "",
-        description: "",
-        tag: "system",
+        text: "",
+        tags: "",
         file: null as File | null,
     });
 
@@ -52,10 +39,6 @@ export function AddFileDialog({
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleTagChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, tag: value }));
-    };
-
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
         setFormData((prev) => ({ ...prev, file }));
@@ -64,10 +47,19 @@ export function AddFileDialog({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.file) {
+        if (!formData.title.trim()) {
             toast({
                 title: "Error",
-                description: "Please select a file to upload.",
+                description: "Title is required.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!formData.text.trim() && !formData.file) {
+            toast({
+                title: "Error",
+                description: "Please provide either text content or upload a file.",
                 variant: "destructive",
             });
             return;
@@ -76,32 +68,43 @@ export function AddFileDialog({
         try {
             setIsLoading(true);
 
-            // Simulate or replace with your API call
-            const uploadData = new FormData();
-            uploadData.append("title", formData.title);
-            uploadData.append("description", formData.description);
-            uploadData.append("tag", formData.tag);
-            uploadData.append("file", formData.file);
+            // Parse tags from comma-separated string
+            const tagsArray = formData.tags
+                .split(",")
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0);
 
-
-            toast({
-                title: "Success",
-                description: "File uploaded successfully!",
-            });
-
-            onAddFile({
+            // Call the backend API
+            await memoryApi.create({
                 title: formData.title,
-                description: formData.description,
-                tags: formData.tag,
+                text: formData.text,
+                tags: tagsArray,
                 file: formData.file,
             });
 
+            toast({
+                title: "Success",
+                description: formData.file 
+                    ? "File uploaded successfully!" 
+                    : "Memory created successfully!",
+            });
+
+            // Reset form
+            setFormData({
+                title: "",
+                text: "",
+                tags: "",
+                file: null,
+            });
+
+            // Notify parent component to refresh data
             onAddFileSuccess?.();
             onClose();
         } catch (error: any) {
+            console.error("Upload error:", error);
             toast({
                 title: "Error",
-                description: error.message || "Something went wrong",
+                description: error?.description || error?.message || "Something went wrong",
                 variant: "destructive",
             });
         } finally {
@@ -109,69 +112,103 @@ export function AddFileDialog({
         }
     };
 
+    const handleClose = () => {
+        if (!isLoading) {
+            // Reset form on close
+            setFormData({
+                title: "",
+                text: "",
+                tags: "",
+                file: null,
+            });
+            onClose();
+        }
+    };
+
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Add New File</DialogTitle>
+                    <DialogTitle>Add New Memory</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="title">Title</Label>
+                        <Label htmlFor="title">Title *</Label>
                         <Input
                             id="title"
                             name="title"
                             value={formData.title}
                             onChange={handleChange}
                             required
-                            placeholder="Title"
+                            placeholder="Enter memory title"
+                            disabled={isLoading}
                         />
                     </div>
+                    
                     <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
+                        <Label htmlFor="text">Text Content {!formData.file && "*"}</Label>
                         <Textarea
-                            id="description"
-                            name="description"
-                            value={formData.description}
+                            id="text"
+                            name="text"
+                            value={formData.text}
                             onChange={handleChange}
-                            rows={3}
-                            required
-                            placeholder="Description"
+                            rows={4}
+                            placeholder="Enter text content or upload a file below"
+                            disabled={isLoading}
                         />
+                        <p className="text-xs text-muted-foreground">
+                            Provide text content or upload a file (or both)
+                        </p>
                     </div>
+
                     <div className="space-y-2">
-                        <Label htmlFor="tag">Tags</Label>
-                        <Select value={formData.tag} onValueChange={handleTagChange}>
-                            <SelectTrigger id="tag">
-                                <SelectValue placeholder="Select tag" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="system">System</SelectItem>
-                                <SelectItem value="architecture">Architecture</SelectItem>
-                                <SelectItem value="schema">Schema</SelectItem>
-                                <SelectItem value="jwt">JWT</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Label htmlFor="tags">Tags</Label>
+                        <Input
+                            id="tags"
+                            name="tags"
+                            value={formData.tags}
+                            onChange={handleChange}
+                            placeholder="e.g. system, architecture, documentation"
+                            disabled={isLoading}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Separate multiple tags with commas
+                        </p>
                     </div>
+
                     <div className="space-y-2">
-                        <Label htmlFor="file">Upload File</Label>
+                        <Label htmlFor="file">Upload File (Optional)</Label>
                         <Input
                             id="file"
                             name="file"
                             type="file"
                             onChange={handleFileChange}
-                            required
+                            disabled={isLoading}
                         />
+                        {formData.file && (
+                            <p className="text-xs text-muted-foreground">
+                                Selected: {formData.file.name}
+                            </p>
+                        )}
                     </div>
-                    <div className="pt-4 flex justify-end">
-                        <Button type="submit" className="w-full" disabled={isLoading}>
+
+                    <div className="pt-4 flex justify-end gap-2">
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={handleClose}
+                            disabled={isLoading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={isLoading}>
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Uploading...
+                                    {formData.file ? "Uploading..." : "Creating..."}
                                 </>
                             ) : (
-                                "Upload File"
+                                "Create Memory"
                             )}
                         </Button>
                     </div>

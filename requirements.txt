@@ -27,3 +27,4 @@ python-docx==1.2.0
 python-pptx==1.0.2
 typing_extensions==4.15.0
 xlsxwriter==3.2.9
+groq>=0.4.0

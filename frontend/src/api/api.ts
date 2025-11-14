@@ -103,6 +103,96 @@ export const authApi = {
   },
 };
 
+// Memory Types
+export type MemoryItem = {
+  id: string;
+  title: string;
+  mem_type: string;
+  text: string;
+  file_id: string;
+  permission: string[];
+  tags: string[];
+  created_at: string | null;
+  updated_at: string | null;
+  deleted_at: string | null;
+};
+
+export type MemoryCreateRequest = {
+  title: string;
+  text: string;
+  tags: string[];
+  file?: File | null;
+};
+
+export type MemoryGetRequest = {
+  title?: string;
+  mem_type?: string;
+  tags?: string[];
+};
+
+export type MemoryGetParams = {
+  archive?: boolean;
+  offset?: number;
+  maxItems?: number;
+  asc?: boolean;
+};
+
+// Memory API
+export const memoryApi = {
+  // Create a new memory (text or file)
+  create: async (data: MemoryCreateRequest) => {
+    const formData = new FormData();
+    formData.append("title", data.title);
+    formData.append("text", data.text);
+    
+    // Handle tags array
+    if (data.tags && data.tags.length > 0) {
+      data.tags.forEach(tag => {
+        formData.append("tags", tag);
+      });
+    }
+    
+    // Handle file if provided
+    if (data.file) {
+      formData.append("file", data.file);
+    }
+
+    return api.post("/memory/create", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  // Get memories with optional filters
+  get: async (filters?: MemoryGetRequest, params?: MemoryGetParams) => {
+    const queryParams: Record<string, string> = {};
+    
+    if (params?.archive !== undefined) {
+      queryParams.archive = params.archive ? "1" : "0";
+    }
+    if (params?.offset !== undefined) {
+      queryParams.offset = params.offset.toString();
+    }
+    if (params?.maxItems !== undefined) {
+      queryParams.maxItems = params.maxItems.toString();
+    }
+    if (params?.asc !== undefined) {
+      queryParams.asc = params.asc ? "1" : "0";
+    }
+
+    return api.get<PaginatedResponse<MemoryItem>>("/memory/get", {
+      params: queryParams,
+      data: filters || {},
+    });
+  },
+
+  // Get available memory types
+  getMemTypes: async () => {
+    return api.get<string[]>("/memory/mem-types");
+  },
+};
+
 // Dedicated OTP API for login flow (reuses the same backend endpoint for now)
 export const otpApi = {
   loginOtp: async (email: string) => {
@@ -118,7 +208,7 @@ export const passwordApi = {
   resetPassword: async (email: string, newPassword: string) => {
     return api.post("/auth/reset-password", {
       email,
-      newPassword
+      newPassword,
     });
   },
 };
@@ -200,25 +290,43 @@ export type ChatRequest = {
   conversation?: string | null;
   content: string;
   file: File | null;
+  agent?: 'professor' | 'hacker';
 };
 
 export type ChatResponse = {
+  conversation: string;
   reply: string;
+  title?: string;
 };
 
 export const aiApi = {
   chat: async (data: ChatRequest) => {
-    let formData = new FormData();
+    const formData = new FormData();
     formData.append("conversation", data.conversation || "");
     formData.append("content", data.content);
-    formData.append("file", data.file);
+    
+    // Only append file if it exists (not null)
+    if (data.file) {
+      formData.append("file", data.file);
+    }
+    
+    // ✅ Send agent parameter to backend
+    if (data.agent) {
+      formData.append("agent", data.agent);
+    }
+    
+    // ✅ Send overrides as JSON string
+    const overrides = {};
+    formData.append("overrides", JSON.stringify(overrides));
+    
     return api.post<ChatResponse>("/ai/chat", formData, {
       headers: {
-        "Content-Type": undefined, 
+        "Content-Type": "multipart/form-data",
       },
     });
   },
 };
+
 export type AuditLogRecord = {
   id: string;
   type: string;

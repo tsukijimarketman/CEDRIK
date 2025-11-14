@@ -45,7 +45,12 @@ def classify_text(text: str) -> str:
       Logger.log.error(repr(e))
       return ""
 
-def generate_model_reply(prompt: Prompt, context: List[str] = [], overrides: dict = {}) -> str:
+def generate_model_reply(
+    prompt: Prompt, 
+    context: List[str] = [], 
+    conversation_history: List[dict] = [],  # ← NEW
+    overrides: dict = {}
+) -> str:
     try:
       with requests.Session() as s:
         retry = Retry(
@@ -54,7 +59,6 @@ def generate_model_reply(prompt: Prompt, context: List[str] = [], overrides: dic
           allowed_methods=["POST"],
         )
         adapter = HTTPAdapter(max_retries=retry)
-        adapter = HTTPAdapter(max_retries=retry)
         s.mount("http://", adapter)
         s.mount("https://", adapter)
 
@@ -62,11 +66,11 @@ def generate_model_reply(prompt: Prompt, context: List[str] = [], overrides: dic
             url=MODEL_SERVER,
             data=json.dumps({
                 "context": context,
+                "conversation_history": conversation_history,  # ← NEW
                 "prompt": asdict(prompt),
                 "overrides": overrides
             }),
             headers={ "Content-Type": "application/json" },
-            # timeout=10
         )
         response.raise_for_status()
         d = response.json()

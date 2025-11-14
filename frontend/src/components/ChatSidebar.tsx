@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useChat } from "@/contexts/ChatContext";
 import { MessageSquarePlus } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Chat {
   conversation: string;
@@ -39,14 +40,14 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  isEdited?: boolean;
 }
 
 interface ChatSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
   onSelectConversation: (conversation: string) => void;
-  setMessages: (id: Message[]) => void;
-  setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
+  setMessages: (messages: Message[]) => void;
 }
 
 export function ChatSidebar({
@@ -54,7 +55,6 @@ export function ChatSidebar({
   onToggle,
   onSelectConversation,
   setMessages,
-  setIsLoggedIn,
 }: ChatSidebarProps) {
   const { user, loading, login, logout } = useUser();
   const [chats, setChats] = useState<Chat[]>([]);
@@ -71,9 +71,9 @@ export function ChatSidebar({
   const isMobile = windowWidth < 768;
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { setActiveChatId } = useChat();
+  const { setActiveChatId, activeChatId } = useChat();
 
-  // FIXED: Load chats only when user changes, not when chats change
+  // Load chats when user changes OR when refresh event is triggered
   const handleChatTitle = async () => {
     try {
       const res = await sidebarTitleApi.sidebarConversationGetTitle();
@@ -83,14 +83,34 @@ export function ChatSidebar({
     }
   };
 
-  // FIXED: Only depend on user, not chats
+  // Load chats when user changes
   useEffect(() => {
     if (user) {
       handleChatTitle();
     } else {
       setChats([]);
     }
-  }, [user]); // Only re-run when user changes
+  }, [user]);
+
+  // Sync active chat with context
+  useEffect(() => {
+    setActiveChat(activeChatId);
+  }, [activeChatId]);
+
+  // Listen for refresh events from other components
+  useEffect(() => {
+    const handleRefreshSidebar = () => {
+      console.log("Refresh sidebar event received");
+      if (user) {
+        handleChatTitle();
+      }
+    };
+
+    window.addEventListener("refreshSidebar", handleRefreshSidebar);
+    return () => {
+      window.removeEventListener("refreshSidebar", handleRefreshSidebar);
+    };
+  }, [user]);
 
   // Handle window resize
   useEffect(() => {
@@ -139,25 +159,24 @@ export function ChatSidebar({
     await login(email, password);
     setCurrentDialog({ type: null });
     await handleChatTitle(); // Reload chats after login
-    setIsLoggedIn(true);
     toast({
       title: "Login successful",
       description: "Welcome back!",
     });
   };
-  
-const handleSignUp = async (
-  username: string,
-  email: string,
-  password: string
-) => {
-  try {
-    await authApi.register({ username, email, password });
-    await handleLogin(email, password);
-  } catch (error) {
-    throw error;
-  }
-};
+
+  const handleSignUp = async (
+    username: string,
+    email: string,
+    password: string
+  ) => {
+    try {
+      await authApi.register({ username, email, password });
+      await handleLogin(email, password);
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const handleSaveSettings = async (username: string, password: string) => {
     try {
@@ -200,7 +219,6 @@ const handleSignUp = async (
       setActiveChatId(null);
       setActiveChat(null);
       setMessages([]);
-      setIsLoggedIn(false);
       toast({
         title: "Logged out",
         description: "You have been logged out successfully.",
@@ -214,28 +232,30 @@ const handleSignUp = async (
     }
   };
 
-  // FIXED: New chat handler
+  // New chat handler
   const handleNewChat = async () => {
     try {
+      // Clear current state first
+      setActiveChat(null);
+      setActiveChatId(null);
+      setMessages([]);
+
+      // Create a new conversation in the backend
       const res = await sidebarConversationCreate.newChat();
-      
+
       // Create chat object with proper Date conversion
       const newChat: Chat = {
         conversation: res.data.conversation,
         title: res.data.title,
-        created_at: new Date(res.data.created_at)
+        created_at: new Date(res.data.created_at),
       };
 
-      // Add to the beginning of the chat list
+      // Add to the beginning of the chat list and refresh
       setChats((prev) => [newChat, ...prev]);
 
       // Set as active chat
       setActiveChat(newChat.conversation);
       setActiveChatId(newChat.conversation);
-      onSelectConversation(newChat.conversation);
-
-      // Clear messages
-      setMessages([]);
 
       // Close mobile menu if open
       if (isMobile) setIsMobileMenuOpen(false);
@@ -254,7 +274,7 @@ const handleSignUp = async (
     }
   };
 
-  // FIXED: Delete chat handler
+  // Delete chat handler
   const handleDeleteChat = async (conversationId: string) => {
     try {
       await sidebarConversationDelete.chatDelete(conversationId);
@@ -344,30 +364,36 @@ const handleSignUp = async (
               <ChevronLeft className="h-4 w-4" />
             </Button>
           </div>
-          
-{/* New Chat Button */}
-{user && (
-  <div className="flex py-3 mb-1 justify-center items-center shadow">
-    <button
-      onClick={handleNewChat}
-      className="bg-stone-200 hover:bg-stone-300 flex justify-center items-center gap-1 py-2 px-3 w-full mx-3 rounded text-sm transition-colors text-black"
-    >
-      <MessageSquarePlus className="w-5 h-5" /> New Chat
-    </button>
-  </div>
-)}
-          {/* Chat List */}
-          <div className="flex-1 overflow-y-auto">
+
+          {/* Improved New Chat Button */}
+          {user && (
+            <div className="flex py-3 mb-1 justify-center items-center border-b border-border">
+              <button
+                onClick={handleNewChat}
+                className={cn(
+                  "flex justify-center items-center gap-2 py-2.5 px-4 w-full mx-3 rounded-lg text-sm transition-all duration-200",
+                  "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow",
+                  "font-medium"
+                )}
+              >
+                <MessageSquarePlus className="w-4 h-4" />
+                New Chat
+              </button>
+            </div>
+          )}
+
+          {/* Chat List with ScrollArea */}
+          <ScrollArea className="flex-1">
             <div className="p-2">
               {chats.map((chat) => (
                 <div
                   key={chat.conversation}
                   className={cn(
-                    "group flex items-center justify-between w-full p-3 rounded-lg mb-1 transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground",
+                    "group flex items-center justify-between w-full p-3 rounded-lg mb-1 transition-all duration-200 border",
+                    "hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20",
                     activeChat === chat.conversation
-                      ? "bg-accent text-accent-foreground"
-                      : ""
+                      ? "bg-accent text-accent-foreground border-accent-foreground/30 shadow-sm"
+                      : "border-transparent"
                   )}
                 >
                   <button
@@ -377,10 +403,10 @@ const handleSignUp = async (
                       onSelectConversation(chat.conversation);
                       if (isMobile) setIsMobileMenuOpen(false);
                     }}
-                    className="flex-1 text-left"
+                    className="flex-1 text-left min-w-0"
                   >
                     <p className="font-medium text-sm truncate">{chat.title}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {chat.created_at.toLocaleDateString()}
                     </p>
                   </button>
@@ -390,7 +416,7 @@ const handleSignUp = async (
                       e.stopPropagation();
                       handleDeleteChat(chat.conversation);
                     }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity ml-2"
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all duration-200 ml-2 p-1 rounded hover:bg-destructive/10"
                     title="Delete chat"
                   >
                     <svg
@@ -411,19 +437,19 @@ const handleSignUp = async (
                 </div>
               ))}
             </div>
-          </div>
+          </ScrollArea>
 
-          {/* User Profile Section */}
-          <div className="mt-auto border-t border-border bg-muted/30 h-[117px]">
+          {/* Compact User Profile Section */}
+          <div className="mt-auto border-t border-border bg-muted/30">
             {loading ? (
-              <div className="p-4">
+              <div className="p-3">
                 <div className="animate-pulse">
-                  <div className="h-8 bg-muted rounded mb-2"></div>
-                  <div className="h-6 bg-muted rounded"></div>
+                  <div className="h-6 bg-muted rounded mb-1"></div>
+                  <div className="h-4 bg-muted rounded"></div>
                 </div>
               </div>
             ) : !user ? (
-              <div className="p-4">
+              <div className="p-3">
                 <div className="space-y-2">
                   <Button
                     variant="outline"
@@ -444,13 +470,13 @@ const handleSignUp = async (
                 </div>
               </div>
             ) : (
-              <div className="p-4">
+              <div className="p-3">
                 <div className="relative">
                   <button
                     onClick={toggleProfile}
-                    className="w-full flex items-center space-x-2 p-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors text-left"
+                    className="w-full flex items-center space-x-2 p-1 rounded-md hover:bg-muted/50 transition-colors text-left"
                   >
-                    <Avatar className="h-8 w-8 flex-shrink-0">
+                    <Avatar className="h-7 w-7 flex-shrink-0">
                       <AvatarImage
                         src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${
                           user?.username || "guest"
@@ -462,7 +488,7 @@ const handleSignUp = async (
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
+                      <p className="font-medium text-xs truncate">
                         {user?.username || "Guest"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
@@ -470,38 +496,38 @@ const handleSignUp = async (
                       </p>
                     </div>
                     {isProfileOpen ? (
-                      <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <ChevronUp className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                     )}
                   </button>
 
                   {isProfileOpen && (
-                    <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover rounded-md shadow-lg border border-border overflow-hidden z-10">
-                      <div className="px-4 py-2 text-sm text-muted-foreground border-b border-border">
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover rounded-md shadow-lg border border-border overflow-hidden z-10">
+                      <div className="px-3 py-1 text-xs text-muted-foreground border-b border-border">
                         {user?.email || "No email"}
                       </div>
                       <div className="py-1">
                         <button
                           onClick={() => openDialog("settings")}
-                          className="w-full flex items-center px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
+                          className="w-full flex items-center px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors"
                         >
-                          <Settings className="mr-2 h-4 w-4" />
+                          <Settings className="mr-2 h-3 w-3" />
                           <span>Settings</span>
                         </button>
                         <button
                           onClick={() => openDialog("help")}
-                          className="w-full flex items-center px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
+                          className="w-full flex items-center px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors"
                         >
-                          <HelpCircle className="mr-2 h-4 w-4" />
+                          <HelpCircle className="mr-2 h-3 w-3" />
                           <span>Help</span>
                         </button>
-                        <div className="border-t border-border my-1"></div>
+                        <div className="border-t border-border my-0.5"></div>
                         <button
                           onClick={() => openDialog("logout")}
-                          className="w-full flex items-center px-4 py-2 text-sm text-red-500 hover:bg-muted/50 transition-colors"
+                          className="w-full flex items-center px-3 py-1.5 text-xs text-red-500 hover:bg-muted/50 transition-colors"
                         >
-                          <LogOut className="mr-2 h-4 w-4" />
+                          <LogOut className="mr-2 h-3 w-3" />
                           <span>Log out</span>
                         </button>
                       </div>

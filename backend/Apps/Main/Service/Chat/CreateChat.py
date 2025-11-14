@@ -38,6 +38,25 @@ def __search_similarity_from_memory(query_embeddings: List[float]):
   ]
   return list(Memory.objects.aggregate(*pipeline)) # type: ignore
 
+def __get_conversation_history(
+    conversation_id: ObjectId,
+    limit: int = 5
+) -> List[dict]:
+    """Get the last N messages from a conversation in chronological order"""
+    messages = Message.objects(
+        conversation=conversation_id
+    ).order_by("-created_at").limit(limit)
+    
+    # Reverse to get chronological order (oldest first)
+    history = []
+    for msg in reversed(list(messages)):
+        history.append({
+            "role": "assistant" if msg.sender is None else "user",
+            "content": msg.text
+        })
+    
+    return history
+
 def __get_last_message(
   conversation_id: ObjectId,
   sender_id: ObjectId,
@@ -87,7 +106,7 @@ def __get_last_message(
 #   return list(Message.objects.aggregate(*pipeline)) # type: ignore
 
 def generate_reply(
-  conversation_id: str,
+  conversation_id: str | None,  # Allow None
   user: UserToken,
   prompt: Prompt,
   overrides: dict
@@ -96,38 +115,73 @@ def generate_reply(
 
   if len(query_embeddings) == 0:
     Logger.log.warning("Embeddings length is 0")
-    # raise Exception(f"Embeddings is len 0")
-  # Logger.log.info(f"embeddings {query_embeddings[:5]}")
 
   sim_results = []
+  conversation_history = []
+  
+  # DEBUG: Log the conversation_id
+  Logger.log.info(f"conversation_id: '{conversation_id}'")
+  
   if len(query_embeddings) > 0:
     start = time.perf_counter()
-    with ThreadPoolExecutor(max_workers=2) as executer:
+    with ThreadPoolExecutor(max_workers=3) as executer:
       ex1 = executer.submit(__search_similarity_from_memory, query_embeddings=query_embeddings)
+      
       ex2 = None
-      if len(conversation_id) > 0:
+      ex3 = None
+      # FIX: Check if conversation_id is not None AND not empty
+      if conversation_id is not None and len(conversation_id) > 0:
         try:
+          conv_obj_id = get_object_id(conversation_id)
+          Logger.log.info(f"Valid conversation ObjectId: {conv_obj_id}")
+          
           ex2 = executer.submit(
             __get_last_message,
-            conversation_id=get_object_id(conversation_id),
+            conversation_id=conv_obj_id,
             sender_id=get_object_id(user.id),
           )
-        except Exception as _:
-          pass
+          
+          ex3 = executer.submit(
+            __get_conversation_history,
+            conversation_id=conv_obj_id,
+            limit=5
+          )
+        except Exception as e:
+          Logger.log.error(f"Error getting conversation context: {e}")
 
       sim_results.extend(ex1.result())
-      if len(conversation_id) > 0 and ex2:
-        sim_results.extend(ex2.result())
+      
+      if ex2 is not None:
+        try:
+          last_messages = ex2.result()
+          sim_results.extend(last_messages)
+          Logger.log.info(f"Retrieved {len(last_messages)} last messages for RAG")
+        except Exception as e:
+          Logger.log.error(f"Error getting last messages: {e}")
+          
+      if ex3 is not None:
+        try:
+          conversation_history = ex3.result()
+          Logger.log.info(f"Retrieved conversation_history with {len(conversation_history)} messages")
+        except Exception as e:
+          Logger.log.error(f"Error getting conversation history: {e}")
       
     end = time.perf_counter()
-    elapsed = end - start;
+    elapsed = end - start
     Logger.log.info(f"Query Context took {elapsed}ms")
 
   Logger.log.info(f"context {sim_results}")
+  Logger.log.info(f"conversation_history {conversation_history}")
+  
   context = [ i["text"] for i in sim_results ]
 
   start = time.perf_counter()
-  reply = generate_model_reply(prompt=prompt, context=context, overrides=overrides)
+  reply = generate_model_reply(
+    prompt=prompt, 
+    context=context, 
+    conversation_history=conversation_history,
+    overrides=overrides
+  )
   end = time.perf_counter()
   elapsed = end - start
   Logger.log.info(f"Reply Generation took {elapsed}ms")

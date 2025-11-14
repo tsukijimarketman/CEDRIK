@@ -23,43 +23,41 @@ export function KaliGPTDialog({ open, onClose, onConfirm }: KaliGPTDialogProps) 
   }, [open]);
 
   const handleYes = async () => {
-    setIsLoading(true);
+  setIsLoading(true);
+  
+  try {
+    // Open CEDRIK Labs in a new tab
+    const labsUrl = 'http://localhost:8069'; // CEDRIK Labs URL
+    const labWindow = window.open(labsUrl, '_blank');
     
-    try {
-      // Call the KaliGPT connection endpoint
-      // For now, we'll simulate the API call with a timeout
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      
-      // In production, you would use:
-      // const response = await kaliGPTApi.connect();
-      // setConnectionMessage(response.data.message || 'Connected Successfully');
-      
-      console.log('connected');
-      setConnectionMessage('Connected Successfully');
+    if (labWindow) {
+      setConnectionMessage('Connected Successfully - Labs opened in new tab');
       setIsLoading(false);
       setShowSuccess(true);
       
-      // Auto-close after showing success message
+      // Auto-close after showing success
       setTimeout(() => {
         onConfirm();
         onClose();
         setShowSuccess(false);
         setConnectionMessage("");
       }, 2000);
-    } catch (error) {
-      console.error('Failed to connect to KaliGPT:', error);
-      setConnectionMessage('Connection Failed. Please try again.');
-      setIsLoading(false);
-      setShowSuccess(true);
-      
-      // Auto-close after showing error
-      setTimeout(() => {
-        onClose();
-        setShowSuccess(false);
-        setConnectionMessage("");
-      }, 2000);
+    } else {
+      throw new Error('Popup blocked');
     }
-  };
+  } catch (error) {
+    console.error('Failed to connect to CEDRIK Labs:', error);
+    setConnectionMessage('Connection Failed. Please allow popups and try again.');
+    setIsLoading(false);
+    setShowSuccess(true);
+    
+    setTimeout(() => {
+      onClose();
+      setShowSuccess(false);
+      setConnectionMessage("");
+    }, 2000);
+  }
+};
 
   const handleNo = () => {
     if (!isLoading) {
@@ -72,7 +70,7 @@ export function KaliGPTDialog({ open, onClose, onConfirm }: KaliGPTDialogProps) 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {showSuccess ? 'Connection Status' : isLoading ? 'Connecting to Kali GPT' : 'Connection Request'}
+            {showSuccess ? 'Connection Status' : isLoading ? 'Connecting to CEDRIK Labs' : 'Connection Request'}
           </DialogTitle>
         </DialogHeader>
         <div className="py-4">
@@ -120,12 +118,12 @@ export function KaliGPTDialog({ open, onClose, onConfirm }: KaliGPTDialogProps) 
                 <div className="absolute top-0 left-0 h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
               </div>
               <p className="mt-4 text-sm text-muted-foreground animate-pulse">
-                Establishing connection to Kali GPT...
+                Establishing connection to CEDRIK Labs...
               </p>
             </div>
           ) : (
             <>
-              <p className="text-center text-lg font-medium mb-6">Are you sure you want to connect to Kali GPT?</p>
+              <p className="text-center text-lg font-medium mb-6">Are you sure you want to connect to CEDRIK Labs?</p>
               <div className="flex justify-center space-x-4">
                 <Button 
                   variant="outline" 

@@ -86,7 +86,7 @@ export function LoginDialog({
 
       await emailjs.send(
         import.meta.env.VITE_SERVICE_ID_EMAILJS,
-        import.meta.env.VITE_TEMPLATE_ID_EMAILJS,
+        import.meta.env.VITE_SIGN_UP_TEMPLATE_ID_EMAILJS,
         templateParams,
         import.meta.env.VITE_PUBLIC_KEY_EMAILJS
       );

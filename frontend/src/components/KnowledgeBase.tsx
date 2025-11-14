@@ -8,8 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -17,87 +16,85 @@ import {
   Trash2,
   Eye,
   BookOpen,
-  Tag,
-  Clock,
+  FileText,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 import { AddFileDialog } from "@/components/dialogs/NewFIleDialog";
 import { EditFileDialog } from "@/components/dialogs/EditFileDialog";
 import { ViewFileDialog } from "@/components/dialogs/ViewFileDialog";
 import { DeleteFileDialog } from "@/components/dialogs/DeleteFileDialog";
-
-
+import { memoryApi, type MemoryItem } from "@/api/api"; 
 
 interface KnowledgeBaseItem {
   id: string;
   title: string;
   description: string;
   tags: string[];
-  author: string;
+  author?: string;
   createdAt: string;
   updatedAt: string;
-  // views: number;
+  mem_type: string;
 }
 
 export function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeBaseItem[]>([
-    {
-      id: "1",
-      title: "System Architecture Overview",
-      description:
-        "This document provides a comprehensive overview of the system architecture, including component interactions, data flow, and integration points.",
-      tags: ["architecture", "system", "overview"],
-      author: "admin_user",
-      createdAt: "2024-01-15",
-      updatedAt: "2024-01-20",
-      // views: 1250,
-    },
-    {
-      id: "2",
-      title: "API Authentication Guide",
-      description:
-        "Complete guide for implementing API authentication, including JWT token management, refresh tokens, and security best practices.",
-      tags: ["api", "authentication", "jwt", "security"],
-      author: "tech_lead",
-      createdAt: "2024-01-10",
-      updatedAt: "2024-01-18",
-      // views: 890,
-    },
-    {
-      id: "3",
-      title: "Database Schema Reference",
-      description:
-        "Detailed reference of all database tables, relationships, and constraints used in the system.",
-      tags: ["database", "schema", "reference"],
-      author: "db_admin",
-      createdAt: "2024-01-05",
-      updatedAt: "2024-01-15",
-      // views: 2100,
-    },
-    {
-      id: "4",
-      title: "Troubleshooting Common Issues",
-      description:
-        "Collection of common issues and their solutions, including error messages, causes, and step-by-step resolution procedures.",
-      tags: ["troubleshooting", "errors", "support"],
-      author: "support_team",
-      createdAt: "2024-01-12",
-      updatedAt: "2024-01-19",
-      // views: 3400,
-    },
-  ]);
+  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeBaseItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAddFileOpen, setIsAddFileOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<KnowledgeBaseItem | null>(null);
+  
+  const { toast } = useToast();
 
-  const categories = ["all", "Documentation", "API", "Database", "Support"];
-  const tags = [
-    "all",
-    "architecture", "system", "overview",
-    "api", "authentication", "jwt", "security",
-    "database", "schema", "reference",
-    "troubleshooting", "errors", "support"
-  ];
+  // Fetch memories from backend
+  const fetchMemories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await memoryApi.get(
+        {}, // No filters for now, fetches all
+        { 
+          archive: false, 
+          offset: 0, 
+          maxItems: 100 
+        }
+      );
 
+      // Transform backend data to frontend format
+      const items: KnowledgeBaseItem[] = response.data.items.map((item: MemoryItem) => ({
+        id: item.id,
+        title: item.title,
+        description: item.text.substring(0, 150) + (item.text.length > 150 ? "..." : ""),
+        tags: item.tags,
+        author: "system", // Backend doesn't provide author info yet
+        createdAt: item.created_at ? new Date(item.created_at).toLocaleDateString() : "N/A",
+        updatedAt: item.updated_at ? new Date(item.updated_at).toLocaleDateString() : "N/A",
+        mem_type: item.mem_type,
+      }));
+
+      setKnowledgeItems(items);
+    } catch (error: any) {
+      console.error("Failed to fetch memories:", error);
+      toast({
+        title: "Error",
+        description: error?.description || "Failed to load knowledge base items",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchMemories();
+  }, []);
+
+  // Filter items based on search
   const filteredItems = knowledgeItems.filter((item) => {
     const matchesSearch =
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -106,38 +103,30 @@ export function KnowledgeBase() {
         tag.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-    const matchesCategory =
-      selectedCategory === "all" || item.category === selectedCategory;
-
-    return matchesSearch && matchesCategory;
+    return matchesSearch;
   });
 
-  const [files, setFiles] = useState<File[]>([]);
-  const [isAddFileOpen, setIsAddFileOpen] = useState(false);
+  const handleAddFileSuccess = () => {
+    // Refresh the list after successful creation
+    fetchMemories();
+  };
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<KnowledgeBaseItem | null>(null);
+  const getMemoryTypeIcon = (memType: string) => {
+    return memType === "FILE" ? <FileText className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />;
+  };
 
-
-
-
-
-  const getCategoryBadge = (category: string) => {
+  const getMemoryTypeBadge = (memType: string) => {
     const colors = {
-      Documentation: "bg-blue-100 text-blue-800",
-      API: "bg-green-100 text-green-800",
-      Database: "bg-purple-100 text-purple-800",
-      Support: "bg-orange-100 text-orange-800",
+      FILE: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      TEXT: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     };
     return (
       <Badge
         className={
-          colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
+          colors[memType as keyof typeof colors] || "bg-gray-100 text-gray-800"
         }
       >
-        {category}
+        {memType}
       </Badge>
     );
   };
@@ -155,133 +144,155 @@ export function KnowledgeBase() {
             </p>
           </div>
           <div className="flex gap-2">
-
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={fetchMemories}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
             <Button className="gap-2" onClick={() => setIsAddFileOpen(true)}>
               <Plus className="h-4 w-4" />
-              New File
-            </Button></div>
+              New Memory
+            </Button>
+          </div>
         </div>
 
-        {/* Search and Filters */}
+        {/* Search */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search articles, content, or tags..."
+              placeholder="Search by title, content, or tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
+              disabled={isLoading}
             />
           </div>
-
         </div>
 
+        {/* Loading State */}
+        {isLoading && knowledgeItems.length === 0 && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
 
         {/* Articles Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.map((item) => (
-            <Card key={item.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg line-clamp-2">
-                      {item.title}
-                    </CardTitle>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    setSelectedFile(item);
-                    setIsViewOpen(true);
-                  }}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                  {item.description}
-                </p>
-
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {item.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-
-
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-xs text-muted-foreground">
-                    Updated {item.updatedAt}
-                  </span>
-                  <div className="flex gap-1" >
-                    <Button variant="ghost" size="sm" onClick={() => {
-                      setSelectedFile(item);
-                      setIsEditOpen(true);
-                    }}>
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-700"
+        {!isLoading && filteredItems.length > 0 && (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredItems.map((item) => (
+              <Card key={item.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        {getMemoryTypeIcon(item.mem_type)}
+                        {getMemoryTypeBadge(item.mem_type)}
+                      </div>
+                      <CardTitle className="text-lg line-clamp-2">
+                        {item.title}
+                      </CardTitle>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
                       onClick={() => {
                         setSelectedFile(item);
-                        setIsDeleteOpen(true);
-                      }}>
-
-                      <Trash2 className="h-3 w-3" />
+                        setIsViewOpen(true);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                    {item.description}
+                  </p>
 
-        {filteredItems.length === 0 && (
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {item.tags.slice(0, 3).map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {item.tags.length > 3 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{item.tags.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <span className="text-xs text-muted-foreground">
+                      Updated {item.updatedAt}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedFile(item);
+                          setIsEditOpen(true);
+                        }}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          setSelectedFile(item);
+                          setIsDeleteOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && filteredItems.length === 0 && (
           <Card className="mt-6">
             <CardContent className="text-center py-8">
               <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No articles found</h3>
-              <p className="text-muted-foreground">
-                Try adjusting your search terms or browse different categories.
+              <h3 className="text-lg font-medium mb-2">
+                {searchTerm ? "No results found" : "No memories yet"}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm 
+                  ? "Try adjusting your search terms."
+                  : "Get started by creating your first memory."}
               </p>
+              {!searchTerm && (
+                <Button onClick={() => setIsAddFileOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Memory
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
       </div>
 
+      {/* Dialogs */}
       <AddFileDialog
         open={isAddFileOpen}
         onClose={() => setIsAddFileOpen(false)}
-        onAddFile={({ title, description, tag, file }) => {
-          interface UploadedFile {
-            id: string;
-            title: string;
-            description?: string;
-            tag?: string;
-            filename: string;
-            uploadedAt: string;
-            raw?: File;
-          }
-
-          const [files, setFiles] = useState<UploadedFile[]>([]);
-          const newFile: UploadedFile = {
-            id: Date.now().toString(),
-            title,
-            description,
-            tag,
-            filename: file?.name ?? "unknown",
-            uploadedAt: new Date().toISOString(),
-            raw: file,
-          };
-
-          setFiles((prev) => [...prev, newFile]);
-        }}
+        onAddFileSuccess={handleAddFileSuccess}
       />
 
-      {/* Edit File Dialog */}
       <EditFileDialog
         open={isEditOpen}
         onClose={() => {
@@ -290,11 +301,15 @@ export function KnowledgeBase() {
         }}
         file={selectedFile}
         onUpdateFile={(updatedFile) => {
-
           console.log("Updated file:", updatedFile);
+          // TODO: Implement update API call when backend endpoint is ready
+          toast({
+            title: "Info",
+            description: "Update functionality coming soon!",
+          });
         }}
       />
-      {/* View File Dialog */}
+
       <ViewFileDialog
         open={isViewOpen}
         onClose={() => {
@@ -311,20 +326,20 @@ export function KnowledgeBase() {
           setSelectedFile(null);
         }}
         onConfirm={() => {
+          // TODO: Implement delete API call when backend endpoint is ready
           if (selectedFile) {
             setKnowledgeItems((prev) =>
               prev.filter((item) => item.id !== selectedFile.id)
             );
+            toast({
+              title: "Info",
+              description: "Item removed from view. Delete API coming soon!",
+            });
           }
           setIsDeleteOpen(false);
           setSelectedFile(null);
         }}
       />
-
     </div>
-
-
-
-
   );
 }

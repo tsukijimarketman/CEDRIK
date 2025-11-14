@@ -22,7 +22,7 @@ On powershell
 build service `backend`
 > No need to rebuild `backendbase` the latest image is uploaded to dockerhub
 ```
-docker compose --profile backend build
+docker compose build --no-cache backend
 ```
 run backend
 ```
@@ -34,5 +34,5 @@ docker compose  --profile frontend up
 ```
 ### All runnables
 ```
-docker compose --profile llama --profile frontend up
+docker compose up main encoder model frontend -d
 ```

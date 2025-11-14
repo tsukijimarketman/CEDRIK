@@ -3,6 +3,12 @@ from typing import Any, Callable
 from dotenv import load_dotenv
 load_dotenv()
 
+print("DEBUG: Current working directory:", os.getcwd())
+print("DEBUG: Does .env exist in cwd?", os.path.exists('.env'))
+print("DEBUG: Does /app/.env exist?", os.path.exists('/app/.env'))
+print("DEBUG: AI_MODEL after load:", os.getenv("AI_MODEL"))
+print("DEBUG: GROQ_API_KEY after load:", os.getenv("GROQ_API_KEY"))
+
 def _get_env_or_default(env_name: str, default: Any, transform: Callable | None = None):
   env = os.getenv(env_name)
   if env == None or len(env) == 0:
@@ -50,6 +56,13 @@ RESOURCE_DIR = str(_get_env_or_default("RESOURCE_DIR", "Uploads/"))
 LLAMA_SERVER = os.getenv("LLAMA_SERVER")
 if AI_MODEL == "llama" and (LLAMA_SERVER == None or len(LLAMA_SERVER) == 0):
   raise Exception("LLAMA_SERVER is not set but AI_MODEL is set to llama")
+
+# Groq Configuration
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL = str(_get_env_or_default("GROQ_MODEL", "llama-3.3-70b-versatile"))
+
+if AI_MODEL == "groq" and (GROQ_API_KEY == None or len(GROQ_API_KEY) == 0):
+    raise Exception("GROQ_API_KEY is not set but AI_MODEL is set to groq")
 
 HF_TOKEN = str(_get_env_or_default("HF_TOKEN", ""))
 
