@@ -16,7 +16,8 @@ def db_connection_init():
         db="CyberSync",
         host=DATABASE_URI,
         tls=True,
-        tlsAllowInvalidCertificates=True
+        tlsAllowInvalidCertificates=True,
+        connect=False
     )
     init_indexes()
     # sslAllowInvalidCertificates=True

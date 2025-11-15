@@ -9,7 +9,7 @@ services:
   backend:
     build:
       dockerfile: BackendRunner.Dockerfile
-    image: cedrik-backend
+    image: maasuncion/cedrik-backend:latest
     profiles: ["backend"]
   frontend:
     build:
@@ -22,8 +22,8 @@ services:
       - 5173:5173
 
   main:
-    image: cedrik-backend
-    pull_policy: never
+    image: maasuncion/cedrik-backend:latest
+    # pull_policy: never
     volumes:
       - ./Uploads/:/Uploads/
       - ./backend/:/app/backend/
@@ -32,7 +32,8 @@ services:
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    # Only one process for main, mongoengine document writes is not thread safe
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 1 --threads 1 -w $${FLASK_APP}:app" ]
     # command: [ "/bin/bash" ]
     # stdin_open: true
     # tty: true
@@ -51,8 +52,8 @@ services:
         - path: ./backend/
           action: restart
   encoder:
-    image: cedrik-backend
-    pull_policy: never
+    image: maasuncion/cedrik-backend:latest
+    # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
       # - ./log/:/app/log/
@@ -61,7 +62,9 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+
+    # Reduce processes for encoder, model, filter-model (to reduce load of server)
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
     networks:
         - internal
     # ports:
@@ -74,8 +77,8 @@ services:
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
   model:
-    image: cedrik-backend
-    pull_policy: never
+    image: maasuncion/cedrik-backend:latest
+    # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
       # - ./log/:/app/log/
@@ -84,7 +87,7 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
     networks:
       - internal
     # ports:
@@ -97,8 +100,8 @@ services:
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
   filter-model:
-    image: cedrik-backend
-    pull_policy: never
+    image: maasuncion/cedrik-backend:latest
+    # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
       # - ./log/:/app/log/
@@ -107,7 +110,7 @@ services:
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
     command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
     networks:
       - internal
     # ports:
@@ -127,7 +130,7 @@ services:
     # pull_policy: never
     entrypoint: "/bin/sh"
     command: [ "-c", "/app/llama-server -m $${MODEL} --host $${HOST} --port $${PORT} --threads 8 --n-gpu-layers 0 --ctx-size 1024" ]
-    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master -p 4 -w $${FLASK_APP}:app" ]
+    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 4 --threads 4 -w $${FLASK_APP}:app" ]
     # stdin_open: true
     # tty: true
     volumes:
