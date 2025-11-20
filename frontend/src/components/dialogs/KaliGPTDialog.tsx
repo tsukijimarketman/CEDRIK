@@ -27,7 +27,7 @@ export function KaliGPTDialog({ open, onClose, onConfirm }: KaliGPTDialogProps) 
   
   try {
     // Open CEDRIK Labs in a new tab
-    const labsUrl = 'http://localhost:8069'; // CEDRIK Labs URL
+    const labsUrl = import.meta.env.VITE_KALI_URL; // CEDRIK Labs URL
     const labWindow = window.open(labsUrl, '_blank');
     
     if (labWindow) {
