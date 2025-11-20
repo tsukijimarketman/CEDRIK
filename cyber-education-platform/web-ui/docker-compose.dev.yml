@@ -1,0 +1,10 @@
+services:
+  web-ui-dev:
+    build: ./web-ui
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./web-ui:/app
+    ports:
+      - "5174:5174"
+    networks:
+      - internal
