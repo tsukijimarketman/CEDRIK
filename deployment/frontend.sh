@@ -54,7 +54,7 @@ echo "Moving $cwd/dist/ contents to /var/www/html/"
 if [[ -d /var/www/html/assets/ ]]; then
     sudo rm -rf /var/www/html/assets
 fi
-mv ./dist/* /var/www/html/
+sudo mv ./dist/* /var/www/html/
 
 echo "restarting nginx"
 sudo systemctl restart nginx
