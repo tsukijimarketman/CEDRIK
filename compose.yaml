@@ -11,15 +11,6 @@ services:
       dockerfile: BackendRunner.Dockerfile
     image: maasuncion/cedrik-backend:latest
     profiles: ["backend"]
-  frontend:
-    build:
-      context: ./frontend/
-      dockerfile: Dockerfile
-    profiles: ["frontend"]
-    volumes:
-      - ./frontend/.env:/app/.env:ro
-    ports:
-      - 5173:5173
 
   main:
     image: maasuncion/cedrik-backend:latest

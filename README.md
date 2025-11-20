@@ -19,20 +19,17 @@ On powershell
 
 ## Docker
 ### Backend
-build service `backend`
-> No need to rebuild `backendbase` the latest image is uploaded to dockerhub
-```
-docker compose build --no-cache backend
-```
 run backend
 ```
-docker compose --profile llama up
+docker compose up
+```
+## Deployment
+### Backend
+```
+docker compose up
 ```
 ### Frontend
+Run only in deployment server
 ```
-docker compose  --profile frontend up
-```
-### All runnables
-```
-docker compose up main encoder model frontend -d
+./deployment/frontend.sh
 ```
