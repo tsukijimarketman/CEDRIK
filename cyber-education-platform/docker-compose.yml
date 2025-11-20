@@ -81,6 +81,8 @@ services:
       - "8084:80"
       - "21:21"
       - "23:23"
+    tty: true            # REQUIRED
+    stdin_open: true     # REQUIRED
     restart: unless-stopped
 
   # Scenario 5: WebGoat (OWASP)
