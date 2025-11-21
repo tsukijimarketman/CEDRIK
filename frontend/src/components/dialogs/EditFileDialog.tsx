@@ -11,6 +11,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { memoryApi } from "@/api/api"; 
 
 interface EditFileDialogProps {
     open: boolean;
@@ -21,16 +22,10 @@ interface EditFileDialogProps {
         description: string;
         tags: string[]; // Changed from string to string[]
     } | null;
-    onUpdateFile: (data: {
-        id: string;
-        title: string;
-        description: string;
-        tags: string[];
-        file?: File | null;
-    }) => void;
+    onUpdateSuccess?: () => void; // Changed callback signature
 }
 
-export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDialogProps) {
+export function EditFileDialog({ open, onClose, file, onUpdateSuccess }: EditFileDialogProps) {
     const [formData, setFormData] = useState({
         title: "",
         description: "",
@@ -85,26 +80,27 @@ export function EditFileDialog({ open, onClose, file, onUpdateFile }: EditFileDi
                 .map(tag => tag.trim())
                 .filter(tag => tag.length > 0);
 
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            onUpdateFile({
-                id: file.id,
+            // Call backend API
+            await memoryApi.update(file.id, {
                 title: formData.title,
-                description: formData.description,
+                text: formData.description,
                 tags: tagsArray,
                 file: formData.file ?? undefined,
             });
 
             toast({
                 title: "Success",
-                description: "File updated successfully!",
+                description: "Memory updated successfully!",
             });
 
+            // Notify parent to refresh
+            onUpdateSuccess?.();
             onClose();
         } catch (error: any) {
+            console.error("Update error:", error);
             toast({
                 title: "Error",
-                description: error.message || "Something went wrong",
+                description: error?.description || error?.message || "Failed to update memory",
                 variant: "destructive",
             });
         } finally {

@@ -9,6 +9,7 @@ class Role(Enum):
 class AuditType(Enum):
   ADD = "add"
   EDIT = "edit"
+  UPDATE = "update" 
   DELETE = "delete"
   MESSAGE = "message"
   LOGIN = "login"

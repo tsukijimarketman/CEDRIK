@@ -13,6 +13,7 @@ const PORT = 3000
 app.use(cors())
 app.use(express.json())
 
+
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

@@ -26,7 +26,7 @@ import { AddFileDialog } from "@/components/dialogs/NewFIleDialog";
 import { EditFileDialog } from "@/components/dialogs/EditFileDialog";
 import { ViewFileDialog } from "@/components/dialogs/ViewFileDialog";
 import { DeleteFileDialog } from "@/components/dialogs/DeleteFileDialog";
-import { memoryApi, type MemoryItem } from "@/api/api"; 
+import { memoryApi, type MemoryItem } from "@/api/api";
 
 interface KnowledgeBaseItem {
   id: string;
@@ -48,6 +48,7 @@ export function KnowledgeBase() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<KnowledgeBaseItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { toast } = useToast();
 
@@ -109,6 +110,42 @@ export function KnowledgeBase() {
   const handleAddFileSuccess = () => {
     // Refresh the list after successful creation
     fetchMemories();
+  };
+
+  const handleUpdateSuccess = () => {
+    // Refresh the list after successful update
+    fetchMemories();
+  };
+
+  const handleDelete = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setIsDeleting(true);
+      
+      // Call backend API
+      await memoryApi.delete(selectedFile.id);
+
+      toast({
+        title: "Success",
+        description: "Memory deleted successfully!",
+      });
+
+      // Refresh the list
+      fetchMemories();
+      
+      setIsDeleteOpen(false);
+      setSelectedFile(null);
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      toast({
+        title: "Error",
+        description: error?.description || error?.message || "Failed to delete memory",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const getMemoryTypeIcon = (memType: string) => {
@@ -216,13 +253,13 @@ export function KnowledgeBase() {
                   </p>
 
                   <div className="flex flex-wrap gap-1 mb-4">
-                    {item.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
+                    {item.tags.slice(0, 3).map((tag, index) => (
+                      <Badge key={`${item.id}-tag-${index}`} variant="secondary" className="text-xs">
                         {tag}
                       </Badge>
                     ))}
                     {item.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge key={`${item.id}-more-tags`} variant="secondary" className="text-xs">
                         +{item.tags.length - 3} more
                       </Badge>
                     )}
@@ -300,14 +337,7 @@ export function KnowledgeBase() {
           setSelectedFile(null);
         }}
         file={selectedFile}
-        onUpdateFile={(updatedFile) => {
-          console.log("Updated file:", updatedFile);
-          // TODO: Implement update API call when backend endpoint is ready
-          toast({
-            title: "Info",
-            description: "Update functionality coming soon!",
-          });
-        }}
+        onUpdateSuccess={handleUpdateSuccess}
       />
 
       <ViewFileDialog
@@ -325,20 +355,8 @@ export function KnowledgeBase() {
           setIsDeleteOpen(false);
           setSelectedFile(null);
         }}
-        onConfirm={() => {
-          // TODO: Implement delete API call when backend endpoint is ready
-          if (selectedFile) {
-            setKnowledgeItems((prev) =>
-              prev.filter((item) => item.id !== selectedFile.id)
-            );
-            toast({
-              title: "Info",
-              description: "Item removed from view. Delete API coming soon!",
-            });
-          }
-          setIsDeleteOpen(false);
-          setSelectedFile(null);
-        }}
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
       />
     </div>
   );

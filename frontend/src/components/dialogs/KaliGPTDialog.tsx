@@ -123,7 +123,7 @@ export function KaliGPTDialog({ open, onClose, onConfirm }: KaliGPTDialogProps) 
             </div>
           ) : (
             <>
-              <p className="text-center text-lg font-medium mb-6">Are you sure you want to connect to CEDRIK Labs?</p>
+              <p className="text-center text-lg font-medium mb-6">Gusto mo you sure you want to connect to CEDRIK Labs?</p>
               <div className="flex justify-center space-x-4">
                 <Button 
                   variant="outline" 

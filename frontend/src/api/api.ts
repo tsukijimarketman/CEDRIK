@@ -103,6 +103,8 @@ export const authApi = {
   },
 };
 
+
+
 // Memory Types
 export type MemoryItem = {
   id: string;
@@ -190,6 +192,41 @@ export const memoryApi = {
   // Get available memory types
   getMemTypes: async () => {
     return api.get<string[]>("/memory/mem-types");
+  },
+
+  // Update an existing memory
+  update: async (memoryId: string, data: Partial<MemoryCreateRequest>) => {
+    const formData = new FormData();
+    
+    if (data.title) {
+      formData.append("title", data.title);
+    }
+    if (data.text) {
+      formData.append("text", data.text);
+    }
+    
+    // Handle tags array
+    if (data.tags && data.tags.length > 0) {
+      data.tags.forEach(tag => {
+        formData.append("tags", tag);
+      });
+    }
+    
+    // Handle file if provided
+    if (data.file) {
+      formData.append("file", data.file);
+    }
+
+    return api.put(`/memory/update/${memoryId}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  // Delete a memory
+  delete: async (memoryId: string) => {
+    return api.delete(`/memory/delete/${memoryId}`);
   },
 };
 
