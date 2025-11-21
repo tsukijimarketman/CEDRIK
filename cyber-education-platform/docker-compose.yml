@@ -2,6 +2,7 @@ services:
   # FIXED: Now builds from custom Dockerfile instead of installing on every startup
   kali-workstation:
     build: ./kali-custom
+    # image: cedrikai/cyber-education-platform-kali-workstation:latest
     container_name: kali-workstation
     hostname: kali-workstation
     environment:
@@ -21,6 +22,7 @@ services:
 
   novnc:
     build: ./novnc-custom
+    # image: cedrikai/cyber-education-platform-novnc:latest
     container_name: novnc
     ports:
       - "6080:6080"
@@ -134,6 +136,7 @@ services:
   # Enhanced Bridge Server with AI Integration
   bridge-server:
     build: ./bridge-server
+    # image: cedrikai/cyber-education-platform-bridge-server:latest
     container_name: cyber-bridge
     ports:
       - "3000:3000"
@@ -162,6 +165,7 @@ services:
   # Web UI for scenario selection
   web-ui:
     build: ./web-ui
+    # image: cedrikai/cyber-education-platform-web-ui:latest
     container_name: cyber-web-ui
     ports:
       - "8069:80"
