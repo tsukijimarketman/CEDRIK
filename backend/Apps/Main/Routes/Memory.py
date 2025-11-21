@@ -265,7 +265,7 @@ def get():
   jsonDict = dict(jsonDict) if jsonDict != None else {}
 
   title = str(re.escape(jsonDict.get("title", "")))
-  tags: List[str] = jsonDict.get("tags")
+  tags: List[str] = jsonDict.get("tags") # type: ignore
   mem_type = str(re.escape(jsonDict.get("mem_type", "")))
 
   filters = []
@@ -284,39 +284,64 @@ def get():
 
     count_pipeline = [ i for i in pipeline ]
     count_pipeline.append({
-      "$count": "total"
+      "$count": "total" # type: ignore
     })
 
     if len(filters) > 0:
       pipeline.append({
         "$match": {
-          "$or": filters
+          "$or": filters # type: ignore
         }
       })
 
-    pipeline.extend(pagination.build_pagination())
-    
-    # Add projection to convert _id to id string
     pipeline.append({
-      "$project": {
-        "id": {"$toString": "$_id"},
-        "title": 1,
-        "text": 1,
-        "mem_type": 1,
-        "file_id": 1,
-        "permission": 1,
-        "tags": 1,
-        "created_at": 1,
-        "updated_at": 1,
-        "deleted_at": 1
+      "$group": {
+        "_id": {
+          "$cond": [
+            {"$in": ["$file_id", [None, ""]]},
+            "$_id",
+            "$file_id"
+          ]
+        },
+        "id": {"$first": "$_id"},
+        "title": {"$first": "$title"},
+        "text": {"$push": "$text"},
+        "mem_type": {"$first": "$mem_type"},
+        "file_id": {"$first": "$file_id"},
+        "permission": {"$first": "$permission"},
+        "tags": {"$addToSet": "$tags"},
+        "created_at": {"$min": "$created_at"},
+        "updated_at": {"$max": "$updated_at"},
+        "deleted_at": {"$first": "$deleted_at"}
       }
-    })
-    
-    q_results: List[dict] = list(Memory.objects.aggregate(pipeline))
+    }) # type: ignore
+
+    pipeline.append({
+      "$addFields": {
+        "tags": {
+          "$reduce": {
+            "input": "$tags",
+            "initialValue": [],
+            "in": {"$setUnion": ["$$value", "$$this"]}
+          }
+        },
+        "text": {
+            "$reduce": {
+              "input": "$text",
+              "initialValue": "",
+              "in": {"$concat": ["$$value", "\n", "$$this"]}
+            }
+        }
+      }
+    }) # type: ignore
+
+
+    pipeline.extend(pagination.build_pagination()) # type: ignore
+    q_results: List[dict] = list(Memory.objects.aggregate(pipeline)) # type: ignore
     results = []
     for doc in q_results:
       results.append(MemoryResult(
-        id=doc.get("id", ""),  # Now "id" exists from projection
+        id=str(doc.get("id", "")),
         title=doc.get("title", ""),
         text=doc.get("text", ""),
         mem_type=doc.get("mem_type", ""),
@@ -329,7 +354,7 @@ def get():
       ))
 
 
-    count_res = list(Memory.objects.aggregate(count_pipeline))
+    count_res = list(Memory.objects.aggregate(count_pipeline)) # type: ignore
 
     return jsonify(PaginationResults(
       total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
@@ -339,6 +364,7 @@ def get():
   except ValidationError as e:
     raise HttpValidationError(e.to_dict()) # type: ignore
   except Exception as e:
+    print(repr(e))
     raise HTTPException(description=str(e))
 
 @memory.route("/mem-types")
