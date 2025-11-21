@@ -22,7 +22,7 @@ from backend.Lib.Logger import Logger
 from backend.Apps.Main.Service.Memory import create_memory, DCreateMemory # type: ignore
 from backend.Apps.Main.Utils import get_schema_of_dataclass, Collections, generate_embeddings, AuditType # type: ignore
 from backend.Apps.Main.Utils.Enum import MemoryType, Role
-from backend.Apps.Main.Utils.Audit import audit_collection # Add this import
+from backend.Apps.Main.Utils.Audit import audit_collection
 
 memory = Blueprint("Memory", __name__)
 
@@ -32,7 +32,7 @@ memory = Blueprint("Memory", __name__)
 def delete(memory_id):
   """
   Soft delete a memory by ID
-  If memory has a file, also delete the file from GridFS
+  If memory is a file type, deletes ALL chunks with the same file_id
   """
   if not ObjectId.is_valid(memory_id):
     raise InvalidId()
@@ -49,30 +49,55 @@ def delete(memory_id):
       if not memory_obj:
         raise InvalidId()
 
-      # If memory has a file, delete it from GridFS
+      # Determine if this is a file memory with chunks
       if memory_obj.file_id:
+        # This is a file memory - delete ALL chunks with this file_id
+        file_id = memory_obj.file_id
+        
+        # Get all memory chunks with this file_id
+        all_chunks = Memory.objects(file_id=file_id)
+        chunk_ids = [chunk.id for chunk in all_chunks]
+        
+        # Delete the file from GridFS
         fs = GridFS(get_db())
         try:
-          fs.delete(memory_obj.file_id)
-          Logger.log.info(f"Deleted file from GridFS: {memory_obj.file_id}")
+          fs.delete(file_id)
+          Logger.log.info(f"Deleted file from GridFS: {file_id}")
         except Exception as e:
           Logger.log.error(f"Error deleting file: {e}")
 
-      # Soft delete (set deleted_at timestamp)
-      result = Memory.objects(id=memory_id).update_one(
-        deleted_at=datetime.utcnow()
-      )
+        # Soft delete ALL chunks
+        result = Memory.objects(file_id=file_id).update(
+          deleted_at=datetime.utcnow()
+        )
+        
+        Logger.log.info(f"Soft deleted {result} memory chunks for file_id: {file_id}")
 
-      if result == 0:
-        raise InvalidId()
+        # Log audit for all chunks
+        for chunk_id in chunk_ids:
+          audit = audit_collection(
+            type=AuditType.DELETE,
+            collection=Collections.MEMORY,
+            id=chunk_id,
+          )
+          col_audit.insert_one(audit.to_mongo(), session=session)
+          
+      else:
+        # This is a text-only memory - delete single item
+        result = Memory.objects(id=memory_id).update_one(
+          deleted_at=datetime.utcnow()
+        )
 
-      # Log audit
-      audit = audit_collection(
-        type=AuditType.DELETE,
-        collection=Collections.MEMORY,
-        id=ObjectId(memory_id),
-      )
-      col_audit.insert_one(audit.to_mongo(), session=session)
+        if result == 0:
+          raise InvalidId()
+
+        # Log audit
+        audit = audit_collection(
+          type=AuditType.DELETE,
+          collection=Collections.MEMORY,
+          id=ObjectId(memory_id),
+        )
+        col_audit.insert_one(audit.to_mongo(), session=session)
 
     return jsonify({"message": "Memory deleted successfully"}), 200
 
@@ -88,7 +113,8 @@ def delete(memory_id):
 def update(memory_id):
   """
   Update a memory by ID
-  Supports both text and file updates
+  For file memories, updates ALL chunks with the same file_id
+  For text memories, updates the single memory
   """
   if not request.content_type or not request.content_type.startswith("multipart/form-data"):
     raise NotAcceptable(description="Content-Type must be multipart/form-data")
@@ -99,6 +125,11 @@ def update(memory_id):
 
   try:
     update_data = {}
+    
+    # Get existing memory to check type
+    existing_memory = Memory.objects(id=memory_id).first()
+    if not existing_memory:
+      raise InvalidId()
     
     # Get form data
     if request.form.get("title"):
@@ -118,16 +149,21 @@ def update(memory_id):
     file = request.files.get("file")
     if file and file.filename:
       # Delete old file if it exists
-      existing_memory = Memory.objects(id=memory_id).first()
-      if existing_memory and existing_memory.file_id:
+      if existing_memory.file_id:
         fs = GridFS(get_db())
         try:
           fs.delete(existing_memory.file_id)
           Logger.log.info(f"Deleted old file: {existing_memory.file_id}")
         except Exception as e:
           Logger.log.error(f"Error deleting old file: {e}")
+        
+        # Delete old chunks
+        Memory.objects(file_id=existing_memory.file_id).delete()
+        Logger.log.info(f"Deleted old memory chunks for file_id: {existing_memory.file_id}")
 
-      # Upload new file
+      # Upload new file and create new chunks
+      # This should use the create_memory function to handle chunking
+      # For now, we'll just upload the file
       file.stream.seek(0)
       fs = GridFS(get_db())
       file_id = fs.put(
@@ -139,35 +175,53 @@ def update(memory_id):
       update_data["mem_type"] = MemoryType.FILE
       Logger.log.info(f"Uploaded new file: {file_id}")
 
-    # Regenerate embeddings if text changed
+    # Regenerate embeddings if text changed (for text-only memories)
     if "text" in update_data or "title" in update_data:
-      memory_obj = Memory.objects(id=memory_id).first()
-      if not memory_obj:
-        raise InvalidId()
-      
-      text_to_embed = f"{update_data.get('title', memory_obj.title)}\n{update_data.get('text', memory_obj.text)}"
-      embeddings = generate_embeddings([text_to_embed])
-      update_data["embeddings"] = embeddings
+      if not existing_memory.file_id:  # Only for text memories
+        text_to_embed = f"{update_data.get('title', existing_memory.title)}\n{update_data.get('text', existing_memory.text)}"
+        embeddings = generate_embeddings([text_to_embed])
+        update_data["embeddings"] = embeddings
 
     # Update timestamp
     update_data["updated_at"] = datetime.utcnow()
 
-    # Perform update
-    result = Memory.objects(id=memory_id).update_one(**update_data)
-    
-    if result == 0:
-      raise InvalidId()
+    # Perform update based on memory type
+    if existing_memory.file_id and not file:
+      # File memory without new file - update ALL chunks
+      result = Memory.objects(file_id=existing_memory.file_id).update(
+        **update_data
+      )
+      Logger.log.info(f"Updated {result} memory chunks for file_id: {existing_memory.file_id}")
+    else:
+      # Text memory or file replacement - update single memory
+      result = Memory.objects(id=memory_id).update_one(**update_data)
+      
+      if result == 0:
+        raise InvalidId()
 
     # Log audit
     user_token = get_token()
     with Transaction() as (session, db):
       col_audit = db.get_collection(Collections.AUDIT.value)
-      audit = audit_collection(
-        type=AuditType.UPDATE,
-        collection=Collections.MEMORY,
-        id=ObjectId(memory_id),
-      )
-      col_audit.insert_one(audit.to_mongo(), session=session)
+      
+      if existing_memory.file_id:
+        # Log audit for all chunks
+        chunks = Memory.objects(file_id=existing_memory.file_id)
+        for chunk in chunks:
+          audit = audit_collection(
+            type=AuditType.UPDATE,
+            collection=Collections.MEMORY,
+            id=chunk.id,
+          )
+          col_audit.insert_one(audit.to_mongo(), session=session)
+      else:
+        # Log audit for single memory
+        audit = audit_collection(
+          type=AuditType.UPDATE,
+          collection=Collections.MEMORY,
+          id=ObjectId(memory_id),
+        )
+        col_audit.insert_one(audit.to_mongo(), session=session)
 
     return jsonify({"message": "Memory updated successfully"}), 200
 
@@ -284,38 +338,54 @@ def get():
 
     count_pipeline = [ i for i in pipeline ]
     count_pipeline.append({
-      "$count": "total" # type: ignore
+      "$count": "total"
     })
 
     if len(filters) > 0:
       pipeline.append({
         "$match": {
-          "$or": filters # type: ignore
+          "$or": filters
         }
       })
 
+    # CRITICAL FIX: Add a unique grouping field BEFORE the $group stage
+    # This ensures text memories (no file_id) each get a unique group identifier
+    pipeline.append({
+      "$addFields": {
+        "grouping_id": {
+          "$cond": [
+            # If file_id exists and is valid
+            {"$and": [
+              {"$ne": ["$file_id", None]},
+              {"$ne": ["$file_id", ""]},
+              {"$ifNull": ["$file_id", False]}
+            ]},
+            "$file_id",  # Use file_id for grouping (chunks merge)
+            "$_id"       # Use unique _id for grouping (stays separate)
+          ]
+        }
+      }
+    })
+    
+    # Now group by the grouping_id field
     pipeline.append({
       "$group": {
-        "_id": {
-          "$cond": [
-            {"$in": ["$file_id", [None, ""]]},
-            "$_id",
-            "$file_id"
-          ]
-        },
-        "id": {"$first": "$_id"},
+        "_id": "$grouping_id",  # Group by our custom field
+        "doc_id": {"$first": "$_id"},
         "title": {"$first": "$title"},
         "text": {"$push": "$text"},
         "mem_type": {"$first": "$mem_type"},
         "file_id": {"$first": "$file_id"},
         "permission": {"$first": "$permission"},
-        "tags": {"$addToSet": "$tags"},
+        "tags": {"$push": "$tags"},
         "created_at": {"$min": "$created_at"},
         "updated_at": {"$max": "$updated_at"},
-        "deleted_at": {"$first": "$deleted_at"}
+        "deleted_at": {"$first": "$deleted_at"},
+        "chunk_count": {"$sum": 1}  # Count how many chunks were grouped
       }
-    }) # type: ignore
+    })
 
+    # Flatten arrays
     pipeline.append({
       "$addFields": {
         "tags": {
@@ -326,26 +396,49 @@ def get():
           }
         },
         "text": {
-            "$reduce": {
-              "input": "$text",
-              "initialValue": "",
-              "in": {"$concat": ["$$value", "\n", "$$this"]}
+          "$trim": {
+            "input": {
+              "$reduce": {
+                "input": "$text",
+                "initialValue": "",
+                "in": {
+                  "$cond": {
+                    "if": {"$eq": ["$$value", ""]},
+                    "then": "$$this",
+                    "else": {"$concat": ["$$value", "\n", "$$this"]}
+                  }
+                }
+              }
             }
+          }
         }
       }
-    }) # type: ignore
+    })
 
+    # Add a readable ID field
+    pipeline.append({
+      "$addFields": {
+        "id": {"$toString": "$doc_id"}
+      }
+    })
 
-    pipeline.extend(pagination.build_pagination()) # type: ignore
-    q_results: List[dict] = list(Memory.objects.aggregate(pipeline)) # type: ignore
+    pipeline.extend(pagination.build_pagination())
+    
+    q_results: List[dict] = list(Memory.objects.aggregate(pipeline))
+    
+    # DEBUG: Log to see what we're getting
+    Logger.log.info(f"Query returned {len(q_results)} grouped results")
+    for result in q_results[:3]:  # Log first 3
+      Logger.log.info(f"Result: id={result.get('id')}, title={result.get('title')}, chunk_count={result.get('chunk_count')}, has_file={bool(result.get('file_id'))}")
+    
     results = []
     for doc in q_results:
       results.append(MemoryResult(
-        id=str(doc.get("id", "")),
+        id=doc.get("id", ""),
         title=doc.get("title", ""),
         text=doc.get("text", ""),
         mem_type=doc.get("mem_type", ""),
-        file_id=str(doc.get("file_id", "")),
+        file_id=str(doc.get("file_id", "")) if doc.get("file_id") else "",
         permission=doc.get("permission", []),
         tags=doc.get("tags", []),
         created_at=doc.get("created_at", None),
@@ -353,18 +446,18 @@ def get():
         deleted_at=doc.get("deleted_at", None)
       ))
 
-
-    count_res = list(Memory.objects.aggregate(count_pipeline)) # type: ignore
+    count_res = list(Memory.objects.aggregate(count_pipeline))
 
     return jsonify(PaginationResults(
       total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
       page=pagination.offset+1,
       items=results
     )), 200
+    
   except ValidationError as e:
-    raise HttpValidationError(e.to_dict()) # type: ignore
+    raise HttpValidationError(e.to_dict())
   except Exception as e:
-    print(repr(e))
+    Logger.log.error(f"Get error: {e}")
     raise HTTPException(description=str(e))
 
 @memory.route("/mem-types")
