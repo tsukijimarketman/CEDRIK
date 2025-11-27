@@ -592,7 +592,10 @@ export function SignUpDialog({
       <Dialog open={showPrivacy} onOpenChange={setShowPrivacy}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Privacy Policy</DialogTitle>
+            <DialogTitle>Agreement and Consent Form</DialogTitle>
+            <DialogDescription>
+              Data Privacy Policy
+            </DialogDescription>
           </DialogHeader>
           <div 
             ref={privacyScrollRef}
@@ -600,128 +603,84 @@ export function SignUpDialog({
             className="space-y-4 text-sm overflow-y-auto flex-1 pr-2"
           >
             <section>
-              <h3 className="font-semibold mb-2">1. Information We Collect</h3>
+              <h3 className="font-semibold mb-2 text-base">Warmest Greetings!</h3>
+              <p className="text-muted-foreground font-semibold mb-2">
+                CEDRIK – Cybersecurity Education through Dynamic Responsive Integrated Knowledge
+              </p>
+              <p className="text-muted-foreground">
+                Thank you for choosing to participate in our AI platform. Your involvement is crucial to advancing cybersecurity education, and we value your support. By engaging with this platform, you acknowledge that the information you provide will remain confidential and will be used solely for research purposes. We are committed to safeguarding your personal information and ensuring your privacy is respected at all times.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold mb-2 text-base">DATA PRIVACY POLICY</h3>
+              <p className="text-muted-foreground">
+                At CEDRIK, we are dedicated to protecting your privacy and ensuring the security of your personal data. By using this platform and submitting your personal information, you expressly consent to the collection, use, and disclosure of your data as outlined in this Privacy Policy.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold mb-2">Information We Collect</h3>
               <p className="text-muted-foreground mb-2">
-                We collect information that you provide directly to us, including:
+                For the purpose of conducting this research, we collect the following personal information:
               </p>
               <ul className="list-disc list-inside ml-4 text-muted-foreground space-y-1">
-                <li>Account information (username, email address, password)</li>
-                <li>Profile information you choose to provide</li>
-                <li>Communications with us and other users</li>
-                <li>Learning progress and course interactions</li>
-                <li>Files and content you upload to the platform</li>
+                <li>Full Name</li>
+                <li>Contact Details (Phone Number and Email Address)</li>
               </ul>
             </section>
 
             <section>
-              <h3 className="font-semibold mb-2">2. Automatically Collected Information</h3>
+              <h3 className="font-semibold mb-2">How We Use the Information</h3>
               <p className="text-muted-foreground mb-2">
-                When you use our platform, we automatically collect certain information, including:
+                The personal information you provide will be used for the following purposes:
               </p>
               <ul className="list-disc list-inside ml-4 text-muted-foreground space-y-1">
-                <li>Device information (IP address, browser type, operating system)</li>
-                <li>Usage data (pages visited, features used, time spent)</li>
-                <li>Log data (access times, error logs, system activity)</li>
-                <li>Cookies and similar tracking technologies</li>
+                <li><strong>Identification:</strong> Your account will be uniquely verified to distinguish you from other users, particularly for actions involving personal or sensitive data.</li>
+                <li><strong>Security:</strong> Your data helps protect your account and ensures its integrity, preventing unauthorized access.</li>
+                <li><strong>User Metrics:</strong> We may use the data to track user engagement and improve the service based on how users interact with the platform, such as identifying popular content or areas for improvement.</li>
               </ul>
             </section>
 
             <section>
-              <h3 className="font-semibold mb-2">3. How We Use Your Information</h3>
+              <h3 className="font-semibold mb-2">Information Sharing and Disclosure</h3>
+              <p className="text-muted-foreground">
+                We may share your information as needed to fulfill the purposes stated above:
+              </p>
+              <p className="text-muted-foreground mt-2">
+                With trusted service providers who assist us in research, analysis, or other relevant activities. These providers are required to uphold strict confidentiality agreements to protect your information.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold mb-2">Data Security</h3>
+              <p className="text-muted-foreground">
+                We have implemented robust physical, electronic, and managerial safeguards to prevent unauthorized access and ensure the security of your data. These security measures are designed to protect the confidentiality and integrity of the personal information we collect.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold mb-2">Your Rights as a Data Subject</h3>
               <p className="text-muted-foreground mb-2">
-                We use the information we collect to:
+                As a participant in this platform, you are entitled to the following rights under the Data Privacy Act:
               </p>
               <ul className="list-disc list-inside ml-4 text-muted-foreground space-y-1">
-                <li>Provide, maintain, and improve our educational services</li>
-                <li>Personalize your learning experience</li>
-                <li>Communicate with you about updates, security alerts, and support</li>
-                <li>Monitor and analyze usage patterns to improve our platform</li>
-                <li>Detect, prevent, and address technical issues and security threats</li>
-                <li>Enforce our terms of service and protect user safety</li>
+                <li>The right to access your personal information.</li>
+                <li>The right to correct any inaccuracies or omissions in your personal information.</li>
+                <li>The right to object to the processing of your personal information.</li>
+                <li>The right to request the erasure or blocking of your personal information.</li>
+                <li>The right to be informed about how your personal data is processed.</li>
+                <li>The right to seek damages in the event of unlawful processing of your data.</li>
+                <li>The right to lodge a complaint with the National Privacy Commission.</li>
               </ul>
             </section>
 
             <section>
-              <h3 className="font-semibold mb-2">4. Information Sharing and Disclosure</h3>
-              <p className="text-muted-foreground mb-2">
-                We do not sell your personal information. We may share your information only in the following circumstances:
-              </p>
-              <ul className="list-disc list-inside ml-4 text-muted-foreground space-y-1">
-                <li>With your consent or at your direction</li>
-                <li>With service providers who assist in operating our platform</li>
-                <li>To comply with legal obligations or respond to lawful requests</li>
-                <li>To protect the rights, property, and safety of our users and the public</li>
-                <li>In connection with a merger, sale, or acquisition of our business</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">5. Data Security</h3>
               <p className="text-muted-foreground">
-                We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no internet transmission is completely secure, and we cannot guarantee absolute security.
+                By signing up for this platform, you acknowledge that you have read, understood, and agreed to the terms outlined in this Privacy Policy. Your participation is greatly valued, and we sincerely appreciate your time and cooperation in contributing to our important research.
               </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">6. Data Retention</h3>
-              <p className="text-muted-foreground">
-                We retain your personal information for as long as necessary to provide our services, comply with legal obligations, resolve disputes, and enforce our agreements. When you delete your account, we will delete or anonymize your personal information within a reasonable timeframe.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">7. Your Rights and Choices</h3>
-              <p className="text-muted-foreground mb-2">
-                You have certain rights regarding your personal information:
-              </p>
-              <ul className="list-disc list-inside ml-4 text-muted-foreground space-y-1">
-                <li>Access and update your account information at any time</li>
-                <li>Request a copy of your personal data</li>
-                <li>Request deletion of your account and associated data</li>
-                <li>Opt out of marketing communications</li>
-                <li>Disable cookies through your browser settings</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">8. Cookies and Tracking Technologies</h3>
-              <p className="text-muted-foreground">
-                We use cookies and similar technologies to authenticate users, remember preferences, analyze usage, and improve our services. You can control cookies through your browser settings, but disabling them may affect platform functionality.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">9. Third-Party Services</h3>
-              <p className="text-muted-foreground">
-                Our platform may contain links to third-party websites or services. We are not responsible for the privacy practices of these third parties. We encourage you to review their privacy policies before providing them with any personal information.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">10. Children's Privacy</h3>
-              <p className="text-muted-foreground">
-                Our platform is not intended for users under the age of 13. We do not knowingly collect personal information from children under 13. If you believe we have collected such information, please contact us immediately.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">11. International Data Transfers</h3>
-              <p className="text-muted-foreground">
-                Your information may be transferred to and processed in countries other than your own. By using our platform, you consent to such transfers. We ensure appropriate safeguards are in place to protect your data.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">12. Changes to This Privacy Policy</h3>
-              <p className="text-muted-foreground">
-                We may update this privacy policy from time to time. We will notify you of significant changes by posting the new policy on our platform and updating the "Last updated" date. Your continued use after changes constitutes acceptance.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold mb-2">13. Contact Us</h3>
-              <p className="text-muted-foreground">
-                If you have questions or concerns about this privacy policy or our data practices, please contact us through our support channels. We will respond to your inquiry within a reasonable timeframe.
+              <p className="text-muted-foreground mt-2 font-semibold">
+                Thank you for your support and participation.
               </p>
             </section>
 
