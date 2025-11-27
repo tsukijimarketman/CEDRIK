@@ -3,11 +3,12 @@ import { SuperAdminSidebar } from "@/components/SuperAdminSidebar";
 import { UserManagement } from "@/components/UserManagement";
 import { AuditLogs } from "@/components/AuditLogs";
 import { KnowledgeBase } from "@/components/KnowledgeBase";
+import { MemoryArchive } from "@/components/MemoryArchive";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
 import { Moon, Sun } from "lucide-react";
 
-type ActiveSection = "user-management" | "audit-logs" | "knowledge-base";
+type ActiveSection = "user-management" | "audit-logs" | "knowledge-base" | "archive";
 
 const SuperAdmin = () => {
   const [activeSection, setActiveSection] = useState<ActiveSection>("user-management");
@@ -22,12 +23,13 @@ const SuperAdmin = () => {
         return <AuditLogs />;
       case "knowledge-base":
         return <KnowledgeBase />;
+      case "archive":
+        return <MemoryArchive />;
       default:
         return <UserManagement />;
     }
   };
 
-  // Compute responsive left margin for the fixed sidebar on desktop sizes
   const contentMarginClass = "md:ml-64";
 
   return (

@@ -228,6 +228,16 @@ export const memoryApi = {
   delete: async (memoryId: string) => {
     return api.delete(`/memory/delete/${memoryId}`);
   },
+
+  // Restore a soft-deleted memory
+  restore: async (memoryId: string) => {
+    return api.put(`/memory/restore/${memoryId}`);
+  },
+
+  // Permanently delete a memory (hard delete)
+  permanentDelete: async (memoryId: string) => {
+    return api.delete(`/memory/permanent-delete/${memoryId}`);
+  },
 };
 
 // Dedicated OTP API for signup flow (reuses the same backend endpoint for now)

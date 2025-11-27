@@ -332,9 +332,24 @@ def get():
     filters.append(match_regex("mem_type", mem_type))
 
   try:
-    pipeline = [
-      pagination.build_archive_match()
-    ]
+    # Check if we're viewing archive or active items
+    archive = request.args.get('archive', '0')
+    
+    pipeline = []
+    
+    # FIXED: Properly handle archive filtering
+    if archive == '0':  # Not viewing archive - show only non-deleted items
+      pipeline.append({
+        "$match": {
+          "deleted_at": None
+        }
+      })
+    else:  # Viewing archive - show only deleted items
+      pipeline.append({
+        "$match": {
+          "deleted_at": {"$ne": None}
+        }
+      })
 
     count_pipeline = [ i for i in pipeline ]
     count_pipeline.append({
@@ -458,6 +473,74 @@ def get():
     raise HttpValidationError(e.to_dict())
   except Exception as e:
     Logger.log.error(f"Get error: {e}")
+    raise HTTPException(description=str(e))
+  
+@memory.route("/restore/<memory_id>", methods=["PUT"])
+@jwt_required(optional=False)
+@protect(role=Role.ADMIN)
+def restore(memory_id):
+  """
+  Restore a soft-deleted memory by ID
+  Sets deleted_at back to None
+  For file memories, restores ALL chunks with the same file_id
+  """
+  if not ObjectId.is_valid(memory_id):
+    raise InvalidId()
+
+  try:
+    user_token = get_token()
+    
+    with Transaction() as (session, db):
+      col_mem = db.get_collection(Collections.MEMORY.value)
+      col_audit = db.get_collection(Collections.AUDIT.value)
+
+      # Get the memory to check for file
+      memory_obj = Memory.objects(id=memory_id).first()
+      if not memory_obj:
+        raise InvalidId()
+
+      # Check if this memory has chunks (file memory)
+      if memory_obj.file_id:
+        # This is a file memory - restore ALL chunks with this file_id
+        result = Memory.objects(file_id=memory_obj.file_id).update(
+          deleted_at=None
+        )
+        
+        Logger.log.info(f"Restored {result} memory chunks for file_id: {memory_obj.file_id}")
+
+        # Log audit for all chunks
+        chunks = Memory.objects(file_id=memory_obj.file_id)
+        for chunk in chunks:
+          audit = audit_collection(
+            type=AuditType.UPDATE,  # Or add AuditType.RESTORE if you have it
+            collection=Collections.MEMORY,
+            id=chunk.id,
+          )
+          col_audit.insert_one(audit.to_mongo(), session=session)
+          
+      else:
+        # This is a text-only memory - restore single item
+        result = Memory.objects(id=memory_id).update_one(
+          deleted_at=None
+        )
+
+        if result == 0:
+          raise InvalidId()
+
+        # Log audit
+        audit = audit_collection(
+          type=AuditType.UPDATE,  # Or add AuditType.RESTORE if you have it
+          collection=Collections.MEMORY,
+          id=ObjectId(memory_id),
+        )
+        col_audit.insert_one(audit.to_mongo(), session=session)
+
+    return jsonify({"message": "Memory restored successfully"}), 200
+
+  except InvalidId:
+    raise InvalidId()
+  except Exception as e:
+    Logger.log.error(f"Restore error: {e}")
     raise HTTPException(description=str(e))
 
 @memory.route("/mem-types")
