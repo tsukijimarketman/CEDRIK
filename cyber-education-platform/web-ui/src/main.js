@@ -2,7 +2,7 @@
 const API_URL = `/cyber-education/api`;
 // const VNC_URL =
 //   'http://localhost:6080/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123';
-const VNC_URL = `/cyber-education/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`
+const VNC_URL = `/cyber-education/vnc/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`
 
 let currentScenario = null;
 let conversationHistory = [];
