@@ -380,7 +380,14 @@ def register():
         raise HttpValidationError(e.to_dict()) # type: ignore
     except DuplicateKeyError as e:
         Logger.log.error(str(e))
-        raise UserAlreadyExist()
+        # Parse the error message to determine which field is duplicated
+        error_msg = str(e)
+        if "username" in error_msg.lower():
+            raise UserAlreadyExist(field="username")
+        elif "email" in error_msg.lower():
+            raise UserAlreadyExist(field="email")
+        else:
+            raise UserAlreadyExist()
     except Exception as e:
         Logger.log.error(repr(e))
         raise HTTPException(description=str(e))

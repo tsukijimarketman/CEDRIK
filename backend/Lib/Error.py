@@ -13,8 +13,14 @@ class UserDoesNotExist(HTTPException):
         self.code = 400
 
 class UserAlreadyExist(HTTPException):
-    def __init__(self):
-        super().__init__("User already exist", Response(status=400))
+    def __init__(self, field: str = "user"):
+        if field == "username":
+            message = "This username is already taken. Please choose another."
+        elif field == "email":
+            message = "This email is already registered. Please use another or sign in."
+        else:
+            message = "User already exists"
+        super().__init__(message, Response(status=400))
         self.code = 400
 
 class HttpValidationError(HTTPException):
