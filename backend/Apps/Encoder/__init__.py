@@ -6,7 +6,7 @@ from backend.Lib.Config import SENTENCE_TRANSFORMER_MODEL, MAIN_SERVER
 from typing import List, Any
 
 app = Flask(__name__)
-
+CORS(app, supports_credentials=True)
 CORS(
   app,
   resources={

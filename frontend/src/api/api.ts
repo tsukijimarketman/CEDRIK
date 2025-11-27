@@ -103,8 +103,6 @@ export const authApi = {
   },
 };
 
-
-
 // Memory Types
 export type MemoryItem = {
   id: string;
@@ -146,14 +144,14 @@ export const memoryApi = {
     const formData = new FormData();
     formData.append("title", data.title);
     formData.append("text", data.text);
-    
+
     // Handle tags array
     if (data.tags && data.tags.length > 0) {
-      data.tags.forEach(tag => {
+      data.tags.forEach((tag) => {
         formData.append("tags", tag);
       });
     }
-    
+
     // Handle file if provided
     if (data.file) {
       formData.append("file", data.file);
@@ -169,7 +167,7 @@ export const memoryApi = {
   // Get memories with optional filters
   get: async (filters?: MemoryGetRequest, params?: MemoryGetParams) => {
     const queryParams: Record<string, string> = {};
-    
+
     if (params?.archive !== undefined) {
       queryParams.archive = params.archive ? "1" : "0";
     }
@@ -197,21 +195,21 @@ export const memoryApi = {
   // Update an existing memory
   update: async (memoryId: string, data: Partial<MemoryCreateRequest>) => {
     const formData = new FormData();
-    
+
     if (data.title) {
       formData.append("title", data.title);
     }
     if (data.text) {
       formData.append("text", data.text);
     }
-    
+
     // Handle tags array
     if (data.tags && data.tags.length > 0) {
-      data.tags.forEach(tag => {
+      data.tags.forEach((tag) => {
         formData.append("tags", tag);
       });
     }
-    
+
     // Handle file if provided
     if (data.file) {
       formData.append("file", data.file);
@@ -300,6 +298,8 @@ export const sidebarTitleApi = {
     }));
     return res;
   },
+  updateChatTitle: (conversationId: string, title: string) =>
+    api.put(`/conversation/update_title/${conversationId}`, { title }),
 };
 
 export const sidebarConversationOpen = {
@@ -337,7 +337,7 @@ export type ChatRequest = {
   conversation?: string | null;
   content: string;
   file: File | null;
-  agent?: 'professor' | 'hacker';
+  agent?: "professor" | "hacker";
 };
 
 export type ChatResponse = {
@@ -351,21 +351,21 @@ export const aiApi = {
     const formData = new FormData();
     formData.append("conversation", data.conversation || "");
     formData.append("content", data.content);
-    
+
     // Only append file if it exists (not null)
     if (data.file) {
       formData.append("file", data.file);
     }
-    
+
     // ✅ Send agent parameter to backend
     if (data.agent) {
       formData.append("agent", data.agent);
     }
-    
+
     // ✅ Send overrides as JSON string
     const overrides = {};
     formData.append("overrides", JSON.stringify(overrides));
-    
+
     return api.post<ChatResponse>("/ai/chat", formData, {
       headers: {
         "Content-Type": "multipart/form-data",

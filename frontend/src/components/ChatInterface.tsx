@@ -4,7 +4,7 @@ import { ChatMessage } from "./ChatMessage";
 import { WelcomeMessage } from "./WelcomeMessage";
 import { ChatInput } from "./ChatInput";
 import { ThemeToggle } from "./ThemeToggle";
-import { aiApi, sidebarConversationOpen } from "@/api/api";
+import { aiApi, sidebarConversationOpen, sidebarTitleApi } from "@/api/api";
 import { useUser } from "@/contexts/UserContext";
 import { useChat } from "@/contexts/ChatContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -54,6 +54,44 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
       document.body.removeChild(textArea);
     }
   }
+};
+
+// Function to update chat title
+const updateChatTitle = async (
+  conversationId: string,
+  title: string
+): Promise<void> => {
+  try {
+    console.log("🔄 Updating chat title via API:", { conversationId, title });
+
+    // Update backend first
+    await sidebarTitleApi.updateChatTitle(conversationId, title);
+
+    // Then update frontend via event
+    window.dispatchEvent(
+      new CustomEvent("updateChatTitle", {
+        detail: { conversationId, title },
+      })
+    );
+
+    console.log("✅ Title updated successfully");
+  } catch (error) {
+    console.error("❌ Failed to update chat title via API:", error);
+    // Even if backend fails, still update frontend for better UX
+    window.dispatchEvent(
+      new CustomEvent("updateChatTitle", {
+        detail: { conversationId, title },
+      })
+    );
+
+    // Don't refresh sidebar if title update failed to avoid overwriting
+    return;
+  }
+
+  // Only refresh sidebar if backend update was successful
+  setTimeout(() => {
+    window.dispatchEvent(new CustomEvent("refreshSidebar"));
+  }, 500);
 };
 
 export function ChatInterface() {
@@ -181,22 +219,41 @@ export function ChatInterface() {
   const handleEditMessage = (messageId: string, newContent: string) => {
     if (!user) return;
 
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId
-          ? { ...msg, content: newContent, isEdited: true }
-          : msg
-      )
-    );
+    // Find the message index first
+    const messageIndex = messages.findIndex((msg) => msg.id === messageId);
+    const editedMessage = messages[messageIndex];
 
-    const editedMessage = messages.find((msg) => msg.id === messageId);
     if (editedMessage?.role === "user") {
-      const messageIndex = messages.findIndex((msg) => msg.id === messageId);
       const nextAssistantMessage = messages[messageIndex + 1];
 
+      // Create the updated messages array
+      let updatedMessages: Message[];
+
       if (nextAssistantMessage && nextAssistantMessage.role === "assistant") {
-        const messagesUntilEdit = messages.slice(0, messageIndex + 1);
-        setMessages(messagesUntilEdit);
+        // Keep messages up to and including the edited one, remove the rest
+        updatedMessages = [
+          ...messages.slice(0, messageIndex),
+          {
+            ...editedMessage,
+            content: newContent,
+            isEdited: true,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ];
+      } else {
+        // Just update the message content
+        updatedMessages = messages.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, content: newContent, isEdited: true }
+            : msg
+        );
+      }
+
+      // Single setMessages call to avoid race conditions
+      setMessages(updatedMessages);
+
+      // Only regenerate if there was an assistant message to regenerate
+      if (nextAssistantMessage && nextAssistantMessage.role === "assistant") {
         handleRegenerateResponse(messageId, newContent);
       }
     }
@@ -250,7 +307,7 @@ export function ChatInterface() {
         conversation: activeChatId,
         content: userMessage.content,
         file: null,
-        agent: currentAgent, 
+        agent: currentAgent,
       });
 
       const reply = res.data.reply ?? "";
@@ -297,7 +354,7 @@ export function ChatInterface() {
     }
   };
 
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = async (content: string) => {
     if (!user) {
       console.log("Please log in to send messages");
       return;
@@ -325,64 +382,85 @@ export function ChatInterface() {
 
     setIsLoading(true);
 
-    void aiApi
-      .chat({
+    try {
+      const res = await aiApi.chat({
         conversation: activeChatId,
         content: content,
         file: null,
         agent: currentAgent,
-      })
-      .then((res) => {
-        const reply = res.data.reply ?? "";
-        const returnedConvId = res.data.conversation;
+      });
 
-        if (returnedConvId && !activeChatId) {
-          setActiveChatId(returnedConvId);
-          // Generate a title from the first message
-          const generatedTitle =
-            content.slice(0, 30) + (content.length > 30 ? "..." : "");
+      const reply = res.data.reply ?? "";
+      const returnedConvId = res.data.conversation;
+
+      // Generate title from first user message (truncated)
+      const generatedTitle =
+        content.slice(0, 50) + (content.length > 50 ? "..." : "");
+
+      console.log("🎯 Title update debug:", {
+        returnedConvId,
+        activeChatId,
+        messagesLength: messages.length,
+        generatedTitle,
+      });
+
+      // Handle title updates for different scenarios
+      if (returnedConvId && !activeChatId) {
+        // Case 1: Brand new conversation - update title
+        setActiveChatId(returnedConvId);
+        setCurrentChatTitle(generatedTitle);
+        await updateChatTitle(returnedConvId, generatedTitle);
+        console.log("🆕 Updated title for new conversation");
+      } else if (activeChatId) {
+        // Case 2: Existing conversation - check if this is the first real message
+        const nonThinkingMessages = messages.filter(
+          (msg) => !msg.id.startsWith("thinking-")
+        );
+        const isFirstRealMessage = nonThinkingMessages.length === 0;
+
+        if (isFirstRealMessage) {
           setCurrentChatTitle(generatedTitle);
-
-          // Trigger sidebar refresh to update the title in the chat list
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent("refreshSidebar"));
-          }, 100);
-        } else {
-          // Just refresh sidebar for existing chats
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent("refreshSidebar"));
-          }, 100);
+          await updateChatTitle(activeChatId, generatedTitle);
+          console.log(
+            "📝 Updated title for first message in existing conversation"
+          );
         }
+      }
 
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === thinkingId
-              ? {
-                  ...m,
-                  content: reply,
-                  timestamp: new Date().toLocaleTimeString(),
-                }
-              : m
-          )
-        );
+      // Always refresh sidebar to ensure consistency
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("refreshSidebar"));
+      }, 300);
 
-        markMessageAsNew(thinkingId);
-      })
-      .catch((err) => {
-        const message = getErrorMessage(err);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === thinkingId
-              ? {
-                  ...m,
-                  content: `Error: ${message}`,
-                  timestamp: new Date().toLocaleTimeString(),
-                }
-              : m
-          )
-        );
-      })
-      .finally(() => setIsLoading(false));
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === thinkingId
+            ? {
+                ...m,
+                content: reply,
+                timestamp: new Date().toLocaleTimeString(),
+              }
+            : m
+        )
+      );
+
+      markMessageAsNew(thinkingId);
+    } catch (err) {
+      const message = getErrorMessage(err);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === thinkingId
+            ? {
+                ...m,
+                content: `Error: ${message}`,
+                timestamp: new Date().toLocaleTimeString(),
+              }
+            : m
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOpenMessage = async (conversation: string) => {
@@ -404,8 +482,7 @@ export function ChatInterface() {
       );
       setMessages(fetchedMessages);
 
-      // Set the chat title (you might need to fetch this from your API)
-      // For now, we'll generate a title from the first message
+      // Set the chat title from the first message
       if (fetchedMessages.length > 0) {
         const firstMessage = fetchedMessages[0].content;
         const generatedTitle =
@@ -429,61 +506,61 @@ export function ChatInterface() {
   }
 
   const renderHeader = () => (
-  <div
-    className={`fixed top-0 left-0 right-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30 ${contentMarginClass} transition-all duration-300`}
-  >
     <div
-      className={cn(
-        "flex items-center justify-between p-4",
-        isSidebarCollapsed ? "max-w-4xl mx-auto" : "w-full px-6"
-      )}
+      className={`fixed top-0 left-0 right-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30 ${contentMarginClass} transition-all duration-300`}
     >
-      {/* Left section - Hamburger and Logo */}
-      <div className="flex items-center gap-4">
-        {isSidebarCollapsed ? (
-          <>
-            <button
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="p-2 hover:bg-muted rounded-md transition-colors"
-              title="Open sidebar"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-5 h-5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                />
-              </svg>
-            </button>
-            <img src="/cedriklogo.png" alt="CEDRIK" className="h-8 w-auto" />
-          </>
-        ) : (
-          <img src="/cedriklogo.png" alt="CEDRIK" className="h-8 w-auto" />
+      <div
+        className={cn(
+          "flex items-center justify-between p-4",
+          isSidebarCollapsed ? "max-w-4xl mx-auto" : "w-full px-6"
         )}
-      </div>
+      >
+        {/* Left section - Hamburger and Logo */}
+        <div className="flex items-center gap-4">
+          {isSidebarCollapsed ? (
+            <>
+              <button
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="p-2 hover:bg-muted rounded-md transition-colors"
+                title="Open sidebar"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                  />
+                </svg>
+              </button>
+              <img src="/cedriklogo.png" alt="CEDRIK" className="h-8 w-auto" />
+            </>
+          ) : (
+            <img src="/cedriklogo.png" alt="CEDRIK" className="h-8 w-auto" />
+          )}
+        </div>
 
-      {/* Centered Chat Title */}
-      <div className="flex-1 flex justify-center">
-        <h1 className="text-lg font-semibold text-foreground truncate max-w-md">
-          {currentChatTitle || "New Chat"}
-        </h1>
-      </div>
+        {/* Centered Chat Title */}
+        <div className="flex-1 flex justify-center">
+          <h1 className="text-lg font-semibold text-foreground truncate max-w-md">
+            {currentChatTitle || "New Chat"}
+          </h1>
+        </div>
 
-      {/* Right section - Agent Switcher + Theme toggle */}
-      <div className="flex items-center gap-2">
-        <AgentSwitcher />  {/* ← NEW! */}
-        <ThemeToggle />
+        {/* Right section - Agent Switcher + Theme toggle */}
+        <div className="flex items-center gap-2">
+          <AgentSwitcher />
+          <ThemeToggle />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 
   const renderMessages = () => (
     <ScrollArea className="flex-1" ref={scrollAreaRef}>

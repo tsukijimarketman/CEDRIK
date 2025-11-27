@@ -78,6 +78,15 @@ export function ChatMessage({
     }
   }, [currentIndex, content, isUser, isNewMessage]);
 
+  useEffect(() => {
+    if (content !== displayedContent && !isNewMessage) {
+      // If content changed but this isn't a new message (likely an edit), update immediately
+      setDisplayedContent(content);
+      setIsTypingComplete(true);
+      isFirstRender.current = false;
+    }
+  }, [content, displayedContent, isNewMessage]);
+
   // Reset typewriter effect when we get a truly new message
   useEffect(() => {
     if (

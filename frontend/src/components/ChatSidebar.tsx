@@ -74,10 +74,33 @@ export function ChatSidebar({
   const { setActiveChatId, activeChatId } = useChat();
 
   // Load chats when user changes OR when refresh event is triggered
+  // Load chats when user changes OR when refresh event is triggered
   const handleChatTitle = async () => {
     try {
       const res = await sidebarTitleApi.sidebarConversationGetTitle();
-      setChats(res.data);
+      console.log("📋 Backend chats response:", res.data);
+
+      // Merge with local updates - preserve any titles we've updated locally
+      setChats((prev) => {
+        const localTitleUpdates = new Map();
+        prev.forEach((chat) => {
+          // Only preserve titles that are different from "New Chat"
+          if (chat.title !== "New Chat" && chat.title !== "") {
+            localTitleUpdates.set(chat.conversation, chat.title);
+          }
+        });
+
+        const mergedChats = res.data.map((backendChat: Chat) => ({
+          ...backendChat,
+          // Use local title if we have one, otherwise use backend title
+          title:
+            localTitleUpdates.get(backendChat.conversation) ||
+            backendChat.title,
+        }));
+
+        console.log("🔄 Merged chats:", mergedChats);
+        return mergedChats;
+      });
     } catch (error) {
       console.error("Failed to load chats:", error);
     }
@@ -119,6 +142,34 @@ export function ChatSidebar({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Listen for chat title updates from the chat interface
+  useEffect(() => {
+    const handleTitleUpdate = (
+      event: CustomEvent<{ conversationId: string; title: string }>
+    ) => {
+      console.log("📝 Received updateChatTitle event:", event.detail);
+      const { conversationId, title } = event.detail;
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.conversation === conversationId ? { ...chat, title } : chat
+        )
+      );
+    };
+
+    const handleEvent = (e: Event) =>
+      handleTitleUpdate(
+        e as CustomEvent<{ conversationId: string; title: string }>
+      );
+    window.addEventListener("updateChatTitle", handleEvent as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        "updateChatTitle",
+        handleEvent as EventListener
+      );
+    };
+  }, []);
+
   // Handle click outside for mobile menu and profile dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -150,6 +201,11 @@ export function ChatSidebar({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMobileMenuOpen, isMobile, isProfileOpen]);
+
+  // Debug: Log when chats update
+  useEffect(() => {
+    console.log("🔄 ChatSidebar chats updated:", chats);
+  }, [chats]);
 
   const toggleProfile = () => {
     setIsProfileOpen(!isProfileOpen);
@@ -243,10 +299,10 @@ export function ChatSidebar({
       // Create a new conversation in the backend
       const res = await sidebarConversationCreate.newChat();
 
-      // Create chat object with proper Date conversion
+      // Create chat object with placeholder title
       const newChat: Chat = {
         conversation: res.data.conversation,
-        title: res.data.title,
+        title: "New Chat", // Placeholder that will be updated
         created_at: new Date(res.data.created_at),
       };
 

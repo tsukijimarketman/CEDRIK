@@ -111,6 +111,42 @@ def create():
     Logger.log.error(repr(e))
     return jsonify({"error": "Failed to create conversation"}), 500
 
+@b_conversation.route("/update_title/<id>", methods=["PUT"])
+@jwt_required(optional=False)
+def update_title(id: str):
+  user_id = get_token()
+  if user_id == None:
+    raise InvalidId()
+
+  try:
+    # Verify the conversation belongs to the user
+    conversation = Conversation.objects(id=id, owner=user_id.id).first()
+    if not conversation:
+      return jsonify({"error": "Conversation not found"}), 404
+
+    # Get new title from request
+    data = request.get_json()
+    if not data or 'title' not in data:
+      return jsonify({"error": "Title is required"}), 400
+
+    new_title = data['title']
+    if not new_title or len(new_title.strip()) == 0:
+      return jsonify({"error": "Title cannot be empty"}), 400
+
+    # Update the title
+    conversation.title = new_title.strip()
+    conversation.save()
+
+    return jsonify({
+      "success": True,
+      "message": "Title updated",
+      "conversation": str(conversation.id),
+      "title": conversation.title
+    }), 200
+
+  except Exception as e:
+    Logger.log.error(repr(e))
+    return jsonify({"error": "Failed to update title"}), 500
 
 @b_conversation.route("/delete/<id>", methods=["DELETE"])
 @jwt_required(optional=False)
