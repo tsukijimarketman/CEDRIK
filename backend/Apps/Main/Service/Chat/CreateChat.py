@@ -14,6 +14,7 @@ from backend.Apps.Main.Utils.LLM import Prompt, generate_embeddings, generate_mo
 
 def __search_similarity_from_memory(query_embeddings: List[float]):
   # Text only vector search
+  # ✅ FIXED: Added filter to exclude soft-deleted memories
   pipeline = [
     {
         "$vectorSearch": {
@@ -21,7 +22,10 @@ def __search_similarity_from_memory(query_embeddings: List[float]):
             "path": "embeddings",
             "queryVector": query_embeddings,
             "numCandidates": 100,
-            "limit": MAX_CONTEXT_SIZE
+            "limit": MAX_CONTEXT_SIZE,
+            "filter": {
+                "deleted_at": None  # ✅ Only include non-deleted memories
+            }
         }
     },
     {
