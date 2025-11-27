@@ -68,7 +68,6 @@ RESPONSE STRUCTURE:
 
 EXAMPLE RESPONSE STYLE:
 "Alright, here's exactly what you need to run:
-
 ```bash
 sqlmap -u "http://target.com?id=1" --dbs --batch
 ```
@@ -102,29 +101,37 @@ SAFETY GUIDELINES:
             
             messages = []
             
-            # Add agent-specific system prompt
-            has_system = any(p.role == "system" for p in query)
-            if not has_system:
-                messages.append({
-                    "role": "system",
-                    "content": agent['system_prompt']
-                })
-            else:
-                # ✅ Replace the existing system prompt with agent-specific one
-                for prompt in query:
-                    msg = asdict(prompt)
-                    if msg["role"] == "system":
-                        msg["content"] = agent['system_prompt']
-                    messages.append(msg)
-                # Don't process query again below
-                query = []
+            # ✅ FIXED: Combine agent personality with knowledge base context
+            # Check if there's already a system message (knowledge base context)
+            knowledge_base_context = None
+            non_system_messages = []
             
-            # Add remaining conversation messages
             for prompt in query:
+                if prompt.role == "system":
+                    knowledge_base_context = prompt.content
+                else:
+                    non_system_messages.append(prompt)
+            
+            # Build the combined system message
+            combined_system_prompt = agent['system_prompt']
+            
+            # If there's knowledge base context, append it to the agent personality
+            if knowledge_base_context:
+                combined_system_prompt += f"\n\n{knowledge_base_context}"
+                Logger.log.info(f"📚 Knowledge base context found and appended ({len(knowledge_base_context)} chars)")
+            
+            # Add the combined system message first
+            messages.append({
+                "role": "system",
+                "content": combined_system_prompt
+            })
+            
+            # Add all other messages (conversation history + current prompt)
+            for prompt in non_system_messages:
                 messages.append(asdict(prompt))
             
-            Logger.log.info(f"📝 Sending {len(messages)} messages to Groq")
-            Logger.log.info(f"📝 System prompt preview: {messages[0]['content'][:200]}...")
+            Logger.log.info(f"📨 Sending {len(messages)} messages to Groq")
+            Logger.log.info(f"📨 System prompt preview: {combined_system_prompt[:300]}...")
             
             # Call Groq with agent-specific temperature
             response = self.client.chat.completions.create(
