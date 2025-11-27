@@ -172,8 +172,11 @@ services:
     networks:
       - hack-lab-network
     environment:
-      - CYBER_EDUCATION_API_BASE_URL=http://localhost:3000
-      - CYBER_EDUCATION_VNC_BASE_URL=http://localhost:6080
+      # put this env in .env of server
+      # not working must install dotenv in web-ui
+      - VITE_CYBER_EDUCATION_API_BASE_URL=http://localhost:3000
+      - VITE_CYBER_EDUCATION_VNC_BASE_URL=http://localhost:6080
+      # ---
       - API_URL=http://bridge-server:3000
       - VNC_URL=http://novnc:8080
     depends_on:
