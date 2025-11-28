@@ -106,6 +106,84 @@ def delete(memory_id):
   except Exception as e:
     Logger.log.error(f"Delete error: {e}")
     raise HTTPException(description=str(e))
+  
+@memory.route("/permanent-delete/<memory_id>", methods=["DELETE"])
+@jwt_required(optional=False)
+@protect(role=Role.ADMIN)
+def permanent_delete(memory_id):
+  """
+  Permanently delete a memory by ID (hard delete)
+  If memory is a file type, permanently deletes ALL chunks with the same file_id
+  Also deletes the file from GridFS
+  """
+  if not ObjectId.is_valid(memory_id):
+    raise InvalidId()
+
+  try:
+    user_token = get_token()
+    
+    with Transaction() as (session, db):
+      col_mem = db.get_collection(Collections.MEMORY.value)
+      col_audit = db.get_collection(Collections.AUDIT.value)
+
+      # Get the memory to check for file
+      memory_obj = Memory.objects(id=memory_id).first()
+      if not memory_obj:
+        raise InvalidId()
+
+      # Determine if this is a file memory with chunks
+      if memory_obj.file_id:
+        # This is a file memory - permanently delete ALL chunks with this file_id
+        file_id = memory_obj.file_id
+        
+        # Get all memory chunks with this file_id for audit logging
+        all_chunks = Memory.objects(file_id=file_id)
+        chunk_ids = [chunk.id for chunk in all_chunks]
+        
+        # Delete the file from GridFS
+        fs = GridFS(get_db())
+        try:
+          fs.delete(file_id)
+          Logger.log.info(f"Permanently deleted file from GridFS: {file_id}")
+        except Exception as e:
+          Logger.log.error(f"Error deleting file: {e}")
+
+        # Permanently delete ALL chunks (hard delete)
+        result = Memory.objects(file_id=file_id).delete()
+        
+        Logger.log.info(f"Permanently deleted {result} memory chunks for file_id: {file_id}")
+
+        # Log audit for all chunks
+        for chunk_id in chunk_ids:
+          audit = audit_collection(
+            type=AuditType.DELETE,
+            collection=Collections.MEMORY,
+            id=chunk_id,
+          )
+          col_audit.insert_one(audit.to_mongo(), session=session)
+          
+      else:
+        # This is a text-only memory - permanently delete single item
+        result = Memory.objects(id=memory_id).delete()
+
+        if result == 0:
+          raise InvalidId()
+
+        # Log audit
+        audit = audit_collection(
+          type=AuditType.DELETE,
+          collection=Collections.MEMORY,
+          id=ObjectId(memory_id),
+        )
+        col_audit.insert_one(audit.to_mongo(), session=session)
+
+    return jsonify({"message": "Memory permanently deleted"}), 200
+
+  except InvalidId:
+    raise InvalidId()
+  except Exception as e:
+    Logger.log.error(f"Permanent delete error: {e}")
+    raise HTTPException(description=str(e))
 
 @memory.route("/update/<memory_id>", methods=["PUT"])
 @jwt_required(optional=False)
