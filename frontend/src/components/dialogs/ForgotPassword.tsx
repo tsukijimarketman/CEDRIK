@@ -35,38 +35,66 @@ export function ForgotPasswordDialog({
     setLoading(true);
 
     try {
-      // Send email using EmailJS
+      // Step 1: Get OTP from backend
+      console.log("Requesting OTP for:", email);
       const resOTP = await passwordApi.forgotPassword(email);
       const otp = resOTP.data;
-      setOtpass(otp);
+      console.log("OTP received from backend:", otp);
       
+      // ✅ Convert OTP to string to ensure consistency
+      const otpString = String(otp);
+      setOtpass(otpString);
       
-
+      // Step 2: Send email using EmailJS
       const templateParams = {
         email: email,
-        otp: otp,
+        otp: otpString, // ✅ Use string version
       };
 
+      console.log("Sending email via EmailJS...");
       await emailjs.send(
-        import.meta.env.VITE_SERVICE_ID_EMAILJS, // Your Service ID
-        import.meta.env.VITE_FORGOT_PASSWORD_TEMPLATE_ID_EMAILJS, // Your Template ID
-        templateParams, // template parameters
-        import.meta.env.VITE_PUBLIC_KEY_EMAILJS // Your Public Key
+        import.meta.env.VITE_SERVICE_ID_EMAILJS,
+        import.meta.env.VITE_FORGOT_PASSWORD_TEMPLATE_ID_EMAILJS,
+        templateParams,
+        import.meta.env.VITE_PUBLIC_KEY_EMAILJS
       );
+      console.log("Email sent successfully");
 
       toast({
         title: "Email Sent",
         description: "Check your inbox for the verification code.",
       });
+      
       onClose(); // close forgot password dialog
       setOtpDialogOpen(true); // open OTP dialog
+      
     } catch (error: any) {
+      // ✅ Enhanced error logging
+      console.error("Error in handleSendOTP:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        text: error?.text,
+        response: error?.response,
+        data: error?.response?.data,
+        error: error?.error,
+      });
+
+      // ✅ Better error message extraction
+      let errorMessage = "Something went wrong. Please try again.";
+      
+      if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.error) {
+        errorMessage = error.error;
+      } else if (error?.text) {
+        errorMessage = error.text;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Error",
-        description:
-          error?.text ||
-          error?.message ||
-          "Something went wrong. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

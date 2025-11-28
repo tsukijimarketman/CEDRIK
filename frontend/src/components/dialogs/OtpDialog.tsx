@@ -29,39 +29,42 @@ export function ConfirmOtpDialog({
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  console.log("OTP Dialog Props:", { otpass, email, open });
 
   const handleConfirmOTP = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      setLoading(true);
+  async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-      try {
-        if (otp === otpass) {
-          toast({
-            title: "OTP Verified",
-            description: "You can now reset your password.",
-          });
-          onClose();
-          setResetDialogOpen(true);
-        } else {
-          toast({
-            title: "Error",
-            description: "Invalid OTP. Please try again.",
-            variant: "destructive",
-          });
-        }
-      } catch (error: any) {
+    try {
+      console.log("Comparing OTPs:", { entered: otp, expected: otpass }); // Add this for debugging
+      
+      if (otp === otpass) {
+        toast({
+          title: "OTP Verified",
+          description: "You can now reset your password.",
+        });
+        onClose();
+        setResetDialogOpen(true);
+      } else {
         toast({
           title: "Error",
-          description: error?.message || "Invalid OTP. Please try again.",
+          description: "Invalid OTP. Please try again.",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
       }
-    },
-    [otp]
-  );
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Invalid OTP. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  },
+  [otp, otpass, toast, onClose] // ✅ Include ALL dependencies
+);
 
   return (
     <>
