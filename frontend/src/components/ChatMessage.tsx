@@ -8,6 +8,7 @@ import {
   oneLight,
 } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUser } from "@/contexts/UserContext";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -41,6 +42,8 @@ export function ChatMessage({
   const [copyFeedback, setCopyFeedback] = useState<"none" | "code" | "all">(
     "none"
   );
+
+  const { user } = useUser();
 
   const isUser = role === "user";
 
@@ -374,14 +377,16 @@ export function ChatMessage({
   );
 
   const renderMessageContent = () => {
+    // In the renderMessageContent function where the textarea is defined, replace this part:
     if (isEditing) {
       return (
         <div className="space-y-2">
           <textarea
             value={editedContent}
             onChange={(e) => setEditedContent(e.target.value)}
-            className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
             autoFocus
+            placeholder="Edit your message..."
           />
         </div>
       );
@@ -498,11 +503,13 @@ export function ChatMessage({
             {isUser ? (
               <>
                 <AvatarImage
-                  src="https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${
+                    user?.username || "user"
+                  }`}
                   alt="USER"
                 />
                 <AvatarFallback className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                  U
+                  {user?.username ? user.username.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
               </>
             ) : (
@@ -519,7 +526,6 @@ export function ChatMessage({
             )}
           </Avatar>
         </div>
-
         {/* Message Content */}
         <div className={cn("flex-1", isUser ? "text-right" : "text-left")}>
           {/* Message bubble */}
