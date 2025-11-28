@@ -41,53 +41,85 @@ def _text_memory(data: DCreateMemory, session: ClientSession, col_memory: Collec
   return col_memory.insert_one(mem.to_mongo(), session=session).inserted_id # type: ignore
 
 def _file_memory(data: DCreateMemory, session: ClientSession, col_memory: Collection): # type: ignore
-  assert(data.file != None)
-
-  data.file.stream.seek(0)
-  file_info = FileInfo(
-    filename=data.file.filename, # type: ignore
-    content_type=data.file.content_type, # type: ignore
-    stream=io.BytesIO(data.file.stream.read())
-  )
-  data.file.stream.seek(0)
-
-  extracted = extract(file_info)
-  chunks = chunkify(
-    io.BytesIO(extracted.encode())
-  )
-  Logger.log.warning(f"CHUNKS {chunks}")
-
-  fs = GridFS(get_db())
-  Logger.log.info("Uploading File")
-  file_id: ObjectId | None = fs.put(
-    data.file.stream,
-    filename=data.file.filename,
-    content_type=data.file.content_type
-  )
-  if file_id == None:
-    raise HTTPException(description="Something went wrong please try again")
-  Logger.log.info("File Uploaded")
-
-  try:
-    memories: List[Memory] = []
-    for chunk in chunks:
-      decoded = chunk.decode()
-      embeddings = generate_embeddings([decoded])
-      mem = Memory(
-        title=data.title,
-        mem_type=MemoryType.FILE,
-        tags=data.tags,
-        embeddings=embeddings,
-        text=decoded,
-        file_id=file_id
-      )
-      mem.validate() # type: ignore
-      memories.append(mem.to_mongo()) # type: ignore
+    assert(data.file != None)
     
-    return col_memory.insert_many(memories, session=session).inserted_ids # type: ignore
-  except Exception as e:
-    fs.delete(file_id)
-    raise
+    # Reset stream to beginning and extract content
+    data.file.stream.seek(0)
+    file_info = FileInfo(
+        filename=data.file.filename, # type: ignore
+        content_type=data.file.content_type, # type: ignore
+        stream=io.BytesIO(data.file.stream.read())
+    )
+    
+    
+    # Extract text from file
+    extracted = extract(file_info)
+    Logger.log.info(f"Extracted text length: {len(extracted)}")
+    
+    # Convert extracted text to bytes for chunking
+    extracted_bytes = extracted.encode('utf-8')
+    chunks = chunkify(io.BytesIO(extracted_bytes))
+    Logger.log.info(f"Generated {len(chunks)} chunks from file")
+    
+    # Upload original file to GridFS
+    data.file.stream.seek(0)  # Reset stream again for GridFS
+    fs = GridFS(get_db())
+    Logger.log.info("Uploading File to GridFS")
+    file_id: ObjectId = fs.put(
+        data.file.stream,
+        filename=data.file.filename,
+        content_type=data.file.content_type
+    )
+    
+    if file_id is None:
+        raise HTTPException(description="Something went wrong please try again")
+    Logger.log.info(f"File Uploaded with ID: {file_id}")
+    
+    try:
+        memories = []
+        for i, chunk in enumerate(chunks):
+            # Handle chunk decoding safely
+            try:
+                decoded = chunk.decode('utf-8')
+            except UnicodeDecodeError:
+                decoded = chunk.decode('utf-8', errors='replace')
+                Logger.log.warning(f"Chunk {i} decoded with replaced characters")
+            
+            # Skip empty chunks
+            if not decoded.strip():
+                Logger.log.info(f"Skipping empty chunk {i}")
+                continue
+            
+            # Generate embeddings and create memory
+            embeddings = generate_embeddings([decoded])
+            mem = Memory(
+                title=data.title,
+                mem_type=MemoryType.FILE,
+                tags=data.tags,
+                embeddings=embeddings,
+                text=decoded,
+                file_id=file_id
+            )
+            mem.validate() # type: ignore
+            memories.append(mem.to_mongo()) # type: ignore
+            Logger.log.info(f"Created memory chunk {i+1}/{len(chunks)}")
+        
+        if not memories:
+            raise HTTPException(description="No valid text chunks could be extracted from the file")
+            
+        result = col_memory.insert_many(memories, session=session)
+        Logger.log.info(f"Inserted {len(result.inserted_ids)} memory chunks")
+        return result.inserted_ids
+        
+    except Exception as e:
+        # Clean up GridFS file if memory insertion fails
+        Logger.log.error(f"Error creating file memories: {e}")
+        try:
+            fs.delete(file_id)
+            Logger.log.info(f"Cleaned up GridFS file: {file_id}")
+        except Exception as delete_error:
+            Logger.log.error(f"Failed to clean up GridFS file: {delete_error}")
+        raise
 
 def create_memory(
   user_token: UserToken | None,
