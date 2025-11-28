@@ -40,9 +40,26 @@ export function AddFileDialog({
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0] || null;
-        setFormData((prev) => ({ ...prev, file }));
-    };
+    const file = e.target.files?.[0] || null;
+
+    if (file) {
+        const maxSize = 10 * 1024 * 1024; // 10 MB in bytes, bitch!
+        
+        if (file.size > maxSize) {
+            toast({
+                title: "File too big",
+                description: `${file.name} is ${(file.size / 1024 / 1024).toFixed(2)} MB. Keep it under 10 MB!`,
+                variant: "destructive",
+            });
+            // Reset the input so they can't submit
+            e.target.value = "";
+            setFormData((prev) => ({ ...prev, file: null }));
+            return;
+        }
+    }
+
+    setFormData((prev) => ({ ...prev, file }));
+};
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -190,6 +207,9 @@ export function AddFileDialog({
                                 Selected: {formData.file.name}
                             </p>
                         )}
+                        <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                        ⚠️ Max file size: 10 MB. Larger files will be rejected.
+                         </p>
                     </div>
 
                     <div className="pt-4 flex justify-end gap-2">
