@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneDark,
@@ -149,8 +149,6 @@ export function ChatMessage({
     setIsEditing(false);
   };
 
-  // Custom code component with copy button
-  // Custom code component with copy button
   const CodeBlock = ({
     children,
     className,
@@ -164,7 +162,7 @@ export function ChatMessage({
 
     if (isCodeBlock) {
       return (
-        <div className="relative my-4 group overflow-hidden">
+        <div className="relative my-4 group overflow-hidden w-full">
           {/* Header with language and copy button */}
           <div className="flex items-center justify-between px-4 py-2 bg-gray-800 rounded-t-lg border-b border-gray-700">
             <span className="text-xs text-gray-300 font-mono capitalize">
@@ -211,32 +209,43 @@ export function ChatMessage({
             </button>
           </div>
 
-          {/* Syntax-highlighted code content with proper overflow */}
-          <div className="overflow-x-auto bg-gray-900 rounded-b-lg">
-            <SyntaxHighlighter
-              language={language}
-              style={oneDark}
-              customStyle={{
-                margin: 0,
-                padding: "1rem",
-                fontSize: "0.875rem",
-                lineHeight: "1.25rem",
-                background: "transparent",
-                minWidth: "fit-content", // Allow horizontal scrolling for very long lines
-              }}
-              showLineNumbers={codeString.split("\n").length > 5}
-              lineNumberStyle={{
-                color: "#6b7280",
-                minWidth: "2.5em",
-                paddingRight: "1em",
-                textAlign: "right",
-                userSelect: "none",
-              }}
-              wrapLines={false} // Don't wrap lines, allow horizontal scroll
-            >
-              {codeString}
-            </SyntaxHighlighter>
-          </div>
+          {/* Syntax-highlighted code content with horizontal scrolling */}
+          <ScrollArea className="bg-gray-900 rounded-b-lg w-full" type="always">
+            <div className="p-4 min-w-max">
+              <SyntaxHighlighter
+                language={language}
+                style={oneDark}
+                customStyle={{
+                  margin: 0,
+                  padding: 0,
+                  fontSize: "0.875rem",
+                  lineHeight: "1.25rem",
+                  background: "transparent",
+                  minWidth: "100%",
+                }}
+                showLineNumbers={codeString.split("\n").length > 5}
+                lineNumberStyle={{
+                  color: "#6b7280",
+                  minWidth: "2.5em",
+                  paddingRight: "1em",
+                  textAlign: "right",
+                  userSelect: "none",
+                }}
+                wrapLines={false}
+                codeTagProps={{
+                  style: {
+                    display: "block",
+                    overflow: "auto",
+                  },
+                }}
+              >
+                {codeString}
+              </SyntaxHighlighter>
+            </div>
+            {/* ScrollBars go here - AFTER the content */}
+            <ScrollBar orientation="horizontal" />
+            <ScrollBar orientation="vertical" />
+          </ScrollArea>
         </div>
       );
     }
@@ -378,7 +387,6 @@ export function ChatMessage({
   );
 
   const renderMessageContent = () => {
-    // In the renderMessageContent function where the textarea is defined, replace this part:
     if (isEditing) {
       return (
         <div className="space-y-2">
@@ -394,7 +402,12 @@ export function ChatMessage({
     }
 
     return (
-      <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:leading-relaxed prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-strong:font-semibold prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:italic prose-em:text-gray-600 dark:prose-em:text-gray-400 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50 dark:prose-blockquote:bg-gray-800/50 prose-blockquote:italic prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400 w-full">
+      <div
+        className={cn(
+          "prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:leading-relaxed prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-strong:font-semibold prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:italic prose-em:text-gray-600 dark:prose-em:text-gray-400 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50 dark:prose-blockquote:bg-gray-800/50 prose-blockquote:italic prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400 w-full break-words overflow-wrap-anywhere",
+          isUser ? "text-right" : "text-left" // Added conditional text alignment
+        )}
+      >
         <ReactMarkdown
           components={{
             strong: ({ children }) => (
@@ -408,42 +421,69 @@ export function ChatMessage({
               </em>
             ),
             p: ({ children }) => (
-              <p className="mb-3 last:mb-0 text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p
+                className={cn(
+                  "mb-3 last:mb-0 text-gray-700 dark:text-gray-300 leading-relaxed break-words overflow-wrap-anywhere",
+                  isUser ? "text-right" : "text-left" // Added conditional text alignment
+                )}
+              >
                 {children}
               </p>
             ),
             ul: ({ children }) => (
-              <ul className="list-disc list-inside mb-3 space-y-1 text-gray-700 dark:text-gray-300">
+              <ul
+                className={cn(
+                  "list-disc list-inside mb-3 space-y-1 text-gray-700 dark:text-gray-300 break-words overflow-wrap-anywhere",
+                  isUser ? "text-right" : "text-left" // Added conditional text alignment
+                )}
+              >
                 {children}
               </ul>
             ),
             ol: ({ children }) => (
-              <ol className="list-decimal list-inside mb-3 space-y-1 text-gray-700 dark:text-gray-300">
+              <ol
+                className={cn(
+                  "list-decimal list-inside mb-3 space-y-1 text-gray-700 dark:text-gray-300 break-words overflow-wrap-anywhere",
+                  isUser ? "text-right" : "text-left" // Added conditional text alignment
+                )}
+              >
                 {children}
               </ol>
             ),
             li: ({ children }) => (
-              <li className="text-gray-700 dark:text-gray-300">{children}</li>
+              <li
+                className={cn(
+                  "text-gray-700 dark:text-gray-300 break-words overflow-wrap-anywhere",
+                  isUser ? "text-right" : "text-left" // Added conditional text alignment
+                )}
+              >
+                {children}
+              </li>
             ),
             blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-blue-500 bg-gray-50 dark:bg-gray-800/50 italic text-gray-600 dark:text-gray-400 py-2 px-4 my-3 rounded-r">
+              <blockquote
+                className={cn(
+                  "border-l-4 border-blue-500 bg-gray-50 dark:bg-gray-800/50 italic text-gray-600 dark:text-gray-400 py-2 px-4 my-3 rounded-r break-words overflow-wrap-anywhere",
+                  isUser ? "text-right" : "text-left" // Added conditional text alignment
+                )}
+              >
                 {children}
               </blockquote>
             ),
             table: ({ children }) => (
               <div className="overflow-x-auto my-3">
-                <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg break-words">
                   {children}
                 </table>
               </div>
             ),
             th: ({ children }) => (
-              <th className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-600">
+              <th className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-600 break-words overflow-wrap-anywhere">
                 {children}
               </th>
             ),
             td: ({ children }) => (
-              <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+              <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 break-words overflow-wrap-anywhere">
                 {children}
               </td>
             ),
@@ -485,18 +525,11 @@ export function ChatMessage({
   return (
     <div
       ref={messageRef}
-      className={cn(
-        // "flex w-full py-6 px-4",
-        // isUser
-        //   ? "bg-blue-100/50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800/40"
-        //   : "bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700"
-        "flex w-full py-6 px-4 bg-blue-100/50 dark:bg-blue-900/20"
-        // Removes the color difference for user and response
-      )}
+      className={cn("flex w-full py-6 px-4 bg-blue-100/50 dark:bg-blue-900/20")}
     >
       <div
         className={cn(
-          "flex w-full max-w-4xl mx-auto",
+          "flex w-full max-w-4xl mx-auto", // This already has max-w-4xl
           isUser ? "flex-row-reverse" : "flex-row"
         )}
       >
@@ -529,17 +562,21 @@ export function ChatMessage({
             )}
           </Avatar>
         </div>
+
         {/* Message Content */}
-        <div className={cn("flex-1", isUser ? "text-right" : "text-left")}>
+        <div
+          className={cn("flex-1 min-w-0", isUser ? "text-right" : "text-left")}
+        >
           {/* Message bubble */}
           <div
             className={cn(
-              "inline-block max-w-full text-left",
+              "inline-block max-w-full break-words",
               isUser
-                ? "bg-blue-500 text-white rounded-l-2xl rounded-tr-2xl rounded-br-sm ml-auto"
-                : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-r-2xl rounded-tl-2xl rounded-bl-sm",
+                ? "bg-blue-500 text-white rounded-l-2xl rounded-tr-2xl rounded-br-sm ml-auto text-right" // No w-full for user
+                : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-r-2xl rounded-tl-2xl rounded-bl-sm text-left w-full", // w-full for assistant
               "px-4 py-3 shadow-sm"
             )}
+            style={{ maxWidth: "calc(100vw - 2rem)" }}
           >
             {renderMessageContent()}
           </div>
