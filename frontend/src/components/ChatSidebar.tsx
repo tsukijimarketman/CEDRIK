@@ -234,38 +234,62 @@ export function ChatSidebar({
     }
   };
 
-  const handleSaveSettings = async (username: string, password: string) => {
-    try {
-      const payload: { username?: string; password?: string } = {};
-      if (username && username !== user?.username) payload.username = username;
-      if (password && password.trim() !== "") payload.password = password;
+  const handleSaveSettings = async (
+  username: string, 
+  currentPassword: string, 
+  newPassword: string
+) => {
+  try {
+    const payload: { 
+      username?: string; 
+      password?: string;
+      currentPassword?: string;
+    } = {};
+    
+    // Always include username if it changed
+    if (username && username !== user?.username) {
+      payload.username = username;
+    }
+    
+    // Only include password fields if user is changing password
+    if (currentPassword && newPassword && newPassword.trim() !== "") {
+      payload.currentPassword = currentPassword;
+      payload.password = newPassword;
+    }
 
-      if (Object.keys(payload).length === 0) {
-        setCurrentDialog({ type: null });
-        return;
-      }
-
-      await authApi.updateMe(payload);
-      toast({
-        title: "Profile updated",
-        description: "Your changes have been saved.",
-      });
+    // If nothing changed, just close dialog
+    if (Object.keys(payload).length === 0) {
       setCurrentDialog({ type: null });
-    } catch (err: unknown) {
-      let message = "Failed to update settings";
-      if (typeof err === "object" && err !== null && "error" in err) {
-        const e = err as { error?: unknown };
-        if (typeof e.error === "string") message = e.error;
+      return;
+    }
+
+    await authApi.updateMe(payload);
+    toast({
+      title: "Profile updated",
+      description: "Your changes have been saved.",
+    });
+    setCurrentDialog({ type: null });
+  } catch (err: unknown) {
+    let message = "Failed to update settings";
+    
+    // Better error handling for password verification errors
+    if (typeof err === "object" && err !== null) {
+      if ("error" in err && typeof err.error === "string") {
+        message = err.error;
+      } else if ("description" in err && typeof err.description === "string") {
+        message = err.description;
       } else if (err instanceof Error) {
         message = err.message;
       }
-      toast({
-        title: "Update failed",
-        description: String(message),
-        variant: "destructive",
-      });
     }
-  };
+    
+    toast({
+      title: "Update failed",
+      description: message,
+      variant: "destructive",
+    });
+  }
+};
 
   const handleLogout = async () => {
     try {

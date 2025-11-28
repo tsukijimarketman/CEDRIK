@@ -84,7 +84,7 @@ export const authApi = {
   me: async () => {
     return api.get("/auth/me");
   },
-  updateMe: async (data: { username?: string; password?: string }) => {
+  updateMe: async (data: { username?: string; password?: string; currentPassword?: string; }) => {
     return api.put("/auth/me", data);
   },
   listUsers: async () => {
