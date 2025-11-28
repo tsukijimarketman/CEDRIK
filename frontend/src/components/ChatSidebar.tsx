@@ -445,13 +445,14 @@ export function ChatSidebar({
                 <div
                   key={chat.conversation}
                   className={cn(
-                    "group flex items-center justify-between w-full p-3 rounded-lg mb-1 transition-all duration-200 border",
+                    "group grid grid-cols-[1fr,auto] items-center gap-2 w-full p-3 rounded-lg mb-1 transition-all duration-200 border",
                     "hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20",
                     activeChat === chat.conversation
                       ? "bg-accent text-accent-foreground border-accent-foreground/30 shadow-sm"
                       : "border-transparent"
                   )}
                 >
+                  {/* Text content */}
                   <button
                     onClick={() => {
                       setActiveChatId(chat.conversation);
@@ -459,20 +460,21 @@ export function ChatSidebar({
                       onSelectConversation(chat.conversation);
                       if (isMobile) setIsMobileMenuOpen(false);
                     }}
-                    className="flex-1 text-left min-w-0"
+                    className="text-left min-w-0 overflow-hidden w-full"
                   >
                     <p className="font-medium text-sm truncate">{chat.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
                       {chat.created_at.toLocaleDateString()}
                     </p>
                   </button>
 
+                  {/* Delete button - hidden until hover but always in same spot */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteChat(chat.conversation);
                     }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all duration-200 ml-2 p-1 rounded hover:bg-destructive/10"
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all duration-200 p-1 rounded hover:bg-destructive/10 flex-shrink-0 w-6 h-6 flex items-center justify-center"
                     title="Delete chat"
                   >
                     <svg

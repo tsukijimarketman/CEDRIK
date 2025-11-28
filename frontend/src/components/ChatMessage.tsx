@@ -150,6 +150,7 @@ export function ChatMessage({
   };
 
   // Custom code component with copy button
+  // Custom code component with copy button
   const CodeBlock = ({
     children,
     className,
@@ -163,7 +164,7 @@ export function ChatMessage({
 
     if (isCodeBlock) {
       return (
-        <div className="relative my-4 group">
+        <div className="relative my-4 group overflow-hidden">
           {/* Header with language and copy button */}
           <div className="flex items-center justify-between px-4 py-2 bg-gray-800 rounded-t-lg border-b border-gray-700">
             <span className="text-xs text-gray-300 font-mono capitalize">
@@ -171,7 +172,7 @@ export function ChatMessage({
             </span>
             <button
               onClick={() => handleCopyCode(codeString)}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors flex-shrink-0 ml-2"
               title="Copy code"
             >
               {copyFeedback === "code" ? (
@@ -210,19 +211,18 @@ export function ChatMessage({
             </button>
           </div>
 
-          {/* Syntax-highlighted code content */}
-          <div className="relative">
+          {/* Syntax-highlighted code content with proper overflow */}
+          <div className="overflow-x-auto bg-gray-900 rounded-b-lg">
             <SyntaxHighlighter
               language={language}
               style={oneDark}
               customStyle={{
                 margin: 0,
                 padding: "1rem",
-                borderBottomLeftRadius: "0.5rem",
-                borderBottomRightRadius: "0.5rem",
                 fontSize: "0.875rem",
                 lineHeight: "1.25rem",
-                background: "#1a202c",
+                background: "transparent",
+                minWidth: "fit-content", // Allow horizontal scrolling for very long lines
               }}
               showLineNumbers={codeString.split("\n").length > 5}
               lineNumberStyle={{
@@ -232,6 +232,7 @@ export function ChatMessage({
                 textAlign: "right",
                 userSelect: "none",
               }}
+              wrapLines={false} // Don't wrap lines, allow horizontal scroll
             >
               {codeString}
             </SyntaxHighlighter>
@@ -242,7 +243,7 @@ export function ChatMessage({
 
     // Inline code styling
     return (
-      <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
+      <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 break-words">
         {children}
       </code>
     );
@@ -393,7 +394,7 @@ export function ChatMessage({
     }
 
     return (
-      <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:leading-relaxed prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-strong:font-semibold prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:italic prose-em:text-gray-600 dark:prose-em:text-gray-400 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50 dark:prose-blockquote:bg-gray-800/50 prose-blockquote:italic prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400">
+      <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:leading-relaxed prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-strong:font-semibold prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:italic prose-em:text-gray-600 dark:prose-em:text-gray-400 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50 dark:prose-blockquote:bg-gray-800/50 prose-blockquote:italic prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400 w-full">
         <ReactMarkdown
           components={{
             strong: ({ children }) => (
@@ -447,7 +448,9 @@ export function ChatMessage({
               </td>
             ),
             code: CodeBlock,
-            pre: ({ children }) => <div className="my-3">{children}</div>,
+            pre: ({ children }) => (
+              <div className="my-3 w-full overflow-hidden">{children}</div>
+            ),
           }}
         >
           {isUser ? content : displayedContent}
@@ -533,7 +536,7 @@ export function ChatMessage({
             className={cn(
               "inline-block max-w-full text-left",
               isUser
-                ? "bg-blue-500 text-white rounded-l-2xl rounded-tr-2xl rounded-br-sm"
+                ? "bg-blue-500 text-white rounded-l-2xl rounded-tr-2xl rounded-br-sm ml-auto"
                 : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-r-2xl rounded-tl-2xl rounded-bl-sm",
               "px-4 py-3 shadow-sm"
             )}
