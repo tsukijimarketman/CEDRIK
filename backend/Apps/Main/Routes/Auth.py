@@ -36,6 +36,7 @@ class ReqRegister:
 class ReqUpdateProfile:
     username: str | None = None
     password: str | None = None
+    currentPassword: str | None = None
 
 @dataclass
 class ReqAdminUpdateUser:
@@ -248,7 +249,7 @@ def update_me():
             col_user = db.get_collection(Collections.USER.value)
             col_audit = db.get_collection(Collections.AUDIT.value)
 
-            user_id = get_object_id(payload.id) # type: ignore
+            user_id = get_object_id(payload.id)
             existing = col_user.find_one({"_id": user_id}, session=session)
             if existing is None:
                 raise UserDoesNotExist()
@@ -261,19 +262,26 @@ def update_me():
             if req_update.username is not None and req_update.username.strip() != "":
                 new_username = req_update.username.strip()
                 if new_username != existing.get("username"):
-                    # Validate username
                     validate_username(new_username)
                     update_fields["username"] = new_username
                     ad_from["username"] = existing.get("username")
                     ad_to["username"] = new_username
 
-            # Password update (only if provided and not empty)
+            # ✅ Password update with current password verification
             if req_update.password is not None and req_update.password.strip() != "":
+                # Verify current password is provided
+                current_password = json.get("currentPassword", "").strip()
+                if not current_password:
+                    raise Unauthorized(description="Current password is required to change password")
+                
+                # Verify current password is correct
+                if not verify_password(str(existing.get("password")), current_password):
+                    raise Unauthorized(description="Current password is incorrect")
+                
                 new_password = req_update.password
                 validate_password(new_password)
                 hashed = hash_password(new_password)
                 update_fields["password"] = hashed
-                # Avoid storing sensitive data in audit
                 ad_from["password"] = "***"
                 ad_to["password"] = "***"
 
