@@ -42,6 +42,7 @@ services:
       watch:
         - path: ./backend/
           action: restart
+    restart: unless-stopped
   encoder:
     image: maasuncion/cedrik-backend:latest
     # pull_policy: never
@@ -67,6 +68,7 @@ services:
       DEBUG: --debug
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
+    restart: unless-stopped
   model:
     image: maasuncion/cedrik-backend:latest
     # pull_policy: never
@@ -90,6 +92,7 @@ services:
       DEBUG: --debug
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
+    restart: unless-stopped
   filter-model:
     image: maasuncion/cedrik-backend:latest
     # pull_policy: never
@@ -114,6 +117,7 @@ services:
       DEBUG: --debug
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
+    restart: unless-stopped
 
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan

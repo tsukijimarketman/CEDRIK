@@ -1,11 +1,55 @@
 #!/bin/bash
 set -e
 
+is_stop=0
+
+function usage() {
+    echo "Usage: run.sh [OPTIONS]"
+    echo ""
+    echo "Script to run, restart, and stop the docker instances of CEDRIK service"
+    echo ""
+    echo "Options:"
+    echo "-h, --help        Shows this help message and exit"
+    echo "-s, --stop        Stops the tmux session and runs 'compose down' to all docker services"
+}
+
+for arg in "$@"; do
+    case "$arg" in
+        "-s" | "--stop")
+            is_stop=1
+            ;;
+        "-h" | "--help")
+            usage
+            exit 0
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
 cd "$(dirname $0)/../"
 cwd=$(pwd)
 echo "Changing path to $cwd"
 
 cedrik_service_ses_name=CedrikService
+d_cyber_education_platform=cyber-education-platform
+d_deployment=deployment
+window_1=main
+window_2=kaligpt
+window_3=util
+tmux_session="$(tmux list-session 2>/dev/null | grep "$cedrik_service_ses_name" || true)"
+
+if [[ $is_stop -eq 1 ]]; then
+    echo "Running docker compose down to all services"
+    cd "${cwd}" && docker compose down
+    cd "${cwd}/${d_cyber_education_platform}" && docker compose down
+
+    sleep 0.5
+    echo "Stopping TMUX session"
+    tmux kill-session -t "$cedrik_service_ses_name"
+    exit 0
+fi
 
 function dire() {
     if [[ ! -d $1 ]]; then
@@ -14,17 +58,8 @@ function dire() {
     fi
 }
 
-d_cyber_education_platform=cyber-education-platform
-d_deployment=deployment
-
 dire $d_cyber_education_platform
 dire $d_deployment
-
-window_1=main
-window_2=kaligpt
-window_3=util
-
-tmux_session="$(tmux list-session 2>/dev/null | grep "$cedrik_service_ses_name" || true)"
 
 echo "Checking for existing TMUX session"
 echo "===================="
