@@ -4,18 +4,19 @@ set -e
 is_stop=0
 
 function usage() {
-    echo "Usage: run.sh [OPTIONS]"
+    echo "Usage: run.sh [OPTIONS] [Actions]"
     echo ""
     echo "Script to run, restart, and stop the docker instances of CEDRIK service"
     echo ""
     echo "Options:"
     echo "-h, --help        Shows this help message and exit"
-    echo "-s, --stop        Stops the tmux session and runs 'compose down' to all docker services"
+    echo "Actions:"
+    echo "stop              Stops the tmux session and runs 'compose stop' to all docker services"
 }
 
 for arg in "$@"; do
     case "$arg" in
-        "-s" | "--stop")
+        "stop")
             is_stop=1
             ;;
         "-h" | "--help")
@@ -24,6 +25,7 @@ for arg in "$@"; do
             ;;
         *)
             usage
+            exit 0
             ;;
     esac
 done
@@ -41,9 +43,9 @@ window_3=util
 tmux_session="$(tmux list-session 2>/dev/null | grep "$cedrik_service_ses_name" || true)"
 
 if [[ $is_stop -eq 1 ]]; then
-    echo "Running docker compose down to all services"
-    cd "${cwd}" && docker compose down
-    cd "${cwd}/${d_cyber_education_platform}" && docker compose down
+    echo "Running docker compose stop to all services"
+    cd "${cwd}" && docker compose stop
+    cd "${cwd}/${d_cyber_education_platform}" && docker compose stop
 
     sleep 0.5
     echo "Stopping TMUX session"
