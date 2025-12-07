@@ -157,7 +157,7 @@ export function EditFileDialog({ open, onClose, file, onUpdateSuccess }: EditFil
                     </div>
                     
                     <div className="pt-4 flex justify-end space-x-2">
-                        <Button variant="outline" onClick={onClose} disabled={isLoading}>
+                        <Button variant="outline" type="button" onClick={onClose} disabled={isLoading}>
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isLoading}>

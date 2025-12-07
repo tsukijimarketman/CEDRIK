@@ -16,9 +16,8 @@ services:
     image: maasuncion/cedrik-backend:latest
     # pull_policy: never
     volumes:
-      - ./Uploads/:/Uploads/
       - ./backend/:/app/backend/
-      # - ./log/:/app/log/
+      - ./log/:/app/log/
       - ./.env:/app/.env:ro
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
@@ -48,7 +47,7 @@ services:
     # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
-      # - ./log/:/app/log/
+      - ./log/:/app/log/
       - ./.env:/app/.env:ro
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
@@ -74,7 +73,7 @@ services:
     # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
-      # - ./log/:/app/log/
+      - ./log/:/app/log/
       - ./.env:/app/.env:ro
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
@@ -98,7 +97,7 @@ services:
     # pull_policy: never
     volumes:
       - ./backend/:/app/backend/
-      # - ./log/:/app/log/
+      - ./log/:/app/log/
       - ./.env:/app/.env:ro
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro

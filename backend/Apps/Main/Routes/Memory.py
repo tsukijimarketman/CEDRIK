@@ -284,14 +284,17 @@ def update(memory_id):
       
       if existing_memory.file_id:
         # Log audit for all chunks
-        chunks = Memory.objects(file_id=existing_memory.file_id)
+        audits = []
+        chunks = Memory.objects(file_id=existing_memory.file_id).only("id")
         for chunk in chunks:
-          audit = audit_collection(
-            type=AuditType.UPDATE,
-            collection=Collections.MEMORY,
-            id=chunk.id,
+          audits.append(
+            audit_collection(
+              type=AuditType.UPDATE,
+              collection=Collections.MEMORY,
+              id=chunk.id,
+            ).to_mongo()
           )
-          col_audit.insert_one(audit.to_mongo(), session=session)
+        col_audit.insert_many(audits, session=session)
       else:
         # Log audit for single memory
         audit = audit_collection(

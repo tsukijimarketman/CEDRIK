@@ -207,7 +207,13 @@ def login():
         }), 200)
         
         # handles Set-Cookie and other params based on app.config
-        set_access_cookies(resp, access_token)
+        set_access_cookies(
+          resp,
+          access_token,
+          # Browser session cookie
+          # keep so browser deletes cookie after closing browser
+          max_age=None
+        )
         return resp
 
     except HTTPException as e:
