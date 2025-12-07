@@ -41,7 +41,7 @@ cd cyber-education-platform/ && ln -sr ../.env ./.env && cd ~/CEDRIK
 cd frontend/ && ln -sr ../.env ./.env && cd ~/CEDRIK
 ```
 ## Edit compose.yaml
-uncomment all commands with `uwsgi` except for main service
+uncomment all commands with `uwsgi` and comment the commands with `flask` except for main service
 
 # Setup nginx
 ## Copy nginx.conf (not the file in repo)
