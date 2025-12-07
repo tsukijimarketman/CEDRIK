@@ -8,6 +8,7 @@
 - OS - Linux
 - User - must not be root
 - Packages
+    - ufw
     - Tmux
     - Nginx
     - Git
@@ -15,7 +16,7 @@
 
 # Setup the environment (debian / ubuntu)
 ```
-sudo apt install -y nginx git tmux
+sudo apt install -y nginx git tmux ufw curl
 
 # Log files for nginx
 mkdir ~/logs/ && touch ~/logs/access.log && touch ~/logs/error.log
@@ -23,6 +24,18 @@ chmod 777 -R ~/logs/
 
 # Util scripts for server management (add more if needed)
 mkdir ~/tools/ && cd ~/tools/ && curl -O https://raw.githubusercontent.com/Mark-Asuncion/dotfiles/refs/heads/main/tools/bkp.sh
+```
+
+## Firewall
+```
+sudo ufw default deny incoming
+sudo ufw allow in ssh
+sudo ufw allow in https
+
+sudo ufw enable
+
+# verify with
+sudo ufw status verbose
 ```
 
 # Clone the repo
