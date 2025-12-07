@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 interface ViewFileDialogProps {
@@ -22,6 +23,46 @@ interface ViewFileDialogProps {
         updatedAt?: string;
         mem_type?: string;
     } | null;
+}
+
+interface RenderTagsProps {
+  tags: string[],
+  limit?: number
+}
+
+function RenderTags({ tags, limit = 3 }: RenderTagsProps) {
+  const [showMore, setShowMore] = useState(false);
+
+  let limitHeightStyle = {};
+  if (showMore) {
+    limitHeightStyle = {
+      "maxHeight": "10svh"
+    };
+  }
+  return <>
+    {
+      tags.length > limit ? <Button variant="outline" size="sm" className="ml-2 mt-2" onClick={() => setShowMore(x => !x)}>{ !showMore? `+${tags.length-limit} more` : "Collapse" }</Button>
+      : null
+    }
+    <div className="overflow-y-auto flex flex-col" style={limitHeightStyle}>
+    <div className="flex flex-wrap gap-2 mt-2">
+      {
+        tags && tags.length > 0 ? (
+          tags.map((tag: string, i: number) => {
+            if (!showMore && i >= limit) return null;
+            return (
+              <Badge key={i} variant="secondary">
+                {tag}
+              </Badge>
+            );
+          })
+        ) : (
+            <span className="text-sm text-muted-foreground">No tags</span>
+          )
+      }
+    </div>
+    </div>
+  </>
 }
 
 export function ViewFileDialog({ open, onClose, file }: ViewFileDialogProps) {
@@ -42,9 +83,14 @@ export function ViewFileDialog({ open, onClose, file }: ViewFileDialogProps) {
 
                     <div>
                         <Label>Description</Label>
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                            {file.description}
-                        </p>
+                        <Textarea
+                          value={file.description}
+                          rows={5}
+                          readOnly={true}
+                        />
+                        {/* <p className="mt-1 whitespace-pre-wrap text-sm text-foreground"> */}
+                        {/*     {file.description} */}
+                        {/* </p> */}
                     </div>
 
                     {file.mem_type && (
@@ -58,17 +104,7 @@ export function ViewFileDialog({ open, onClose, file }: ViewFileDialogProps) {
 
                     <div>
                         <Label>Tags</Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {file.tags && file.tags.length > 0 ? (
-                                file.tags.map((tag: string, i: number) => (
-                                    <Badge key={i} variant="secondary">
-                                        {tag}
-                                    </Badge>
-                                ))
-                            ) : (
-                                <span className="text-sm text-muted-foreground">No tags</span>
-                            )}
-                        </div>
+                        <RenderTags tags={file.tags} />
                     </div>
 
                     {file.author && (
