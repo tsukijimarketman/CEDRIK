@@ -1,8 +1,8 @@
-from dataclasses import asdict, dataclass
-from datetime import datetime
-import json
+from dataclasses import dataclass
+from datetime import datetime, timezone
 import re
-from typing import List
+from pymongo.synchronous.command_cursor import CommandCursor
+from typing import List, Any
 from flask import jsonify, request
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required # type: ignore
@@ -371,9 +371,9 @@ class MemoryResult:
   file_id: str
   permission: List[str]
   tags: List[str]
-  created_at: datetime | None
-  updated_at: datetime | None
-  deleted_at: datetime | None
+  created_at: str | None
+  updated_at: str | None
+  deleted_at: str | None
 
 @memory.route("/get")
 @jwt_required(optional=False)
@@ -381,27 +381,34 @@ class MemoryResult:
 def get():
   """
   Query Params
-    archive - 1 or 0 (default: 0)
-    offset - int (default: 0)
-    maxItems - int (default: 30)
-    asc - 1 or 0 (default: 0) (sorts by updated_at)
-  Body (application/json)
-    title: str
-    mem_type: MemoryType
-    tags: List[str]
+    archive                - 1 or 0 (default: 0)
+    offset                 - int (default: 0)
+    maxItems               - int (default: 30)
+    sort                   - <field_name>-<asc|desc>
+    title                  - str
+    mem_type               - MemoryType
+    deleted_at-<gte|lte>   - iso date
+    tags                   - str separated with ','
   """
   user_id = get_token()
   if user_id == None:
     raise InvalidId()
 
-  pagination = Pagination(request.args)
+  pagination = Pagination(request.args) # type: ignore
 
-  jsonDict = request.get_json(silent=True)
-  jsonDict = dict(jsonDict) if jsonDict != None else {}
+  args = request.args;
 
-  title = str(re.escape(jsonDict.get("title", "")))
-  tags: List[str] = jsonDict.get("tags") # type: ignore
-  mem_type = str(re.escape(jsonDict.get("mem_type", "")))
+  title = str(re.escape(args.get("title", "")))
+  tags: List[str] | None = None
+  if len(args.get("tags", "")) > 0:
+    tags = args.get("tags", "").split(',')
+  mem_type = str(re.escape(args.get("mem_type", "")))
+
+  is_deleted_at_lte = True
+  deleted_at = str(args.get("deleted_at-lte", ""))
+  if len(deleted_at) == 0:
+    deleted_at = str(args.get("deleted_at-gte", ""))
+    is_deleted_at_lte = False
 
   filters = []
   if len(title) > 0:
@@ -411,42 +418,20 @@ def get():
     filters.append(match_list("tags", tags))
   if len(mem_type) > 0:
     filters.append(match_regex("mem_type", mem_type))
+  if len(deleted_at) > 0:
+    try:
+      filters.append({
+        "deleted_at": {
+          f"${"lte" if is_deleted_at_lte else "gte"}": datetime.fromisoformat(deleted_at)
+        }
+      })
+    except: pass
+
 
   try:
-    # Check if we're viewing archive or active items
-    archive = request.args.get('archive', '0')
-    
-    pipeline = []
-    
-    # FIXED: Properly handle archive filtering
-    if archive == '0':  # Not viewing archive - show only non-deleted items
-      pipeline.append({
-        "$match": {
-          "deleted_at": None
-        }
-      })
-    else:  # Viewing archive - show only deleted items
-      pipeline.append({
-        "$match": {
-          "deleted_at": {"$ne": None}
-        }
-      })
-
-    count_pipeline = [ i for i in pipeline ]
-    count_pipeline.append({
-      "$count": "total"
-    })
-
-    if len(filters) > 0:
-      pipeline.append({
-        "$match": {
-          "$or": filters
-        }
-      })
-
     # CRITICAL FIX: Add a unique grouping field BEFORE the $group stage
     # This ensures text memories (no file_id) each get a unique group identifier
-    pipeline.append({
+    pagination.pipeline.append({
       "$addFields": {
         "grouping_id": {
           "$cond": [
@@ -464,7 +449,7 @@ def get():
     })
     
     # Now group by the grouping_id field
-    pipeline.append({
+    pagination.pipeline.append({
       "$group": {
         "_id": "$grouping_id",  # Group by our custom field
         "doc_id": {"$first": "$_id"},
@@ -482,7 +467,7 @@ def get():
     })
 
     # Flatten arrays
-    pipeline.append({
+    pagination.pipeline.append({
       "$addFields": {
         "tags": {
           "$reduce": {
@@ -512,16 +497,25 @@ def get():
     })
 
     # Add a readable ID field
-    pipeline.append({
+    pagination.pipeline.append({
       "$addFields": {
         "id": {"$toString": "$doc_id"}
       }
     })
 
-    pipeline.extend(pagination.build_pagination())
+    if len(filters) > 0:
+      pagination.pipeline.append({
+        "$match": {
+          "$or": filters
+        }
+      })
+
+    pagination.set_offset_for_last_page(Memory)
+    cmd_cursor: CommandCursor = Memory.objects.aggregate(pagination.build_pipeline()) # type: ignore
+    cmd_cursor_list = cmd_cursor.to_list(1)
+    aggregation: dict[str, Any] = cmd_cursor_list[0] if len(cmd_cursor_list) > 0 else {}
     
-    q_results: List[dict] = list(Memory.objects.aggregate(pipeline))
-    
+    q_results = aggregation.get("items", [])
     # DEBUG: Log to see what we're getting
     Logger.log.info(f"Query returned {len(q_results)} grouped results")
     for result in q_results[:3]:  # Log first 3
@@ -537,21 +531,19 @@ def get():
         file_id=str(doc.get("file_id", "")) if doc.get("file_id") else "",
         permission=doc.get("permission", []),
         tags=doc.get("tags", []),
-        created_at=doc.get("created_at", None),
-        updated_at=doc.get("updated_at", None),
-        deleted_at=doc.get("deleted_at", None)
+        created_at=doc.get("created_at").astimezone(timezone.utc).isoformat() if doc.get("created_at", None) != None else None, # type: ignore
+        updated_at=doc.get("updated_at").astimezone(timezone.utc).isoformat() if doc.get("updated_at", None) != None else None, # type: ignore
+        deleted_at=doc.get("deleted_at").astimezone(timezone.utc).isoformat() if doc.get("deleted_at", None) != None else None # type: ignore
       ))
 
-    count_res = list(Memory.objects.aggregate(count_pipeline))
-
     return jsonify(PaginationResults(
-      total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
+      total=aggregation.get("total", 0),
       page=pagination.offset+1,
       items=results
     )), 200
     
   except ValidationError as e:
-    raise HttpValidationError(e.to_dict())
+    raise HttpValidationError(e.to_dict()) # type: ignore
   except Exception as e:
     Logger.log.error(f"Get error: {e}")
     raise HTTPException(description=str(e))

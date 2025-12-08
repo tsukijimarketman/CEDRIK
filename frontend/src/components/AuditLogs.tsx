@@ -10,19 +10,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 30;
+
+enum SortFields {
+  type = "type",
+  user = "user.username",
+  ip = "data.ip",
+  createdAt = "created_at"
+};
 
 export function AuditLogs() {
   const [searchTerm, setSearchTerm] = useState("");
+
   const [logs, setLogs] = useState<AuditLogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
+  const [totalPages, setTotalPage] = useState(0);
+
   const [selectedLog, setSelectedLog] = useState<AuditLogRecord | null>(null);
+
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [sortField, setSortField] = useState<keyof NormalizedAuditLog>('id');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const [sortField, setSortField] = useState<SortFields>(SortFields.createdAt);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     let active = true;
@@ -30,12 +43,21 @@ export function AuditLogs() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await auditApi.list();
+        const response = await auditApi.list({
+          query: searchTerm,
+          sort: sortField.toString(),
+          sortAsc: sortOrder == "asc",
+          offset: Math.max(0, currentPage) - 1,
+          archive: false,
+          maxItems: PAGE_SIZE
+        });
         if (!active) {
           return;
         }
         setLogs(response.data.items);
-        setCurrentPage(1);
+        setPageInput("" + response.data.page);
+        setCurrentPage(response.data.page);
+        setTotalPage(Math.ceil(response.data.total / PAGE_SIZE));
       } catch (err) {
         if (!active) {
           return;
@@ -55,12 +77,7 @@ export function AuditLogs() {
     return () => {
       active = false;
     };
-  }, []);
-
-  useEffect(() => {
-    setPageInput(String(currentPage));
-  }, [currentPage]);
-
+  }, [currentPage, searchTerm, sortField, sortOrder]);
 
   type NormalizedAuditLog = {
     id: string;
@@ -89,7 +106,7 @@ export function AuditLogs() {
     }
   };
 
-  const handleSort = (field: keyof NormalizedAuditLog) => {
+  const handleSort = (field: SortFields) => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -129,48 +146,47 @@ export function AuditLogs() {
     });
   }, [logs]);
 
-  const normalizedSearch = searchTerm.trim().toLowerCase(); // handle searchbar
-  const filteredLogs = normalizedLogs.filter((log) => {
-    if (!normalizedSearch) {
-      return true;
-    }
-    return (
-      log.type.toLowerCase().includes(normalizedSearch) ||
-      log.collection.toLowerCase().includes(normalizedSearch) ||
-      log.user.toLowerCase().includes(normalizedSearch)
-      // log.ipAddress.toLowerCase().includes(normalizedSearch)
-    );
-  });
+  // const normalizedSearch = searchTerm.trim().toLowerCase(); // handle searchbar
+  // const filteredLogs = normalizedLogs.filter((log) => {
+  //   if (!normalizedSearch) {
+  //     return true;
+  //   }
+  //   return (
+  //     log.type.toLowerCase().includes(normalizedSearch) ||
+  //     log.collection.toLowerCase().includes(normalizedSearch) ||
+  //     log.user.toLowerCase().includes(normalizedSearch)
+  //     // log.ipAddress.toLowerCase().includes(normalizedSearch)
+  //   );
+  // });
 
 
+  // const sortedLogs = [...filteredLogs].sort((a, b) => {
+  //   const vala = a[sortField];
+  //   const valb = b[sortField];
+  //
+  //   if (sortField === 'createdAt') {
+  //     const dateA = new Date(vala);
+  //     const dateB = new Date(valb);
+  //     return sortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+  //   }
+  //   return sortOrder === 'asc' ? String(vala).localeCompare(String(valb)) : String(valb).localeCompare(String(vala));
+  // });
 
-  const sortedLogs = [...filteredLogs].sort((a, b) => {
-    const vala = a[sortField];
-    const valb = b[sortField];
 
-    if (sortField === 'createdAt') {
-      const dateA = new Date(vala);
-      const dateB = new Date(valb);
-      return sortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
-    }
-    return sortOrder === 'asc' ? String(vala).localeCompare(String(valb)) : String(valb).localeCompare(String(vala));
-  });
+  // const totalPages = Math.max(1, Math.ceil(sortedLogs.length / PAGE_SIZE));
 
+  // useEffect(() => {
+  //   setCurrentPage((prev) => {
+  //     const clamped = Math.min(Math.max(prev, 1), totalPages);
+  //     return clamped;
+  //   });
+  // }, [totalPages]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedLogs.length / PAGE_SIZE));
-
-  useEffect(() => {
-    setCurrentPage((prev) => {
-      const clamped = Math.min(Math.max(prev, 1), totalPages);
-      return clamped;
-    });
-  }, [totalPages]);
-
-  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
-  const displayedLogs = sortedLogs.slice(
-    (safeCurrentPage - 1) * PAGE_SIZE,
-    safeCurrentPage * PAGE_SIZE
-  );
+  const safeCurrentPage = currentPage;
+  // const displayedLogs = sortedLogs.slice(
+  //   (safeCurrentPage - 1) * PAGE_SIZE,
+  //   safeCurrentPage * PAGE_SIZE
+  // );
 
   const handleFirstPage = () => setCurrentPage(1);
   const handleLastPage = () => setCurrentPage(totalPages);
@@ -216,9 +232,14 @@ export function AuditLogs() {
         <div className="relative mb-6">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search logs by action, collection, or resource id..."
-            value={searchTerm}
-            onChange={(e) => {
+            placeholder="Search logs by action, username, or ip address..."
+            defaultValue={searchTerm}
+            onKeyUp={(e) => {
+              if (e.key == "Enter") {
+                e.currentTarget.blur()
+              }
+            }}
+            onBlur={(e) => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
@@ -240,7 +261,7 @@ export function AuditLogs() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer w-[250px]">Timestamp ↑↓ {sortField === "createdAt" && (sortOrder === "asc")} </TableHead>
+                  <TableHead onClick={() => handleSort(SortFields.createdAt)} className="cursor-pointer w-[250px]">Timestamp ↑↓ {sortField === SortFields.createdAt && (sortOrder === "asc")} </TableHead>
                   <TableHead className="cursor-pointer w-[160px]">Action </TableHead>
                   <TableHead className="cursor-pointer w-[160px]">Collection</TableHead>
                   <TableHead className="cursor-pointer w-[170px]">User</TableHead>
@@ -255,14 +276,14 @@ export function AuditLogs() {
                       Loading audit logs...
                     </TableCell>
                   </TableRow>
-                ) : filteredLogs.length === 0 ? (
+                ) : logs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-sm">
                       No audit logs found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayedLogs.map((log) => {
+                  normalizedLogs.map((log) => {
                     const createdAt = log.createdAt ? new Date(log.createdAt).toLocaleString() : "N/A";
                     return (
                       <TableRow key={log.id}>

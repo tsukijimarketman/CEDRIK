@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, timezone
 from flask import Response, jsonify, make_response, request
 from flask.blueprints import Blueprint
 from flask_jwt_extended import create_access_token, jwt_required, set_access_cookies, unset_jwt_cookies
@@ -559,8 +559,8 @@ def list_users():
                 "username": user.username,
                 "role": user.role.value if isinstance(user.role, Role) else str(user.role),
                 "is_active": user_is_active,
-                "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
-                "updated_at": user.updated_at.isoformat() if getattr(user, "updated_at", None) else None,
+                "created_at": user.created_at.astimezone(timezone.utc).isoformat() if getattr(user, "created_at", None) else None,
+                "updated_at": user.updated_at.astimezone(timezone.utc).isoformat() if getattr(user, "updated_at", None) else None,
             })
 
         return jsonify(response_data), 200

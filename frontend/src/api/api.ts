@@ -135,6 +135,8 @@ export type MemoryGetParams = {
   offset?: number;
   maxItems?: number;
   asc?: boolean;
+  deletedAt?: Date;
+  deletedAtDir?: "gte" | "lte";
 };
 
 // Memory API
@@ -180,10 +182,23 @@ export const memoryApi = {
     if (params?.asc !== undefined) {
       queryParams.asc = params.asc ? "1" : "0";
     }
+    if (filters?.tags !== undefined) {
+      queryParams.tags = filters.tags.join(",");
+    }
+    if (filters?.title !== undefined) {
+      queryParams.title = filters.title;
+    }
+
+    if (filters?.mem_type !== undefined) {
+      queryParams.mem_type = filters.mem_type;
+    }
+
+    if (params.deletedAt && params.deletedAtDir) {
+      queryParams[`deleted_at-${params.deletedAtDir}`] = params.deletedAt.toISOString();
+    }
 
     return api.get<PaginatedResponse<MemoryItem>>("/memory/get", {
-      params: queryParams,
-      data: filters || {},
+      params: queryParams
     });
   },
 
@@ -391,11 +406,28 @@ export type AuditLogRecord = {
   deleted_at: string | null;
 };
 
+export type AuditLogQuery = {
+  archive: boolean;
+  offset: number,
+  maxItems: number,
+  sort: string,
+  sortAsc: boolean,
+  query: string
+}
+
 export const auditApi = {
-  list: async (options?: { archive?: boolean }) => {
+  list: async (options: AuditLogQuery) => {
     const params: Record<string, string> = {};
-    if (options?.archive !== undefined) {
-      params.archive = options.archive ? "true" : "false";
+    params.archive = options.archive ? "true" : "false";
+    params.offset = options.offset ? `${options.offset}` : "0";
+    params.maxItems = options.maxItems ? `${options.maxItems}` : "0";
+    if (options.sort != undefined || options.sort.length != 0) {
+      params.sort = `${options.sort}-${options.sortAsc ? "asc" : "desc" }`;
+    }
+    if (options.query != undefined || options.query.length != 0) {
+      params.username = options.query;
+      params.type = options.query;
+      params.ip = options.query;
     }
 
     const res = await api.get<PaginatedResponse<AuditLogRecord>>("/audit/get", {

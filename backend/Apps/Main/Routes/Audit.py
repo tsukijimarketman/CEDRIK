@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import timezone
 import re
-import traceback
+from pymongo.synchronous.command_cursor import CommandCursor
 from mongoengine.queryset.visitor import Q
 from dataclasses import asdict, dataclass
-from typing import List
+from typing import List, Any
 from flask import json, jsonify, request
 from flask.blueprints import Blueprint
 from bson import json_util
@@ -28,9 +28,9 @@ class AuditResult:
   type: str
   data: dict
   user: dict
-  created_at: datetime | None
-  updated_at: datetime | None
-  deleted_at: datetime | None
+  created_at: str | None
+  updated_at: str | None
+  deleted_at: str | None
 
 @b_audit.route("/get")
 @jwt_required(optional=False)
@@ -38,34 +38,31 @@ class AuditResult:
 def get():
   """
   Query Params
-    archive - 1 or 0 (default: 0)
-    offset - int (default: 0)
-    maxItems - int (default: 30)
-    asc - 1 or 0 (default: 0) (sorts by updated_at)
-  Body (application/json)
-    username: str
-    type: str
-    ip: str
+    archive    - 1 or 0 (default: 0)
+    offset     - int (default: 0)
+    maxItems   - int (default: 30)
+    sort       - <field_name>-<asc|desc>
+    username   - str
+    type       - str
+    ip         - str
   """
   user_id = get_token()
   if user_id == None:
     raise InvalidId()
 
-  pagination = Pagination(request.args)
+  pagination = Pagination(request.args) # type: ignore
 
-  jsonDict = request.get_json(silent=True)
-  jsonDict = dict(jsonDict) if jsonDict != None else {}
-  name = str(re.escape(jsonDict.get("username", "")))
-  _type = jsonDict.get("type", "")
-  ip = str(re.escape(jsonDict.get("ip", "")))
+  args = request.args
+  name = str(re.escape(args.get("username", "")))
+  _type = args.get("type", "")
+  ip = str(re.escape(args.get("ip", "")))
 
   filters = []
-  
   if len(_type) > 0:
     filters.append(match_regex("type", _type))
     filters.append({
       "type": {
-        '$regex': _type, 
+        '$regex': _type,
         '$options': 'i'
       }
     })
@@ -80,8 +77,7 @@ def get():
       filters.append(v)
 
   try:
-    audits = []
-    pipeline = [
+    pagination.pipeline = [
       {
         '$lookup': {
           'from': Collections.USER.value,
@@ -95,32 +91,25 @@ def get():
           'path': '$user', 
           'preserveNullAndEmptyArrays': True
         }
-      },
-      pagination.build_archive_match()
+      }
     ]
-
     if len(filters) > 0:
-      pipeline.append({
+      pagination.pipeline.append({
         "$match": {
           "$or": filters
         }
-      }) # type: ignore
+      })
 
-    count_pipeline = [ i for i in pipeline ]
-    count_pipeline.append({
-      "$count": "total"
-    }) # type: ignore
-
-    count_res: List[dict] = list(Audit.objects.aggregate(count_pipeline)) # type: ignore
-
-    pipeline.extend(pagination.build_pagination()) # type: ignore
-
-    audits: List[dict] = list(Audit.objects.aggregate(pipeline)) # type: ignore
-
+    pagination.set_offset_for_last_page(Audit)
+    cmd_cursor: CommandCursor = Audit.objects.aggregate(pagination.build_pipeline()) # type: ignore
+    cmd_cursor_list = cmd_cursor.to_list(1)
+    aggregation: dict[str, Any] = cmd_cursor_list[0] if len(cmd_cursor_list) > 0 else {}
+    audits: List[dict] = list(
+      aggregation.get("items", [])
+    )
     results = []
 
     for audit in audits:
-      # Logger.log.info(audit)
       data_dict = audit.get("data", {})
       data_id = data_dict.get("id", "")
       if not isinstance(data_id, str):
@@ -141,14 +130,14 @@ def get():
           type=AuditType(audit["type"]).value if audit.get("type", None) != None else AuditType.MESSAGE.value,
           user=user if user else {},
           data=data_dict,
-          created_at=audit.get("created_at", None), # type: ignore
-          updated_at=audit.get("updated_at", None), # type: ignore
-          deleted_at=audit.get("deleted_at", None), # type: ignore
+          created_at=audit.get("created_at").astimezone(timezone.utc).isoformat() if audit.get("created_at", None) != None else None, # type: ignore
+          updated_at=audit.get("updated_at").astimezone(timezone.utc).isoformat() if audit.get("updated_at", None) != None else None, # type: ignore
+          deleted_at=audit.get("deleted_at").astimezone(timezone.utc).isoformat() if audit.get("deleted_at", None) != None else None # type: ignore
         )
       )
 
     return jsonify(PaginationResults(
-      total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
+      total=int(aggregation.get("total", 0)),
       page=pagination.offset + 1,
       items=[ asdict(i) for i in results]
     )), 200
