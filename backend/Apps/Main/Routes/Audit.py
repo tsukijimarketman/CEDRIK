@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
+from datetime import timezone
 import re
-import traceback
+from pymongo.synchronous.command_cursor import CommandCursor
 from mongoengine.queryset.visitor import Q
 from dataclasses import asdict, dataclass
-from typing import List
+from typing import List, Any
 from flask import json, jsonify, request
 from flask.blueprints import Blueprint
 from bson import json_util
@@ -38,13 +38,13 @@ class AuditResult:
 def get():
   """
   Query Params
-    archive - 1 or 0 (default: 0)
-    offset - int (default: 0)
-    maxItems - int (default: 30)
-    asc - 1 or 0 (default: 0) (sorts by updated_at)
-    username: str
-    type: str
-    ip: str
+    archive    - 1 or 0 (default: 0)
+    offset     - int (default: 0)
+    maxItems   - int (default: 30)
+    sort       - <field_name>-<asc|desc>
+    username   - str
+    type       - str
+    ip         - str
   """
   user_id = get_token()
   if user_id == None:
@@ -58,12 +58,11 @@ def get():
   ip = str(re.escape(args.get("ip", "")))
 
   filters = []
-  
   if len(_type) > 0:
     filters.append(match_regex("type", _type))
     filters.append({
       "type": {
-        '$regex': _type, 
+        '$regex': _type,
         '$options': 'i'
       }
     })
@@ -78,8 +77,7 @@ def get():
       filters.append(v)
 
   try:
-    audits = []
-    pipeline = [
+    pagination.pipeline = [
       {
         '$lookup': {
           'from': Collections.USER.value,
@@ -93,32 +91,25 @@ def get():
           'path': '$user', 
           'preserveNullAndEmptyArrays': True
         }
-      },
-      pagination.build_archive_match()
+      }
     ]
-
     if len(filters) > 0:
-      pipeline.append({
+      pagination.pipeline.append({
         "$match": {
           "$or": filters
         }
-      }) # type: ignore
+      })
 
-    count_pipeline = [ i for i in pipeline ]
-    count_pipeline.append({
-      "$count": "total"
-    }) # type: ignore
-
-    count_res: List[dict] = list(Audit.objects.aggregate(count_pipeline)) # type: ignore
-
-    pipeline.extend(pagination.build_pagination()) # type: ignore
-
-    audits: List[dict] = list(Audit.objects.aggregate(pipeline)) # type: ignore
-
+    pagination.set_offset_for_last_page(Audit)
+    cmd_cursor: CommandCursor = Audit.objects.aggregate(pagination.build_pipeline()) # type: ignore
+    cmd_cursor_list = cmd_cursor.to_list(1)
+    aggregation: dict[str, Any] = cmd_cursor_list[0] if len(cmd_cursor_list) > 0 else {}
+    audits: List[dict] = list(
+      aggregation.get("items", [])
+    )
     results = []
 
     for audit in audits:
-      # Logger.log.info(audit)
       data_dict = audit.get("data", {})
       data_id = data_dict.get("id", "")
       if not isinstance(data_id, str):
@@ -146,7 +137,7 @@ def get():
       )
 
     return jsonify(PaginationResults(
-      total=count_res[0].get("total", len(results)) if len(count_res) > 0 else len(results),
+      total=int(aggregation.get("total", 0)),
       page=pagination.offset + 1,
       items=[ asdict(i) for i in results]
     )), 200
