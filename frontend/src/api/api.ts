@@ -400,11 +400,28 @@ export type AuditLogRecord = {
   deleted_at: string | null;
 };
 
+export type AuditLogQuery = {
+  archive: boolean;
+  offset: number,
+  maxItems: number,
+  sort: string,
+  sortAsc: boolean,
+  query: string
+}
+
 export const auditApi = {
-  list: async (options?: { archive?: boolean }) => {
+  list: async (options: AuditLogQuery) => {
     const params: Record<string, string> = {};
-    if (options?.archive !== undefined) {
-      params.archive = options.archive ? "true" : "false";
+    params.archive = options.archive ? "true" : "false";
+    params.offset = options.offset ? `${options.offset}` : "0";
+    params.maxItems = options.maxItems ? `${options.maxItems}` : "0";
+    if (options.sort != undefined || options.sort.length != 0) {
+      params.sort = `${options.sort}-${options.sortAsc ? "asc" : "desc" }`;
+    }
+    if (options.query != undefined || options.query.length != 0) {
+      params.username = options.query;
+      params.type = options.query;
+      params.ip = options.query;
     }
 
     const res = await api.get<PaginatedResponse<AuditLogRecord>>("/audit/get", {

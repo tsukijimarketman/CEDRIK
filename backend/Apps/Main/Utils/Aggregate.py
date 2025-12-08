@@ -25,7 +25,7 @@ class Pagination:
       self.sort = ("created_at", -1)
   
   def set_offset_for_last_page(self, class_doc):
-    if self.offset != -1:
+    if self.offset >= 0:
       return
 
     p = [ i for i in self.pipeline ]
