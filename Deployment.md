@@ -8,8 +8,9 @@
 - OS - Linux
 - User - must not be root
 - Packages
+    - Docker
     - ufw
-    - Tmux
+    - Tmux (required for run.sh)
     - Nginx
     - Git
     - Crontab (optional)

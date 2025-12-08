@@ -8,11 +8,11 @@ Wants=nginx.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/ubuntu/
+WorkingDirectory=/home/cedrik/
 User=1000
-ExecStart=/bin/bash /home/ubuntu/app/CEDRIK/deployment/run.sh
-ExecReload=/bin/bash /home/ubuntu/app/CEDRIK/deployment/run.sh -s && /bin/bash /home/ubuntu/app/CEDRIK/deployment/run.sh
-ExecStop=/bin/bash /home/ubuntu/app/CEDRIK/deployment/run.sh stop
+ExecStart=/bin/bash /home/cedrik/CEDRIK/deployment/run.sh
+ExecReload=/bin/bash /home/cedrik/CEDRIK/deployment/run.sh -s && /bin/bash /home/ubuntu/app/CEDRIK/deployment/run.sh
+ExecStop=/bin/bash /home/cedrik/CEDRIK/deployment/run.sh stop
 
 [Install]
 WantedBy=multi-user.target
