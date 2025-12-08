@@ -42,7 +42,6 @@ def get():
     offset - int (default: 0)
     maxItems - int (default: 30)
     asc - 1 or 0 (default: 0) (sorts by updated_at)
-  Body (application/json)
     username: str
     type: str
     ip: str
@@ -51,13 +50,12 @@ def get():
   if user_id == None:
     raise InvalidId()
 
-  pagination = Pagination(request.args)
+  pagination = Pagination(request.args) # type: ignore
 
-  jsonDict = request.get_json(silent=True)
-  jsonDict = dict(jsonDict) if jsonDict != None else {}
-  name = str(re.escape(jsonDict.get("username", "")))
-  _type = jsonDict.get("type", "")
-  ip = str(re.escape(jsonDict.get("ip", "")))
+  args = request.args
+  name = str(re.escape(args.get("username", "")))
+  _type = args.get("type", "")
+  ip = str(re.escape(args.get("ip", "")))
 
   filters = []
   

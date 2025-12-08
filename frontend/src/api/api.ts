@@ -180,10 +180,19 @@ export const memoryApi = {
     if (params?.asc !== undefined) {
       queryParams.asc = params.asc ? "1" : "0";
     }
+    if (filters?.tags !== undefined) {
+      queryParams.tags = filters.tags.join(",");
+    }
+    if (filters?.title !== undefined) {
+      queryParams.title = filters.title;
+    }
+
+    if (filters?.mem_type !== undefined) {
+      queryParams.mem_type = filters.mem_type;
+    }
 
     return api.get<PaginatedResponse<MemoryItem>>("/memory/get", {
-      params: queryParams,
-      data: filters || {},
+      params: queryParams
     });
   },
 

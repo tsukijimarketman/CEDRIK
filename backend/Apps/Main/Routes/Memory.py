@@ -385,23 +385,23 @@ def get():
     offset - int (default: 0)
     maxItems - int (default: 30)
     asc - 1 or 0 (default: 0) (sorts by updated_at)
-  Body (application/json)
     title: str
     mem_type: MemoryType
-    tags: List[str]
+    tags: str separated with ','
   """
   user_id = get_token()
   if user_id == None:
     raise InvalidId()
 
-  pagination = Pagination(request.args)
+  pagination = Pagination(request.args) # type: ignore
 
-  jsonDict = request.get_json(silent=True)
-  jsonDict = dict(jsonDict) if jsonDict != None else {}
+  args = request.args;
 
-  title = str(re.escape(jsonDict.get("title", "")))
-  tags: List[str] = jsonDict.get("tags") # type: ignore
-  mem_type = str(re.escape(jsonDict.get("mem_type", "")))
+  title = str(re.escape(args.get("title", "")))
+  tags: List[str] | None = None
+  if len(args.get("tags", "")) > 0:
+    tags = args.get("tags", "").split(',')
+  mem_type = str(re.escape(args.get("mem_type", "")))
 
   filters = []
   if len(title) > 0:

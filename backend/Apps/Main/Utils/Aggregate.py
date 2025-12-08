@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any, List
+from werkzeug.datastructures import ImmutableMultiDict
 
 @dataclass
 class PaginationResults:
@@ -13,7 +14,7 @@ class Pagination:
   max_items: int
   asc: bool # updated_at
 
-  def __init__(self, args: dict):
+  def __init__(self, args: ImmutableMultiDict):
     self.is_archive = bool(args.get("archive", default=0, type=int))
     self.offset = args.get("offset", default=0, type=int)
     self.max_items = args.get("maxItems", default=30, type=int)
