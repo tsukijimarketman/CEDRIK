@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import re
 from typing import List
@@ -371,9 +371,9 @@ class MemoryResult:
   file_id: str
   permission: List[str]
   tags: List[str]
-  created_at: datetime | None
-  updated_at: datetime | None
-  deleted_at: datetime | None
+  created_at: str | None
+  updated_at: str | None
+  deleted_at: str | None
 
 @memory.route("/get")
 @jwt_required(optional=False)
@@ -537,9 +537,9 @@ def get():
         file_id=str(doc.get("file_id", "")) if doc.get("file_id") else "",
         permission=doc.get("permission", []),
         tags=doc.get("tags", []),
-        created_at=doc.get("created_at", None),
-        updated_at=doc.get("updated_at", None),
-        deleted_at=doc.get("deleted_at", None)
+        created_at=doc.get("created_at").astimezone(timezone.utc).isoformat() if doc.get("created_at", None) != None else None, # type: ignore
+        updated_at=doc.get("updated_at").astimezone(timezone.utc).isoformat() if doc.get("updated_at", None) != None else None, # type: ignore
+        deleted_at=doc.get("deleted_at").astimezone(timezone.utc).isoformat() if doc.get("deleted_at", None) != None else None # type: ignore
       ))
 
     count_res = list(Memory.objects.aggregate(count_pipeline))

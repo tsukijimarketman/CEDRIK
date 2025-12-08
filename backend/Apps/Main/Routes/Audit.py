@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import re
 import traceback
 from mongoengine.queryset.visitor import Q
@@ -28,9 +28,9 @@ class AuditResult:
   type: str
   data: dict
   user: dict
-  created_at: datetime | None
-  updated_at: datetime | None
-  deleted_at: datetime | None
+  created_at: str | None
+  updated_at: str | None
+  deleted_at: str | None
 
 @b_audit.route("/get")
 @jwt_required(optional=False)
@@ -139,9 +139,9 @@ def get():
           type=AuditType(audit["type"]).value if audit.get("type", None) != None else AuditType.MESSAGE.value,
           user=user if user else {},
           data=data_dict,
-          created_at=audit.get("created_at", None), # type: ignore
-          updated_at=audit.get("updated_at", None), # type: ignore
-          deleted_at=audit.get("deleted_at", None), # type: ignore
+          created_at=audit.get("created_at").astimezone(timezone.utc).isoformat() if audit.get("created_at", None) != None else None, # type: ignore
+          updated_at=audit.get("updated_at").astimezone(timezone.utc).isoformat() if audit.get("updated_at", None) != None else None, # type: ignore
+          deleted_at=audit.get("deleted_at").astimezone(timezone.utc).isoformat() if audit.get("deleted_at", None) != None else None # type: ignore
         )
       )
 
