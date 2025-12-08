@@ -54,9 +54,13 @@ interface ArchivedMemoryItem {
   mem_type: string;
 }
 
+const PAGE_SIZE = 30;
+
 export function MemoryArchive() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
+  const [dateQFilter, setDateQFilter] = useState<Date | null>(null);
+  const [dateQOrderFilter, setDateQOrderFilter] = useState<"gte" | "lte">("gte");
   const [archivedItems, setArchivedItems] = useState<ArchivedMemoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -65,6 +69,10 @@ export function MemoryArchive() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [memoryToDelete, setMemoryToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const [totalPages, setTotalPage] = useState(0);
   
   const { toast } = useToast();
 
@@ -76,10 +84,15 @@ export function MemoryArchive() {
         {},
         { 
           archive: true,  // Get deleted items
-          offset: 0, 
-          maxItems: 100 
+          offset: Math.max(0, currentPage) - 1,
+          maxItems: PAGE_SIZE,
+          deletedAt: dateQFilter,
+          deletedAtDir: dateQOrderFilter
         }
       );
+
+      setCurrentPage(response.data.page)
+      setTotalPage(Math.ceil(response.data.total / PAGE_SIZE))
 
       // Transform backend data to frontend format
       const items: ArchivedMemoryItem[] = response.data.items.map((item: MemoryItem) => ({
@@ -110,42 +123,65 @@ export function MemoryArchive() {
   // Load data on component mount
   useEffect(() => {
     fetchArchivedMemories();
-  }, []);
+  }, [currentPage, dateQFilter]);
+  useEffect(() => {
+    let now = new Date(Date.now());
+    switch (dateFilter) {
+      case "all":
+      case "today":
+        now = null;
+        setDateQOrderFilter("gte");
+        break;
+      case "week":
+        now.setDate(now.getDate() - 7)
+        setDateQOrderFilter("gte");
+        break;
+      case "month":
+        now.setMonth(now.getMonth() - 1)
+        setDateQOrderFilter("gte");
+        break;
+      case "older":
+        now.setMonth(now.getMonth() - 1)
+        setDateQOrderFilter("lte");
+        break;
+    }
+    setDateQFilter(now);
+  }, [dateFilter]);
 
   // Filter items based on search and date
-  const filteredItems = archivedItems.filter((item) => {
-    const matchesSearch =
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tags.some((tag) =>
-        tag.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-    // Date filtering
-    let matchesDate = true;
-    if (dateFilter !== "all" && item.deletedAt) {
-      const deletedDate = new Date(item.deletedAt);
-      const now = new Date();
-      const daysDiff = Math.floor((now.getTime() - deletedDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      switch (dateFilter) {
-        case "today":
-          matchesDate = daysDiff === 0;
-          break;
-        case "week":
-          matchesDate = daysDiff <= 7;
-          break;
-        case "month":
-          matchesDate = daysDiff <= 30;
-          break;
-        case "older":
-          matchesDate = daysDiff > 30;
-          break;
-      }
-    }
-
-    return matchesSearch && matchesDate;
-  });
+  // const filteredItems = archivedItems.filter((item) => {
+  //   const matchesSearch =
+  //     item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     item.tags.some((tag) =>
+  //       tag.toLowerCase().includes(searchTerm.toLowerCase())
+  //     );
+  //
+  //   let matchesDate = true;
+  //   if (dateFilter !== "all" && item.deletedAt) {
+  //     const deletedDate = new Date(item.deletedAt);
+  //     const now = new Date();
+  //     const daysDiff = Math.floor((now.getTime() - deletedDate.getTime()) / (1000 * 60 * 60 * 24));
+  //     setDateQFilter(new Date(now.getTime() - deletedDate.getTime()));
+  //
+  //     switch (dateFilter) {
+  //       case "today":
+  //         matchesDate = daysDiff === 0;
+  //         break;
+  //       case "week":
+  //         matchesDate = daysDiff <= 7;
+  //         break;
+  //       case "month":
+  //         matchesDate = daysDiff <= 30;
+  //         break;
+  //       case "older":
+  //         matchesDate = daysDiff > 30;
+  //         break;
+  //     }
+  //   }
+  //
+  //   return matchesSearch && matchesDate;
+  // });
 
   const handleRestore = async (memoryId: string) => {
     try {
@@ -221,7 +257,29 @@ export function MemoryArchive() {
     );
   };
 
+  const handleFirstPage = () => setCurrentPage(1);
+  const handleLastPage = () => setCurrentPage(totalPages);
+  const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setPageInput(value);
+
+    if (value === "") {
+      return;
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isNaN(numericValue)) {
+      const clamped = Math.min(Math.max(numericValue, 1), totalPages);
+      setCurrentPage(clamped);
+    }
+  };
+
+
   return (
+    <>
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
@@ -284,9 +342,9 @@ export function MemoryArchive() {
         )}
 
         {/* Archives Grid */}
-        {!isLoading && filteredItems.length > 0 && (
+        {!isLoading && archivedItems.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredItems.map((item) => (
+            {archivedItems.map((item) => (
               <Card key={item.id} className="hover:shadow-md transition-shadow border-red-200 dark:border-red-900">
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -372,7 +430,7 @@ export function MemoryArchive() {
         )}
 
         {/* Empty State */}
-        {!isLoading && filteredItems.length === 0 && (
+        {!isLoading && archivedItems.length === 0 && (
           <Card className="mt-6">
             <CardContent className="text-center py-8">
               <Archive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -432,5 +490,55 @@ export function MemoryArchive() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    <div className="m-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleFirstPage}
+          disabled={currentPage === 1}
+        >
+          First
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrevPage}
+          disabled={currentPage === 1}
+        >
+          Prev
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleNextPage}
+          disabled={currentPage === totalPages}
+        >
+          Next
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleLastPage}
+          disabled={currentPage === totalPages}
+        >
+          Last
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">
+          Page {currentPage} of {totalPages}
+        </span>
+        <Input
+          type="text"
+          value={pageInput}
+          onChange={handlePageInputChange}
+          className="w-20"
+          placeholder="Go to"
+          inputMode="numeric"
+        />
+      </div>
+    </div>
+    </>
   );
 }

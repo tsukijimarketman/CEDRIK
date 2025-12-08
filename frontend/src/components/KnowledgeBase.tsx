@@ -28,6 +28,8 @@ import { ViewFileDialog } from "@/components/dialogs/ViewFileDialog";
 import { DeleteFileDialog } from "@/components/dialogs/DeleteFileDialog";
 import { memoryApi, type MemoryItem } from "@/api/api";
 
+const PAGE_SIZE = 30;
+
 interface KnowledgeBaseItem {
   id: string;
   title: string;
@@ -49,7 +51,11 @@ export function KnowledgeBase() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<KnowledgeBaseItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const [totalPages, setTotalPage] = useState(0);
+
   const { toast } = useToast();
 
   // Fetch memories from backend
@@ -59,11 +65,14 @@ export function KnowledgeBase() {
       const response = await memoryApi.get(
         {}, // No filters for now, fetches all
         { 
-          archive: false, 
-          offset: 0, 
-          maxItems: 100 
+          archive: false,
+          offset: Math.max(0, currentPage) - 1,
+          maxItems: PAGE_SIZE
         }
       );
+
+      setCurrentPage(response.data.page)
+      setTotalPage(Math.ceil(response.data.total / PAGE_SIZE))
 
       // Transform backend data to frontend format
       const items: KnowledgeBaseItem[] = response.data.items.map((item: MemoryItem) => ({
@@ -93,7 +102,7 @@ export function KnowledgeBase() {
   // Load data on component mount
   useEffect(() => {
     fetchMemories();
-  }, []);
+  }, [currentPage]);
 
   // Filter items based on search
   const filteredItems = knowledgeItems.filter((item) => {
@@ -168,7 +177,28 @@ export function KnowledgeBase() {
     );
   };
 
+  const handleFirstPage = () => setCurrentPage(1);
+  const handleLastPage = () => setCurrentPage(totalPages);
+  const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setPageInput(value);
+
+    if (value === "") {
+      return;
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isNaN(numericValue)) {
+      const clamped = Math.min(Math.max(numericValue, 1), totalPages);
+      setCurrentPage(clamped);
+    }
+  };
+
   return (
+    <>
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
@@ -359,5 +389,55 @@ export function KnowledgeBase() {
         isLoading={isDeleting}
       />
     </div>
+    <div className="m-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleFirstPage}
+          disabled={currentPage === 1}
+        >
+          First
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrevPage}
+          disabled={currentPage === 1}
+        >
+          Prev
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleNextPage}
+          disabled={currentPage === totalPages}
+        >
+          Next
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleLastPage}
+          disabled={currentPage === totalPages}
+        >
+          Last
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">
+          Page {currentPage} of {totalPages}
+        </span>
+        <Input
+          type="text"
+          value={pageInput}
+          onChange={handlePageInputChange}
+          className="w-20"
+          placeholder="Go to"
+          inputMode="numeric"
+        />
+      </div>
+    </div>
+    </>
   );
 }

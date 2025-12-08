@@ -381,13 +381,14 @@ class MemoryResult:
 def get():
   """
   Query Params
-    archive     - 1 or 0 (default: 0)
-    offset      - int (default: 0)
-    maxItems    - int (default: 30)
-    sort        - <field_name>-<asc|desc>
-    title       - str
-    mem_type    - MemoryType
-    tags        - str separated with ','
+    archive                - 1 or 0 (default: 0)
+    offset                 - int (default: 0)
+    maxItems               - int (default: 30)
+    sort                   - <field_name>-<asc|desc>
+    title                  - str
+    mem_type               - MemoryType
+    deleted_at-<gte|lte>   - iso date
+    tags                   - str separated with ','
   """
   user_id = get_token()
   if user_id == None:
@@ -403,6 +404,12 @@ def get():
     tags = args.get("tags", "").split(',')
   mem_type = str(re.escape(args.get("mem_type", "")))
 
+  is_deleted_at_lte = True
+  deleted_at = str(args.get("deleted_at-lte", ""))
+  if len(deleted_at) == 0:
+    deleted_at = str(args.get("deleted_at-gte", ""))
+    is_deleted_at_lte = False
+
   filters = []
   if len(title) > 0:
     filters.append(match_regex("title", title))
@@ -411,6 +418,15 @@ def get():
     filters.append(match_list("tags", tags))
   if len(mem_type) > 0:
     filters.append(match_regex("mem_type", mem_type))
+  if len(deleted_at) > 0:
+    try:
+      filters.append({
+        "deleted_at": {
+          f"${"lte" if is_deleted_at_lte else "gte"}": datetime.fromisoformat(deleted_at)
+        }
+      })
+    except: pass
+
 
   try:
     # CRITICAL FIX: Add a unique grouping field BEFORE the $group stage

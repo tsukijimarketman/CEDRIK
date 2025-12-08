@@ -135,6 +135,8 @@ export type MemoryGetParams = {
   offset?: number;
   maxItems?: number;
   asc?: boolean;
+  deletedAt?: Date;
+  deletedAtDir?: "gte" | "lte";
 };
 
 // Memory API
@@ -189,6 +191,10 @@ export const memoryApi = {
 
     if (filters?.mem_type !== undefined) {
       queryParams.mem_type = filters.mem_type;
+    }
+
+    if (params.deletedAt && params.deletedAtDir) {
+      queryParams[`deleted_at-${params.deletedAtDir}`] = params.deletedAt.toISOString();
     }
 
     return api.get<PaginatedResponse<MemoryItem>>("/memory/get", {
