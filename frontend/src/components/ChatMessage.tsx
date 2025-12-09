@@ -70,7 +70,7 @@ export function ChatMessage({
         const timer = setTimeout(() => {
           setDisplayedContent(content.slice(0, currentIndex + 1));
           setCurrentIndex(currentIndex + 1);
-        }, 1);
+        }, 20);
 
         return () => clearTimeout(timer);
       } else {

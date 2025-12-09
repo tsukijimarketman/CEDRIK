@@ -184,8 +184,12 @@ export function ChatInterface() {
 
   // ✅ Callback function for when typewriter completes
   const handleTypewriterComplete = () => {
-    setIsStreaming(false);
-    setIsLoading(false); // ✅ Also clear loading state
+    console.log("🎬 Typewriter complete! Clearing states in 2 seconds...");
+    setTimeout(() => {
+      console.log("🔴 Clearing isStreaming and isLoading");
+      setIsStreaming(false);
+      setIsLoading(false);
+    }, 2000);
   };
 
   const handleEditMessage = (messageId: string, newContent: string) => {
@@ -295,6 +299,13 @@ export function ChatInterface() {
       }, 100);
 
       markMessageAsNew(thinkingId);
+      
+      // ✅ Add delay before clearing streaming state (keeps Stop button visible)
+      setTimeout(() => {
+        if (handleTypewriterComplete) {
+          handleTypewriterComplete();
+        }
+      }, 2000); // Keep Stop button for 2 seconds after streaming completes
     } catch (err: any) {
       if (err.name === "AbortError") {
         setMessages((prev) =>
@@ -367,8 +378,12 @@ export function ChatInterface() {
 
     setMessages((prev) => [...prev, assistantMessage]);
     markMessageAsNew(thinkingId);
+    
+    console.log("🚀 Setting isLoading and isStreaming to TRUE");
     setIsLoading(true);
     setIsStreaming(true);
+    
+    console.log("🔴 Stop button should appear now - isStreaming:", true, "abortController:", !!controller);
 
     try {
       let streamedContent = "";
@@ -390,6 +405,8 @@ export function ChatInterface() {
         },
         controller.signal
       );
+
+      console.log("✅ Streaming complete, content length:", streamedContent.length);
 
       const returnedConvId = result.conversation;
       const generatedTitle =
@@ -416,6 +433,8 @@ export function ChatInterface() {
       }, 300);
 
       markMessageAsNew(thinkingId);
+      
+      console.log("⏳ Waiting for typewriter to complete...");
     } catch (err: any) {
       if (err.name === "AbortError") {
         setMessages((prev) =>
