@@ -20,6 +20,7 @@ interface ChatMessageProps {
   messageId: string;
   copyToClipboard: (text: string) => Promise<boolean>;
   isNewMessage?: boolean;
+  onTypewriterComplete?: () => void;
 }
 
 export function ChatMessage({
@@ -32,6 +33,7 @@ export function ChatMessage({
   messageId,
   copyToClipboard,
   isNewMessage = false,
+  onTypewriterComplete,
 }: ChatMessageProps) {
   const messageRef = useRef<HTMLDivElement>(null);
   const [displayedContent, setDisplayedContent] = useState("");
@@ -74,12 +76,15 @@ export function ChatMessage({
       } else {
         setIsTypingComplete(true);
         isFirstRender.current = false;
+        if (onTypewriterComplete) {
+          onTypewriterComplete();
+        }
       }
     } else {
       setDisplayedContent(content);
       setIsTypingComplete(true);
     }
-  }, [currentIndex, content, isUser, isNewMessage]);
+  }, [currentIndex, content, isUser, isNewMessage, onTypewriterComplete]);
 
   useEffect(() => {
     if (content !== displayedContent && !isNewMessage) {
@@ -135,6 +140,7 @@ export function ChatMessage({
     }
   };
 
+  
   // Save edited message
   const handleSaveEdit = () => {
     if (onEditMessage && editedContent.trim() !== content) {

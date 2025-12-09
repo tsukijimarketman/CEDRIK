@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from mongoengine import ValidationError
-from flask import request, jsonify
+from flask import request, jsonify, Response, stream_with_context
 from flask.blueprints import Blueprint
 from flask_jwt_extended import jwt_required
 from werkzeug.exceptions import InternalServerError, NotAcceptable
 from werkzeug.datastructures import FileStorage
 
 import random
+import json
 from backend.Apps.Main.Database.Models import Audit
 from backend.Apps.Main.Filter.Filter import FILTER_ERR_MSG, m_filter
 from backend.Apps.Main.Utils.Audit import audit_message
@@ -14,11 +15,11 @@ from backend.Apps.Main.Utils.Enum import AuditType
 from backend.Lib.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId, TooManyFiles
 from backend.Apps.Main.Database import Transaction
 from backend.Lib.Logger import Logger
-from backend.Apps.Main.Service.Chat.CreateChat import generate_reply
+# ✅ FIXED: Import both generate_reply and generate_reply_stream
+from backend.Apps.Main.Service.Chat.CreateChat import generate_reply, generate_reply_stream
 from backend.Apps.Main.Utils import get_token, Collections
 from backend.Apps.Main.Service import create_chat
 from backend.Lib.Common import Prompt
-import json as Js
 
 ai = Blueprint("Ai", __name__)
 
@@ -31,6 +32,140 @@ class ChatBody:
     overrides: dict | None = None
     def __post_init__(self):
         self.prompt = Prompt(**self.prompt) # type: ignore
+
+@ai.route("/chat-stream", methods=["POST"])
+@jwt_required(optional=False)
+def chat_stream():
+    '''
+    Streaming version of chat endpoint.
+    Supports real-time response streaming and proper cancellation.
+    Returns Server-Sent Events (SSE) stream.
+    '''
+    body = None
+
+    if not request.content_type or not request.content_type.startswith("multipart/form-data"):
+        raise NotAcceptable(description="Content-Type must be multipart/form-data")
+    if len(request.files.getlist("file")) > 1:
+        raise TooManyFiles()
+    
+    agent = request.form.get("agent", "professor")
+
+    try:
+        json_data = {}
+        conversation = request.form.get("conversation", "")
+        json_data["conversation"] = conversation if conversation and len(conversation.strip()) > 0 else None
+        
+        json_data["prompt"] = {
+            "role": "user",
+            "content": request.form.get("content", "")
+        }
+        json_data["file"] = request.files.get("file")
+        json_data["overrides"] = json.loads(request.form.get("overrides", "{}"))
+
+        body = ChatBody(**json_data)
+        if body.overrides == None:
+            body.overrides = {}
+        body.overrides["agent"] = agent
+    except Exception as e:
+        Logger.log.error(f"Error parsing chat body: {repr(e)}")
+        raise BadBody()
+    
+    user_token = get_token()
+    if (user_token == None): 
+        raise HttpInvalidId()
+
+    def generate():
+        conv_id = body.conversation
+        full_reply = ""
+        embeddings = []
+        
+        try:
+            audit_message(f"user: {user_token.username}\nquery: \"{body.prompt.content}\"").save()
+            
+            # Filter check
+            filter_result = m_filter(body.prompt.content)
+            Logger.log.warning(f"FilterResult {filter_result}")
+            
+            if filter_result.is_filtered:
+                audit_message(f"user: {user_token.username}\nquery: \"{body.prompt.content}\" is filtered", AuditType.FILTERED).save()
+                error_msg = FILTER_ERR_MSG[random.randint(0, len(FILTER_ERR_MSG)-1)]
+                yield f"data: {json.dumps({'type': 'error', 'content': error_msg})}\n\n"
+                return
+
+            Logger.log.warning(f"Finding Related Context...")
+            
+            # Stream the reply
+            for item in generate_reply_stream(
+                conversation_id=body.conversation,
+                user=user_token,
+                prompt=body.prompt,
+                overrides=body.overrides
+            ):
+                # Check if client disconnected
+                try:
+                    if isinstance(item, dict):
+                        # This is the final metadata chunk
+                        embeddings = item.get("embeddings", [])
+                        full_reply = item.get("full_reply", full_reply)
+                    else:
+                        # This is a text chunk
+                        full_reply += item
+                        yield f"data: {json.dumps({'type': 'content', 'content': item})}\n\n"
+                except GeneratorExit:
+                    Logger.log.warning("Client disconnected - stopping generation")
+                    return
+            
+            # Save to database after streaming is complete
+            with Transaction() as (session, db):
+                col_conversation = db.get_collection(Collections.CONVERSATION.value)
+                col_message = db.get_collection(Collections.MESSAGE.value)
+                col_audit = db.get_collection(Collections.AUDIT.value)
+
+                default_title = body.prompt.content
+                if len(default_title) > 20:
+                    default_title = default_title[:20]
+
+                # Create Reply object for database storage
+                from backend.Apps.Main.Utils.LLM import Reply
+                model_reply = Reply(
+                    reply=full_reply,
+                    embeddings=embeddings,
+                    prompt=body.prompt
+                )
+
+                conv_id = create_chat(
+                    session,
+                    col_audit,
+                    col_conversation,
+                    col_message,
+                    model_reply,
+                    default_title,
+                    body.conversation,
+                    body.prompt,
+                    user_token
+                )
+
+                if conv_id != None:
+                    conv_id = str(conv_id)
+            
+            # Send completion with conversation ID
+            yield f"data: {json.dumps({'type': 'done', 'conversation': conv_id})}\n\n"
+            
+        except Exception as e:
+            Logger.log.error(f"Streaming error: {repr(e)}")
+            import traceback
+            Logger.log.error(traceback.format_exc())
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+    
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive'
+        }
+    )
 
 @ai.route("/chat", methods=["POST"])
 @jwt_required(optional=False)
@@ -53,35 +188,36 @@ def chat():
     agent = request.form.get("agent", "professor")
 
     try:
-        json = {}
+        json_dict = {}
         # FIX: Handle empty conversation as None
         conversation = request.form.get("conversation", "")
-        json["conversation"] = conversation if conversation and len(conversation.strip()) > 0 else None
+        json_dict["conversation"] = conversation if conversation and len(conversation.strip()) > 0 else None
         
-        json["prompt"] = {
+        json_dict["prompt"] = {
             "role": "user",
             "content": request.form.get("content", "")
         }
         # TODO handle file
-        json["file"] = request.files.get("file")
-        json["overrides"] = Js.loads(request.form.get("overrides", "{}"))
+        json_dict["file"] = request.files.get("file")
+        json_dict["overrides"] = json.loads(request.form.get("overrides", "{}"))
 
-        body = ChatBody(**json)
+        body = ChatBody(**json_dict)
         if body.overrides == None:
-          body.overrides = {}
+            body.overrides = {}
         body.overrides["agent"] = agent
     except Exception as e:
-        Logger.log.error(f"Error parsing chat body: {repr(e)}")  # DEBUG
+        Logger.log.error(f"Error parsing chat body: {repr(e)}")
         raise BadBody()
-    user_token = get_token()
-    if (user_token == None): raise HttpInvalidId()
     
-
+    user_token = get_token()
+    if (user_token == None): 
+        raise HttpInvalidId()
+    
     try:
         audit_message(f"user: {user_token.username}\nquery: \"{body.prompt.content}\"").save()
-        # Logger.log.warning(f"Do Filter(Not Implemented Yet)...")
         filter_result = m_filter(body.prompt.content)
         Logger.log.warning(f"FilterResult {filter_result}")
+        
         if filter_result.is_filtered:
             audit_message(f"user: {user_token.username}\nquery: \"{body.prompt.content}\" is filtered", AuditType.FILTERED).save()
             return jsonify({
@@ -97,11 +233,9 @@ def chat():
             conversation_id=body.conversation,
             user=user_token,
             prompt=body.prompt,
-            
             overrides=body.overrides
         )
         Logger.log.info(f"Reply {model_reply.reply} {model_reply.embeddings[:5]}")
-        # ==============
 
         with Transaction() as (session, db):
             col_conversation = db.get_collection(Collections.CONVERSATION.value)
@@ -126,6 +260,7 @@ def chat():
 
             if conv_id != None:
                 conv_id = str(conv_id)
+            
             return jsonify({
                 "conversation": conv_id,
                 "reply": model_reply.reply

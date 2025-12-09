@@ -93,6 +93,62 @@ SAFETY GUIDELINES:
 - Emphasize legal and ethical boundaries"""
             }
         }
+
+    def generate_stream(self, query: List[Prompt], overrides: dict = {}):
+        '''Streaming version that yields chunks as they arrive from Groq'''
+        try:
+            agent_type = overrides.get("agent", "professor")
+            agent = self.agents.get(agent_type, self.agents['professor'])
+            
+            Logger.log.info(f"🤖 Using agent: {agent_type} (streaming)")
+            
+            messages = []
+            knowledge_base_context = None
+            non_system_messages = []
+            
+            for prompt in query:
+                if prompt.role == "system":
+                    knowledge_base_context = prompt.content
+                else:
+                    non_system_messages.append(prompt)
+            
+            combined_system_prompt = agent['system_prompt']
+            
+            if knowledge_base_context:
+                combined_system_prompt += f"\n\n{knowledge_base_context}"
+                Logger.log.info(f"📚 Knowledge base context appended")
+            
+            messages.append({
+                "role": "system",
+                "content": combined_system_prompt
+            })
+            
+            for prompt in non_system_messages:
+                messages.append(asdict(prompt))
+            
+            Logger.log.info(f"📨 Streaming {len(messages)} messages to Groq")
+            
+            # ✅ Enable streaming in Groq API
+            stream = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=agent['temperature'],
+                max_tokens=overrides.get("max_new_tokens", 1500),
+                top_p=overrides.get("top_p", 0.9),
+                stream=True  # ✅ This enables streaming
+            )
+            
+            # Yield chunks as they arrive
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+            
+            Logger.log.info(f"✅ {agent['name']} streaming complete")
+            
+        except Exception as e:
+            Logger.log.error(f"Groq streaming error: {str(e)}")
+            Logger.log.error(traceback.format_exc())
+            yield "I apologize, but I encountered an error. Please try again."
     
     def generate(self, query: List[Prompt], overrides: dict = {}) -> str:
         try:

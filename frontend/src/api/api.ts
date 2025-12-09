@@ -4,20 +4,16 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // Required for cookies
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  // Ensure credentials are sent with every request
-  // Flask-JWT-Extended CSRF cookie/header names
-  // It sets a non-HttpOnly cookie named `csrf_access_token` to be sent back as `X-CSRF-TOKEN`
   xsrfCookieName: "csrf_access_token",
   xsrfHeaderName: "X-CSRF-TOKEN",
   withXSRFToken: true,
 });
 
-// Ensure CSRF header is set even in cross-site scenarios
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   try {
     if (typeof document !== "undefined") {
@@ -43,28 +39,121 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// Add a response interceptor to handle errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      console.error(
-        "Authentication error:",
-        error.response?.data?.msg || "Not authenticated"
-      );
-      // You might want to redirect to login or refresh the token here
-    }
-    return Promise.reject(error);
-  }
-);
+// ===== TYPE DECLARATIONS (declare all types before usage) =====
 
-// Reusable pagination response type
 export type PaginatedResponse<T> = {
   items: T[];
   page: number;
   total: number;
 };
+
+export type UserRecord = {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type MemoryItem = {
+  id: string;
+  title: string;
+  mem_type: string;
+  text: string;
+  file_id: string;
+  permission: string[];
+  tags: string[];
+  created_at: string | null;
+  updated_at: string | null;
+  deleted_at: string | null;
+};
+
+export type MemoryCreateRequest = {
+  title: string;
+  text: string;
+  tags: string[];
+  file?: File | null;
+};
+
+export type MemoryGetRequest = {
+  title?: string;
+  mem_type?: string;
+  tags?: string[];
+};
+
+export type MemoryGetParams = {
+  archive?: boolean;
+  offset?: number;
+  maxItems?: number;
+  asc?: boolean;
+  deletedAt?: Date;
+  deletedAtDir?: "gte" | "lte";
+};
+
+export type ChatSidebarTitle = {
+  conversation: string;
+  title: string;
+  created_at: Date;
+};
+
+export type ChatSidebarNewChat = {
+  conversation: string;
+  title: string;
+  created_at: Date;
+};
+
+export type ChatSidebarOpen = {
+  text: string;
+  created_at: Date;
+};
+
+export type ChatPrompt = {
+  role: string;
+  content: string;
+};
+
+export type ChatRequest = {
+  conversation?: string | null;
+  content: string;
+  file: File | null;
+  agent?: "professor" | "hacker";
+};
+
+export type ChatResponse = {
+  conversation: string;
+  reply: string;
+  title?: string;
+};
+
+export type AuditLogRecord = {
+  id: string;
+  type: string;
+  data: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  user?: {
+    id?: string;
+    username?: string;
+    email?: string;
+    role?: string;
+  } | null;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  deleted_at: string | null;
+};
+
+export type AuditLogQuery = {
+  archive: boolean;
+  offset: number;
+  maxItems: number;
+  sort: string;
+  sortAsc: boolean;
+  query: string;
+};
+
+// ===== API IMPLEMENTATIONS =====
 
 export const authApi = {
   register: async (userData: {
@@ -103,58 +192,36 @@ export const authApi = {
   },
 };
 
-// Memory Types
-export type MemoryItem = {
-  id: string;
-  title: string;
-  mem_type: string;
-  text: string;
-  file_id: string;
-  permission: string[];
-  tags: string[];
-  created_at: string | null;
-  updated_at: string | null;
-  deleted_at: string | null;
+export const otpApi = {
+  signupOtp: async (email: string) => {
+    return api.post("/auth/signup-otp", { email });
+  },
 };
 
-export type MemoryCreateRequest = {
-  title: string;
-  text: string;
-  tags: string[];
-  file?: File | null;
+export const passwordApi = {
+  forgotPassword: async (email: string) => {
+    return api.post("/auth/forgot-password", { email });
+  },
+  resetPassword: async (email: string, newPassword: string) => {
+    return api.post("/auth/reset-password", {
+      email,
+      newPassword,
+    });
+  },
 };
 
-export type MemoryGetRequest = {
-  title?: string;
-  mem_type?: string;
-  tags?: string[];
-};
-
-export type MemoryGetParams = {
-  archive?: boolean;
-  offset?: number;
-  maxItems?: number;
-  asc?: boolean;
-  deletedAt?: Date;
-  deletedAtDir?: "gte" | "lte";
-};
-
-// Memory API
 export const memoryApi = {
-  // Create a new memory (text or file)
   create: async (data: MemoryCreateRequest) => {
     const formData = new FormData();
     formData.append("title", data.title);
     formData.append("text", data.text);
 
-    // Handle tags array
     if (data.tags && data.tags.length > 0) {
       data.tags.forEach((tag) => {
         formData.append("tags", tag);
       });
     }
 
-    // Handle file if provided
     if (data.file) {
       formData.append("file", data.file);
     }
@@ -166,7 +233,6 @@ export const memoryApi = {
     });
   },
 
-  // Get memories with optional filters
   get: async (filters?: MemoryGetRequest, params?: MemoryGetParams) => {
     const queryParams: Record<string, string> = {};
 
@@ -188,12 +254,10 @@ export const memoryApi = {
     if (filters?.title !== undefined) {
       queryParams.title = filters.title;
     }
-
     if (filters?.mem_type !== undefined) {
       queryParams.mem_type = filters.mem_type;
     }
-
-    if (params.deletedAt && params.deletedAtDir) {
+    if (params?.deletedAt && params?.deletedAtDir) {
       queryParams[`deleted_at-${params.deletedAtDir}`] = params.deletedAt.toISOString();
     }
 
@@ -202,12 +266,10 @@ export const memoryApi = {
     });
   },
 
-  // Get available memory types
   getMemTypes: async () => {
     return api.get<string[]>("/memory/mem-types");
   },
 
-  // Update an existing memory
   update: async (memoryId: string, data: Partial<MemoryCreateRequest>) => {
     const formData = new FormData();
 
@@ -218,14 +280,12 @@ export const memoryApi = {
       formData.append("text", data.text);
     }
 
-    // Handle tags array
     if (data.tags && data.tags.length > 0) {
       data.tags.forEach((tag) => {
         formData.append("tags", tag);
       });
     }
 
-    // Handle file if provided
     if (data.file) {
       formData.append("file", data.file);
     }
@@ -237,71 +297,17 @@ export const memoryApi = {
     });
   },
 
-  // Delete a memory
   delete: async (memoryId: string) => {
     return api.delete(`/memory/delete/${memoryId}`);
   },
 
-  // Restore a soft-deleted memory
   restore: async (memoryId: string) => {
     return api.put(`/memory/restore/${memoryId}`);
   },
 
-  // Permanently delete a memory (hard delete)
   permanentDelete: async (memoryId: string) => {
     return api.delete(`/memory/permanent-delete/${memoryId}`);
   },
-};
-
-// Dedicated OTP API for signup flow (reuses the same backend endpoint for now)
-export const otpApi = {
-  signupOtp: async (email: string) => {
-    return api.post("/auth/signup-otp", { email });
-  },
-};
-
-export const passwordApi = {
-  forgotPassword: async (email: string) => {
-    return api.post("/auth/forgot-password", { email });
-  },
-
-  resetPassword: async (email: string, newPassword: string) => {
-    return api.post("/auth/reset-password", {
-      email,
-      newPassword,
-    });
-  },
-};
-////
-export type UserRecord = {
-  id: string;
-  email: string;
-  username: string;
-  role: string;
-  is_active: boolean;
-  created_at: string | null;
-  updated_at: string | null;
-};
-
-//conversation
-//title
-//created_at
-
-export type ChatSidebarTitle = {
-  conversation: string;
-  title: string;
-  created_at: Date;
-};
-
-export type ChatSidebarNewChat = {
-  conversation: string;
-  title: string;
-  created_at: Date;
-};
-
-export type ChatSidebarOpen = {
-  text: string;
-  created_at: Date;
 };
 
 export const sidebarTitleApi = {
@@ -318,7 +324,7 @@ export const sidebarTitleApi = {
 };
 
 export const sidebarConversationOpen = {
-  conversationOpen: async (id) => {
+  conversationOpen: async (id: string) => {
     const res = await api.get<ChatSidebarOpen[]>("/conversation/get/" + id);
     res.data = res.data.map((x) => ({
       ...x,
@@ -342,42 +348,20 @@ export const sidebarConversationDelete = {
   },
 };
 
-// AI Chat API
-export type ChatPrompt = {
-  role: string;
-  content: string;
-};
-
-export type ChatRequest = {
-  conversation?: string | null;
-  content: string;
-  file: File | null;
-  agent?: "professor" | "hacker";
-};
-
-export type ChatResponse = {
-  conversation: string;
-  reply: string;
-  title?: string;
-};
-
 export const aiApi = {
-  chat: async (data: ChatRequest) => {
+  chat: async (data: ChatRequest, signal?: AbortSignal) => {
     const formData = new FormData();
     formData.append("conversation", data.conversation || "");
     formData.append("content", data.content);
 
-    // Only append file if it exists (not null)
     if (data.file) {
       formData.append("file", data.file);
     }
 
-    // ✅ Send agent parameter to backend
     if (data.agent) {
       formData.append("agent", data.agent);
     }
 
-    // ✅ Send overrides as JSON string
     const overrides = {};
     formData.append("overrides", JSON.stringify(overrides));
 
@@ -385,35 +369,94 @@ export const aiApi = {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      signal,
     });
   },
-};
 
-export type AuditLogRecord = {
-  id: string;
-  type: string;
-  data: Record<string, unknown> | null;
-  metadata: Record<string, unknown> | null;
-  user?: {
-    id?: string;
-    username?: string;
-    email?: string;
-    role?: string;
-  } | null; // 👈 added this
-  is_active: boolean;
-  created_at: string | null;
-  updated_at: string | null;
-  deleted_at: string | null;
-};
+  chatStream: async (
+    data: ChatRequest,
+    onChunk: (chunk: string) => void,
+    signal?: AbortSignal
+  ): Promise<{ conversation: string }> => {
+    const formData = new FormData();
+    formData.append("conversation", data.conversation || "");
+    formData.append("content", data.content);
 
-export type AuditLogQuery = {
-  archive: boolean;
-  offset: number,
-  maxItems: number,
-  sort: string,
-  sortAsc: boolean,
-  query: string
-}
+    if (data.file) {
+      formData.append("file", data.file);
+    }
+
+    if (data.agent) {
+      formData.append("agent", data.agent);
+    }
+
+    const overrides = {};
+    formData.append("overrides", JSON.stringify(overrides));
+
+    let csrfToken = "";
+    if (typeof document !== "undefined") {
+      const token = document.cookie
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith("csrf_access_token="))
+        ?.split("=")?.[1];
+      if (token) {
+        csrfToken = decodeURIComponent(token);
+      }
+    }
+
+    const response = await fetch(`${API_BASE_URL}/ai/chat-stream`, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+      headers: {
+        "X-CSRF-TOKEN": csrfToken,
+      },
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let conversationId = "";
+
+    if (!reader) {
+      throw new Error("No response body");
+    }
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = JSON.parse(line.slice(6));
+
+            if (data.type === "content") {
+              onChunk(data.content);
+            } else if (data.type === "done") {
+              conversationId = data.conversation || "";
+            } else if (data.type === "error") {
+              throw new Error(data.content);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return { conversation: conversationId };
+  },
+};
 
 export const auditApi = {
   list: async (options: AuditLogQuery) => {
@@ -422,7 +465,7 @@ export const auditApi = {
     params.offset = options.offset ? `${options.offset}` : "0";
     params.maxItems = options.maxItems ? `${options.maxItems}` : "0";
     if (options.sort != undefined || options.sort.length != 0) {
-      params.sort = `${options.sort}-${options.sortAsc ? "asc" : "desc" }`;
+      params.sort = `${options.sort}-${options.sortAsc ? "asc" : "desc"}`;
     }
     if (options.query != undefined || options.query.length != 0) {
       params.username = options.query;
@@ -437,9 +480,17 @@ export const auditApi = {
   },
 };
 
+// Response interceptor (single, combined version)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      console.error(
+        "Authentication error:",
+        error.response?.data?.msg || "Not authenticated"
+      );
+    }
+    
     if (error.response) {
       return Promise.reject(error.response.data);
     }

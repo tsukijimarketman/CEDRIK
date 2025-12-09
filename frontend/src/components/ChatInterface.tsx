@@ -22,7 +22,6 @@ interface Message {
   isEdited?: boolean;
 }
 
-// Extract a human-readable error message from various error shapes
 function getErrorMessage(err: unknown): string {
   if (typeof err === "string") return err;
   if (err && typeof err === "object") {
@@ -34,13 +33,11 @@ function getErrorMessage(err: unknown): string {
   return "An error occurred while getting a response.";
 }
 
-// Utility function for copying to clipboard
 const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
     await navigator.clipboard.writeText(text);
     return true;
   } catch (err) {
-    // Fallback for older browsers
     const textArea = document.createElement("textarea");
     textArea.value = text;
     document.body.appendChild(textArea);
@@ -56,39 +53,29 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
   }
 };
 
-// Function to update chat title
 const updateChatTitle = async (
   conversationId: string,
   title: string
 ): Promise<void> => {
   try {
     console.log("🔄 Updating chat title via API:", { conversationId, title });
-
-    // Update backend first
     await sidebarTitleApi.updateChatTitle(conversationId, title);
-
-    // Then update frontend via event
     window.dispatchEvent(
       new CustomEvent("updateChatTitle", {
         detail: { conversationId, title },
       })
     );
-
     console.log("✅ Title updated successfully");
   } catch (error) {
     console.error("❌ Failed to update chat title via API:", error);
-    // Even if backend fails, still update frontend for better UX
     window.dispatchEvent(
       new CustomEvent("updateChatTitle", {
         detail: { conversationId, title },
       })
     );
-
-    // Don't refresh sidebar if title update failed to avoid overwriting
     return;
   }
 
-  // Only refresh sidebar if backend update was successful
   setTimeout(() => {
     window.dispatchEvent(new CustomEvent("refreshSidebar"));
   }, 500);
@@ -98,20 +85,18 @@ export function ChatInterface() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const { user, loading } = useUser();
-  const [regeneratingMessageId, setRegeneratingMessageId] = useState<
-    string | null
-  >(null);
+  const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
   const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
   const [currentChatTitle, setCurrentChatTitle] = useState<string>("");
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const { currentAgent } = useAgent();
-
   const { activeChatId, setActiveChatId } = useChat();
 
-  // Debug authentication state
   useEffect(() => {
     console.log("🔐 ChatInterface Auth Debug:", {
       user: user ? { email: user.email, username: user.username } : null,
@@ -121,21 +106,17 @@ export function ChatInterface() {
     });
   }, [user, loading, activeChatId]);
 
-  // Reset chat title when no active chat
   useEffect(() => {
     if (!activeChatId) {
       setCurrentChatTitle("");
     }
   }, [activeChatId]);
 
-  // Auto scroll to bottom when new messages are added
   useEffect(() => {
     if (messages.length > 0 && viewportRef.current) {
       const viewport = viewportRef.current;
-      // Only auto-scroll if user is near the bottom
       const isNearBottom =
-        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
-        100;
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
 
       if (isNearBottom) {
         viewport.scrollTo({
@@ -146,27 +127,21 @@ export function ChatInterface() {
     }
   }, [messages]);
 
-  // Handle scroll events to show/hide scroll-to-bottom button
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
 
     const handleScroll = () => {
       const isAtBottom =
-        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
-        100;
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
       setShowScrollToBottom(!isAtBottom);
     };
 
     viewport.addEventListener("scroll", handleScroll);
-
-    // Initial check
     handleScroll();
-
     return () => viewport.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Also check for scroll position when messages change
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -176,7 +151,6 @@ export function ChatInterface() {
     setShowScrollToBottom(!isAtBottom);
   }, [messages]);
 
-  // Scroll to bottom function
   const scrollToBottom = () => {
     if (viewportRef.current) {
       viewportRef.current.scrollTo({
@@ -186,22 +160,16 @@ export function ChatInterface() {
     }
   };
 
-  // Helper function to determine if a message is new (should show typewriter effect)
   const isNewMessage = (messageId: string, index: number): boolean => {
-    // Only assistant messages can be new
     const message = messages[index];
     if (message.role !== "assistant") return false;
-
-    // Check if this message ID is in our new messages set
     return newMessageIds.has(messageId);
   };
 
-  // Add a message to the new messages set (for typewriter effect)
   const markMessageAsNew = (messageId: string) => {
     setNewMessageIds((prev) => new Set(prev).add(messageId));
   };
 
-  // Remove a message from the new messages set (when typing completes)
   const markMessageAsNotNew = (messageId: string) => {
     setNewMessageIds((prev) => {
       const newSet = new Set(prev);
@@ -210,27 +178,27 @@ export function ChatInterface() {
     });
   };
 
-  // Clear all new message flags when loading existing conversation
   const clearNewMessageFlags = () => {
     setNewMessageIds(new Set());
   };
 
-  // Handle message editing
+  // ✅ Callback function for when typewriter completes
+  const handleTypewriterComplete = () => {
+    setIsStreaming(false);
+    setIsLoading(false); // ✅ Also clear loading state
+  };
+
   const handleEditMessage = (messageId: string, newContent: string) => {
     if (!user) return;
 
-    // Find the message index first
     const messageIndex = messages.findIndex((msg) => msg.id === messageId);
     const editedMessage = messages[messageIndex];
 
     if (editedMessage?.role === "user") {
       const nextAssistantMessage = messages[messageIndex + 1];
-
-      // Create the updated messages array
       let updatedMessages: Message[];
 
       if (nextAssistantMessage && nextAssistantMessage.role === "assistant") {
-        // Keep messages up to and including the edited one, remove the rest
         updatedMessages = [
           ...messages.slice(0, messageIndex),
           {
@@ -241,7 +209,6 @@ export function ChatInterface() {
           },
         ];
       } else {
-        // Just update the message content
         updatedMessages = messages.map((msg) =>
           msg.id === messageId
             ? { ...msg, content: newContent, isEdited: true }
@@ -249,22 +216,22 @@ export function ChatInterface() {
         );
       }
 
-      // Single setMessages call to avoid race conditions
       setMessages(updatedMessages);
 
-      // Only regenerate if there was an assistant message to regenerate
       if (nextAssistantMessage && nextAssistantMessage.role === "assistant") {
         handleRegenerateResponse(messageId, newContent);
       }
     }
   };
 
-  // Handle response regeneration
   const handleRegenerateResponse = async (
     userMessageId?: string,
     newContent?: string
   ) => {
     if (!user) return;
+
+    const controller = new AbortController();
+    setAbortController(controller);
 
     let userMessage: Message;
 
@@ -289,68 +256,86 @@ export function ChatInterface() {
 
     setRegeneratingMessageId(userMessage.id);
     setIsLoading(true);
+    setIsStreaming(true);
 
     const thinkingId = `thinking-${Date.now()}`;
-    const thinkingMessage: Message = {
+    const assistantMessage: Message = {
       id: thinkingId,
       role: "assistant",
-      content: "CEDRIK is thinking...",
+      content: "",
       timestamp: new Date().toLocaleTimeString(),
     };
 
-    setMessages((prev) => [...prev, thinkingMessage]);
-    // Mark the thinking message as new for immediate display
+    setMessages((prev) => [...prev, assistantMessage]);
     markMessageAsNew(thinkingId);
 
     try {
-      const res = await aiApi.chat({
-        conversation: activeChatId,
-        content: userMessage.content,
-        file: null,
-        agent: currentAgent,
-      });
+      let streamedContent = "";
 
-      const reply = res.data.reply ?? "";
-      const returnedConvId = res.data.conversation;
-
-      if (returnedConvId && !activeChatId) {
-        setActiveChatId(returnedConvId);
-      }
+      await aiApi.chatStream(
+        {
+          conversation: activeChatId,
+          content: userMessage.content,
+          file: null,
+          agent: currentAgent,
+        },
+        (chunk) => {
+          streamedContent += chunk;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === thinkingId ? { ...m, content: streamedContent } : m
+            )
+          );
+        },
+        controller.signal
+      );
 
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent("refreshSidebar"));
       }, 100);
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === thinkingId
-            ? {
-                ...m,
-                content: reply,
-                timestamp: new Date().toLocaleTimeString(),
-              }
-            : m
-        )
-      );
-
-      // Mark the final message as new for typewriter effect
       markMessageAsNew(thinkingId);
-    } catch (err) {
-      const message = getErrorMessage(err);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === thinkingId
-            ? {
-                ...m,
-                content: `Error: ${message}`,
-                timestamp: new Date().toLocaleTimeString(),
-              }
-            : m
-        )
-      );
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? {
+                  ...m,
+                  content: m.content || "Response generation stopped.",
+                  timestamp: new Date().toLocaleTimeString(),
+                }
+              : m
+          )
+        );
+      } else {
+        const message = getErrorMessage(err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? {
+                  ...m,
+                  content: `Error: ${message}`,
+                  timestamp: new Date().toLocaleTimeString(),
+                }
+              : m
+          )
+        );
+      }
+      setIsStreaming(false);
     } finally {
-      setIsLoading(false);
+      // ✅ Don't clear isLoading here - let typewriter complete first
       setRegeneratingMessageId(null);
+      setAbortController(null);
+    }
+  };
+
+  const handleStopGeneration = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsLoading(false); // ✅ Clear loading immediately when stopped
+      setIsStreaming(false);
     }
   };
 
@@ -359,6 +344,9 @@ export function ChatInterface() {
       console.log("Please log in to send messages");
       return;
     }
+
+    const controller = new AbortController();
+    setAbortController(controller);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -370,49 +358,48 @@ export function ChatInterface() {
     setMessages((prev) => [...prev, userMessage]);
 
     const thinkingId = `thinking-${Date.now()}`;
-    const thinkingMessage: Message = {
+    const assistantMessage: Message = {
       id: thinkingId,
       role: "assistant",
-      content: "CEDRIK is thinking...",
+      content: "",
       timestamp: new Date().toLocaleTimeString(),
     };
 
-    setMessages((prev) => [...prev, thinkingMessage]);
+    setMessages((prev) => [...prev, assistantMessage]);
     markMessageAsNew(thinkingId);
-
     setIsLoading(true);
+    setIsStreaming(true);
 
     try {
-      const res = await aiApi.chat({
-        conversation: activeChatId,
-        content: content,
-        file: null,
-        agent: currentAgent,
-      });
+      let streamedContent = "";
 
-      const reply = res.data.reply ?? "";
-      const returnedConvId = res.data.conversation;
+      const result = await aiApi.chatStream(
+        {
+          conversation: activeChatId,
+          content: content,
+          file: null,
+          agent: currentAgent,
+        },
+        (chunk) => {
+          streamedContent += chunk;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === thinkingId ? { ...m, content: streamedContent } : m
+            )
+          );
+        },
+        controller.signal
+      );
 
-      // Generate title from first user message (truncated)
+      const returnedConvId = result.conversation;
       const generatedTitle =
         content.slice(0, 50) + (content.length > 50 ? "..." : "");
 
-      console.log("🎯 Title update debug:", {
-        returnedConvId,
-        activeChatId,
-        messagesLength: messages.length,
-        generatedTitle,
-      });
-
-      // Handle title updates for different scenarios
       if (returnedConvId && !activeChatId) {
-        // Case 1: Brand new conversation - update title
         setActiveChatId(returnedConvId);
         setCurrentChatTitle(generatedTitle);
         await updateChatTitle(returnedConvId, generatedTitle);
-        console.log("🆕 Updated title for new conversation");
       } else if (activeChatId) {
-        // Case 2: Existing conversation - check if this is the first real message
         const nonThinkingMessages = messages.filter(
           (msg) => !msg.id.startsWith("thinking-")
         );
@@ -421,45 +408,45 @@ export function ChatInterface() {
         if (isFirstRealMessage) {
           setCurrentChatTitle(generatedTitle);
           await updateChatTitle(activeChatId, generatedTitle);
-          console.log(
-            "📝 Updated title for first message in existing conversation"
-          );
         }
       }
 
-      // Always refresh sidebar to ensure consistency
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent("refreshSidebar"));
       }, 300);
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === thinkingId
-            ? {
-                ...m,
-                content: reply,
-                timestamp: new Date().toLocaleTimeString(),
-              }
-            : m
-        )
-      );
-
       markMessageAsNew(thinkingId);
-    } catch (err) {
-      const message = getErrorMessage(err);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === thinkingId
-            ? {
-                ...m,
-                content: `Error: ${message}`,
-                timestamp: new Date().toLocaleTimeString(),
-              }
-            : m
-        )
-      );
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? {
+                  ...m,
+                  content: m.content || "Response generation stopped.",
+                  timestamp: new Date().toLocaleTimeString(),
+                }
+              : m
+          )
+        );
+      } else {
+        const message = getErrorMessage(err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? {
+                  ...m,
+                  content: `Error: ${message}`,
+                  timestamp: new Date().toLocaleTimeString(),
+                }
+              : m
+          )
+        );
+      }
+      setIsStreaming(false);
     } finally {
-      setIsLoading(false);
+      // ✅ Don't clear isLoading here - let typewriter complete first
+      setAbortController(null);
     }
   };
 
@@ -467,7 +454,6 @@ export function ChatInterface() {
     if (!user) return;
 
     try {
-      // Clear any existing new message flags when loading a conversation
       clearNewMessageFlags();
 
       const res = await sidebarConversationOpen.conversationOpen(conversation);
@@ -482,7 +468,6 @@ export function ChatInterface() {
       );
       setMessages(fetchedMessages);
 
-      // Set the chat title from the first message
       if (fetchedMessages.length > 0) {
         const firstMessage = fetchedMessages[0].content;
         const generatedTitle =
@@ -515,7 +500,6 @@ export function ChatInterface() {
           isSidebarCollapsed ? "max-w-4xl mx-auto" : "w-full px-6"
         )}
       >
-        {/* Left section - Hamburger and Logo */}
         <div className="flex items-center gap-4">
           {isSidebarCollapsed ? (
             <>
@@ -546,14 +530,12 @@ export function ChatInterface() {
           )}
         </div>
 
-        {/* Centered Chat Title */}
         <div className="flex-1 flex justify-center">
           <h1 className="text-lg font-semibold text-foreground truncate max-w-md">
             {currentChatTitle || "New Chat"}
           </h1>
         </div>
 
-        {/* Right section - Agent Switcher + Theme toggle */}
         <div className="flex items-center gap-2">
           <AgentSwitcher />
           <ThemeToggle />
@@ -568,7 +550,6 @@ export function ChatInterface() {
         {messages.length === 0 ? (
           <WelcomeMessage loggedOut={!isAuthenticated} />
         ) : (
-          // Add top padding for fixed header and bottom padding for fixed input
           <div className="pt-16 pb-32">
             {messages.map((message, index) => (
               <ChatMessage
@@ -584,6 +565,7 @@ export function ChatInterface() {
                   isAuthenticated ? () => handleRegenerateResponse() : undefined
                 }
                 copyToClipboard={copyToClipboard}
+                onTypewriterComplete={handleTypewriterComplete}
               />
             ))}
           </div>
@@ -594,7 +576,6 @@ export function ChatInterface() {
 
   return (
     <div className="relative h-screen bg-chat-background flex flex-col">
-      {/* Sidebar with higher z-index */}
       <div className="z-40">
         <ChatSidebar
           setMessages={setMessages}
@@ -604,18 +585,12 @@ export function ChatInterface() {
         />
       </div>
 
-      {/* Fixed Header */}
       {renderHeader()}
 
-      {/* Main content area that moves with sidebar */}
-      <div
-        className={`flex flex-col flex-1 ${contentMarginClass} transition-all duration-300 min-w-0 relative z-20 pt-16`}
-      >
-        {/* Messages area should take available space */}
+      <div className={`flex flex-col flex-1 ${contentMarginClass} transition-all duration-300 min-w-0 relative z-20 pt-16`}>
         <div className="flex-1 overflow-hidden relative">
           {renderMessages()}
 
-          {/* Scroll to bottom button - Fixed positioning */}
           {showScrollToBottom && (
             <Button
               onClick={scrollToBottom}
@@ -629,10 +604,28 @@ export function ChatInterface() {
         </div>
       </div>
 
-      {/* Fixed ChatInput */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-30 ${contentMarginClass} transition-all duration-300`}
-      >
+      <div className={`fixed bottom-0 left-0 right-0 z-30 ${contentMarginClass} transition-all duration-300`}>
+        {isStreaming && abortController && (
+          <div className="flex justify-center pb-2 animate-in fade-in duration-200">
+            <Button
+              onClick={handleStopGeneration}
+              variant="outline"
+              size="sm"
+              className="bg-red-500 hover:bg-red-600 text-white border-red-600 shadow-lg transition-all duration-200 hover:scale-105"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                className="w-4 h-4 mr-2"
+              >
+                <rect x="6" y="6" width="12" height="12" rx="1" />
+              </svg>
+              Stop Generating
+            </Button>
+          </div>
+        )}
+
         <ChatInput
           onSendMessage={
             isAuthenticated
