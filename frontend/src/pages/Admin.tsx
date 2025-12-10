@@ -1,39 +1,92 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { AdminSidebar } from "@/components/AdminSidebar";
+import { AdminUserManagement } from "@/components/AdminUserManagement";
+import { AdminKnowledgeBase } from "@/components/AdminKnowledgeBase";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/ThemeProvider";
+import { Moon, Sun } from "lucide-react";
+
+type ActiveSection = "user-management" | "knowledge-base";
 
 const Admin = () => {
+  const [activeSection, setActiveSection] = useState<ActiveSection>("user-management");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { theme, setTheme } = useTheme();
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case "user-management":
+        return <AdminUserManagement />;
+      case "knowledge-base":
+        return <AdminKnowledgeBase />;
+      default:
+        return <AdminUserManagement />;
+    }
+  };
+
+  const contentMarginClass = "md:ml-64";
+
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>Manage user accounts and permissions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Coming soon...</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>System Settings</CardTitle>
-              <CardDescription>Configure system-wide settings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Coming soon...</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics</CardTitle>
-              <CardDescription>View system analytics and reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Coming soon...</p>
-            </CardContent>
-          </Card>
+    <div className="relative h-screen bg-background">
+      <AdminSidebar
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
+
+      <div
+        className={`flex flex-col h-full ${contentMarginClass} transition-all duration-300 min-w-0`}
+      >
+        {/* Header */}
+        <div className="border-b border-border bg-background">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center">
+              {isSidebarCollapsed && (
+                <button
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="mr-4 p-2 hover:bg-muted rounded-md transition-colors"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                className="gap-2"
+              >
+                {theme === "light" ? (
+                  <Moon className="h-4 w-4" />
+                ) : (
+                  <Sun className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {theme === "light" ? "Dark" : "Light"}
+                </span>
+              </Button>
+              <span className="text-sm text-muted-foreground capitalize">
+                {activeSection.replace("-", " ")}
+              </span>
+            </div>
+          </div>
         </div>
+
+        {/* Main Content */}
+        {renderContent()}
       </div>
     </div>
   );
