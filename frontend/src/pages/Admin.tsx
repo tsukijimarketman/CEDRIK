@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { AdminUserManagement } from "@/components/AdminUserManagement";
-import { AdminKnowledgeBase } from "@/components/AdminKnowledgeBase";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
 import { Moon, Sun } from "lucide-react";
 
-type ActiveSection = "user-management" | "knowledge-base";
+type ActiveSection = "user-management";
 
 const Admin = () => {
   const [activeSection, setActiveSection] = useState<ActiveSection>("user-management");
@@ -17,8 +16,6 @@ const Admin = () => {
     switch (activeSection) {
       case "user-management":
         return <AdminUserManagement />;
-      case "knowledge-base":
-        return <AdminKnowledgeBase />;
       default:
         return <AdminUserManagement />;
     }

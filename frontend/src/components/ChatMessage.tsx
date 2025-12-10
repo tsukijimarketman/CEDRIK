@@ -20,7 +20,7 @@ interface ChatMessageProps {
   messageId: string;
   copyToClipboard: (text: string) => Promise<boolean>;
   isNewMessage?: boolean;
-  onTypewriterComplete?: () => void;
+  onTypewriterComplete?: (messageId: string) => void;
 }
 
 export function ChatMessage({
@@ -44,6 +44,7 @@ export function ChatMessage({
   const [copyFeedback, setCopyFeedback] = useState<"none" | "code" | "all">(
     "none"
   );
+  const hasCalledCallback = useRef(false);
 
   const { user } = useUser();
 
@@ -54,37 +55,44 @@ export function ChatMessage({
 
   // Typewriter effect only for new assistant messages
   useEffect(() => {
-    if (
-      isUser ||
-      content === "CEDRIK is thinking..." ||
-      content.startsWith("Error:") ||
-      content.startsWith("Please Login First")
-    ) {
-      setDisplayedContent(content);
-      setIsTypingComplete(true);
-      return;
-    }
+  if (
+    isUser ||
+    content === "CEDRIK is thinking..." ||
+    content.startsWith("Error:") ||
+    content.startsWith("Please Login First")
+  ) {
+    setDisplayedContent(content);
+    setIsTypingComplete(true);
+    return;
+  }
 
-    if (isNewMessage && isFirstRender.current) {
-      if (currentIndex < content.length) {
-        const timer = setTimeout(() => {
-          setDisplayedContent(content.slice(0, currentIndex + 1));
-          setCurrentIndex(currentIndex + 1);
-        }, 20);
+  if (isNewMessage && isFirstRender.current) {
+    if (currentIndex < content.length) {
+      console.log(`⌨️ Typewriter for ${messageId}: ${currentIndex}/${content.length}`);
+      const timer = setTimeout(() => {
+        const charsToAdd = Math.min(3, content.length - currentIndex);
+        setDisplayedContent(content.slice(0, currentIndex + charsToAdd));
+        setCurrentIndex(currentIndex + charsToAdd);
+      }, 5);
 
-        return () => clearTimeout(timer);
-      } else {
-        setIsTypingComplete(true);
-        isFirstRender.current = false;
-        if (onTypewriterComplete) {
-          onTypewriterComplete();
-        }
-      }
+      return () => clearTimeout(timer);
     } else {
-      setDisplayedContent(content);
+      console.log(`✅ Typewriter COMPLETE for ${messageId} - calling callback`);
       setIsTypingComplete(true);
+      isFirstRender.current = false;
+      
+      // ✅ Only call the callback once
+      if (onTypewriterComplete && !hasCalledCallback.current && content.length > 0) {
+        hasCalledCallback.current = true;
+        onTypewriterComplete(messageId);
+      }
     }
-  }, [currentIndex, content, isUser, isNewMessage, onTypewriterComplete]);
+  } else {
+    console.log(`⚡ Message ${messageId} - instant render (not new or not first render)`);
+    setDisplayedContent(content);
+    setIsTypingComplete(true);
+  }
+}, [currentIndex, content, isUser, isNewMessage, onTypewriterComplete, messageId]);
 
   useEffect(() => {
     if (content !== displayedContent && !isNewMessage) {
@@ -97,22 +105,23 @@ export function ChatMessage({
 
   // Reset typewriter effect when we get a truly new message
   useEffect(() => {
-    if (
-      !isUser &&
-      isNewMessage &&
-      content !== "CEDRIK is thinking..." &&
-      !content.startsWith("Error:") &&
-      !content.startsWith("Please Login First")
-    ) {
-      setDisplayedContent("");
-      setCurrentIndex(0);
-      setIsTypingComplete(false);
-      isFirstRender.current = true;
-    } else if (!isNewMessage) {
-      setDisplayedContent(content);
-      setIsTypingComplete(true);
-    }
-  }, [content, isUser, isNewMessage]);
+  if (
+    !isUser &&
+    isNewMessage &&
+    content !== "CEDRIK is thinking..." &&
+    !content.startsWith("Error:") &&
+    !content.startsWith("Please Login First")
+  ) {
+    setDisplayedContent("");
+    setCurrentIndex(0);
+    setIsTypingComplete(false);
+    isFirstRender.current = true;
+    hasCalledCallback.current = false; // ✅ Reset the flag for new messages
+  } else if (!isNewMessage) {
+    setDisplayedContent(content);
+    setIsTypingComplete(true);
+  }
+}, [content, isUser, isNewMessage]);
 
   // Scroll into view when typing is complete or for user messages
   useEffect(() => {

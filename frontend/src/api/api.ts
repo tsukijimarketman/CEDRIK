@@ -374,88 +374,94 @@ export const aiApi = {
   },
 
   chatStream: async (
-    data: ChatRequest,
-    onChunk: (chunk: string) => void,
-    signal?: AbortSignal
-  ): Promise<{ conversation: string }> => {
-    const formData = new FormData();
-    formData.append("conversation", data.conversation || "");
-    formData.append("content", data.content);
+  data: ChatRequest,
+  onChunk: (chunk: string) => void,
+  signal?: AbortSignal
+): Promise<{ conversation: string }> => {
+  const formData = new FormData();
+  formData.append("conversation", data.conversation || "");
+  formData.append("content", data.content);
 
-    if (data.file) {
-      formData.append("file", data.file);
+  if (data.file) {
+    formData.append("file", data.file);
+  }
+
+  if (data.agent) {
+    formData.append("agent", data.agent);
+  }
+
+  const overrides = {};
+  formData.append("overrides", JSON.stringify(overrides));
+
+  let csrfToken = "";
+  if (typeof document !== "undefined") {
+    const token = document.cookie
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith("csrf_access_token="))
+      ?.split("=")?.[1];
+    if (token) {
+      csrfToken = decodeURIComponent(token);
     }
+  }
 
-    if (data.agent) {
-      formData.append("agent", data.agent);
-    }
+  const response = await fetch(`${API_BASE_URL}/ai/chat-stream`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+    headers: {
+      "X-CSRF-TOKEN": csrfToken,
+    },
+    signal,
+  });
 
-    const overrides = {};
-    formData.append("overrides", JSON.stringify(overrides));
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
 
-    let csrfToken = "";
-    if (typeof document !== "undefined") {
-      const token = document.cookie
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith("csrf_access_token="))
-        ?.split("=")?.[1];
-      if (token) {
-        csrfToken = decodeURIComponent(token);
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let conversationId = "";
+
+  if (!reader) {
+    throw new Error("No response body");
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) {
+        console.log("✅ Stream reader completed");
+        break;
       }
-    }
 
-    const response = await fetch(`${API_BASE_URL}/ai/chat-stream`, {
-      method: "POST",
-      body: formData,
-      credentials: "include",
-      headers: {
-        "X-CSRF-TOKEN": csrfToken,
-      },
-      signal,
-    });
+      const chunk = decoder.decode(value);
+      const lines = chunk.split("\n");
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = JSON.parse(line.slice(6));
 
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-    let conversationId = "";
-
-    if (!reader) {
-      throw new Error("No response body");
-    }
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = JSON.parse(line.slice(6));
-
-            if (data.type === "content") {
-              onChunk(data.content);
-            } else if (data.type === "done") {
-              conversationId = data.conversation || "";
-            } else if (data.type === "error") {
-              throw new Error(data.content);
-            }
+          if (data.type === "content") {
+            onChunk(data.content);
+          } else if (data.type === "done") {
+            conversationId = data.conversation || "";
+            console.log("✅ Received 'done' event with conversation:", conversationId);
+            // ✅ DON'T break here - let the stream finish naturally
+          } else if (data.type === "error") {
+            throw new Error(data.content);
           }
         }
       }
-    } finally {
-      reader.releaseLock();
     }
+  } finally {
+    reader.releaseLock();
+  }
 
-    return { conversation: conversationId };
-  },
+  console.log("✅ Returning from chatStream with conversation:", conversationId);
+  return { conversation: conversationId };
+},
 };
 
 export const auditApi = {

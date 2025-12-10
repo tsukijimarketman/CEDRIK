@@ -95,6 +95,7 @@ export function ChatInterface() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const { currentAgent } = useAgent();
+  const [activeTypingMessageId, setActiveTypingMessageId] = useState<string | null>(null);
   const { activeChatId, setActiveChatId } = useChat();
 
   useEffect(() => {
@@ -151,6 +152,16 @@ export function ChatInterface() {
     setShowScrollToBottom(!isAtBottom);
   }, [messages]);
 
+  useEffect(() => {
+  console.log("📊 STATE UPDATE:", {
+    isStreaming,
+    isLoading,
+    hasAbortController: !!abortController,
+    activeTypingMessageId,
+    shouldShowStopButton: isStreaming && !!abortController
+  });
+}, [isStreaming, isLoading, abortController, activeTypingMessageId]);
+
   const scrollToBottom = () => {
     if (viewportRef.current) {
       viewportRef.current.scrollTo({
@@ -183,14 +194,19 @@ export function ChatInterface() {
   };
 
   // ✅ Callback function for when typewriter completes
-  const handleTypewriterComplete = () => {
-    console.log("🎬 Typewriter complete! Clearing states in 2 seconds...");
-    setTimeout(() => {
-      console.log("🔴 Clearing isStreaming and isLoading");
-      setIsStreaming(false);
-      setIsLoading(false);
-    }, 2000);
-  };
+  const handleTypewriterComplete = (messageId: string) => {
+  console.log("🎬 Typewriter complete for message:", messageId);
+  console.log("🎬 Active typing message:", activeTypingMessageId);
+  if (messageId === activeTypingMessageId) {
+    console.log("✅ Clearing states - this is the active message");
+    setIsStreaming(false);
+    setIsLoading(false);
+    setAbortController(null);
+    setActiveTypingMessageId(null);
+  } else {
+    console.log("⏭️ Ignoring - not the active message");
+  }
+};
 
   const handleEditMessage = (messageId: string, newContent: string) => {
     if (!user) return;
@@ -272,6 +288,7 @@ export function ChatInterface() {
 
     setMessages((prev) => [...prev, assistantMessage]);
     markMessageAsNew(thinkingId);
+    setActiveTypingMessageId(thinkingId);
 
     try {
       let streamedContent = "";
@@ -300,12 +317,6 @@ export function ChatInterface() {
 
       markMessageAsNew(thinkingId);
       
-      // ✅ Add delay before clearing streaming state (keeps Stop button visible)
-      setTimeout(() => {
-        if (handleTypewriterComplete) {
-          handleTypewriterComplete();
-        }
-      }, 2000); // Keep Stop button for 2 seconds after streaming completes
     } catch (err: any) {
       if (err.name === "AbortError") {
         setMessages((prev) =>
@@ -334,10 +345,13 @@ export function ChatInterface() {
         );
       }
       setIsStreaming(false);
+      setIsLoading(false);
+      setAbortController(null);
+      setActiveTypingMessageId(null);
     } finally {
       // ✅ Don't clear isLoading here - let typewriter complete first
       setRegeneratingMessageId(null);
-      setAbortController(null);
+      
     }
   };
 
@@ -378,6 +392,7 @@ export function ChatInterface() {
 
     setMessages((prev) => [...prev, assistantMessage]);
     markMessageAsNew(thinkingId);
+    setActiveTypingMessageId(thinkingId);
     
     console.log("🚀 Setting isLoading and isStreaming to TRUE");
     setIsLoading(true);
@@ -405,6 +420,13 @@ export function ChatInterface() {
         },
         controller.signal
       );
+      console.log("✅ STREAMING DONE - but NOT clearing states yet");
+  console.log("📊 Current state:", {
+    isStreaming,
+    hasAbortController: !!abortController,
+    activeTypingMessageId,
+    thinkingId
+  });
 
       console.log("✅ Streaming complete, content length:", streamedContent.length);
 
@@ -434,8 +456,9 @@ export function ChatInterface() {
 
       markMessageAsNew(thinkingId);
       
-      console.log("⏳ Waiting for typewriter to complete...");
+      
     } catch (err: any) {
+      console.log("❌ ERROR in handleSendMessage - clearing states immediately");
       if (err.name === "AbortError") {
         setMessages((prev) =>
           prev.map((m) =>
@@ -463,9 +486,11 @@ export function ChatInterface() {
         );
       }
       setIsStreaming(false);
-    } finally {
-      // ✅ Don't clear isLoading here - let typewriter complete first
+      setIsLoading(false);
       setAbortController(null);
+      setActiveTypingMessageId(null);
+    } finally {
+      console.log("🏁 FINALLY block - NOT clearing anything");
     }
   };
 
