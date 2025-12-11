@@ -20,8 +20,18 @@ export function HelpDialog({ open, onClose }: HelpDialogProps) {
         </DialogHeader>
         <div className="py-4">
           <p className="mb-4">
-            In case of emergency and concern, contact Ma'am Flordeliza{" "}
-            <span className="text-red-500">(Thonie)</span> Fernandez
+            For assistance with CEDRIK, please contact us at:
+          </p>
+          <p className="mb-4 font-medium">
+            <a 
+              href="mailto:aicedrik@gmail.com" 
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              aicedrik@gmail.com
+            </a>
+          </p>
+          <p className="text-sm text-gray-600">
+            We'll respond to your inquiry as soon as possible.
           </p>
           <div className="mt-6 flex justify-end">
             <Button onClick={onClose}>Close</Button>
