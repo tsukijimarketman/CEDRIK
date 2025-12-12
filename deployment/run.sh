@@ -95,7 +95,7 @@ else
     cmd_2="cd \"${cwd}/${d_cyber_education_platform}\" && docker compose restart"
     # cmd_3="${cwd}/${d_deployment}/frontend.sh"
 
-    tmux send-keys -t "$cedrik_service_ses_name:$window_3" "$cmd_1 && $cmd_2 ENTER 2>/dev/null
+    tmux send-keys -t "$cedrik_service_ses_name:$window_3" "$cmd_1 && $cmd_2" ENTER 2>/dev/null
     echo "Command exited with code $?"
 fi
 

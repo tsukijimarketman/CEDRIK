@@ -15,28 +15,35 @@
     - Git
     - Crontab (optional)
 
+> NOTE
+> commands prefixed with $ must be run under root user
+> do not add user with UID >= 1000 to sudo group
+
 # Setup the environment (debian / ubuntu)
 ```
-sudo apt install -y nginx git tmux ufw curl
+$ sudo apt install -y nginx git tmux ufw curl
 
 # Log files for nginx
-mkdir ~/logs/ && touch ~/logs/access.log && touch ~/logs/error.log
-chmod 777 -R ~/logs/
+$ mkdir ~/logs/ && touch ~/logs/access.log && touch ~/logs/error.log
+$ chmod 777 -R ~/logs/
+# for nginx cache
+$ mkdir -p /data/nginx/cache
 
 # Util scripts for server management (add more if needed)
 mkdir ~/tools/ && cd ~/tools/ && curl -O https://raw.githubusercontent.com/Mark-Asuncion/dotfiles/refs/heads/main/tools/bkp.sh
+
 ```
 
 ## Firewall
 ```
-sudo ufw default deny incoming
-sudo ufw allow in ssh
-sudo ufw allow in https
+$ sudo ufw default deny incoming
+$ sudo ufw allow in ssh
+$ sudo ufw allow in https
 
-sudo ufw enable
+$ sudo ufw enable
 
 # verify with
-sudo ufw status verbose
+$ sudo ufw status verbose
 ```
 
 # Clone the repo
@@ -47,7 +54,7 @@ mkdir -m 777 hf_cache/
 mkdir -m 777 log/
 
 # copy the .env from Local to server
-scp -i <ssh_key> <local_path_to_.env> <user>@<ip>:<path_to_CEDRIK_dir>
+(Local) scp -i <ssh_key> <local_path_to_.env> <user>@<ip>:<path_to_CEDRIK_dir>
 
 # edit .env SERVER_FRONTEND var to the ip of the server
 
@@ -62,7 +69,7 @@ uncomment all commands with `uwsgi` and comment the commands with `flask` except
 before copying fix the paths first
 ```
 # From Local computer
-scp -i <ssh_key> <local_path_to_nginx.conf> <user>@<ip>:/etc/nginx/nginx.conf
+(Local) scp -i <ssh_key> <local_path_to_nginx.conf> <user>@<ip>:/etc/nginx/nginx.conf
 ```
 
 # Install the cedrik.service
@@ -72,7 +79,7 @@ scp -i <ssh_key> <local_path_to_nginx.conf> <user>@<ip>:/etc/nginx/nginx.conf
 ```
 # Copy the contents of the file with your clipboard
 # And paste after running the command
-sudo systemctl edit --full --force cedrik.service
+$ sudo systemctl edit --full --force cedrik.service
 ```
 > if you have a preferred cli editor you can run with
 > `sudo EDITOR=<editor> systemctl edit --full --force cedrik.service`
@@ -81,13 +88,13 @@ sudo systemctl edit --full --force cedrik.service
 
 ## enable the service
 ```
-sudo systemctl enable cedrik.service
+$ sudo systemctl enable cedrik.service
 ```
 > the next time the server reboots it will start the docker services with this service
 
 # Crontab (scheduler)
 ```
-crontab -e
+$ crontab -e
 # or
 EDITOR=<editor> crontab -e
 
