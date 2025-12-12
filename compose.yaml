@@ -11,6 +11,19 @@ services:
       dockerfile: BackendRunner.Dockerfile
     image: maasuncion/cedrik-backend:latest
     profiles: ["backend"]
+  frontend:
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+    # profiles: ["frontend"]
+    command: ["nginx", "-g", "daemon off;"]
+    volumes:
+      - ./frontend/.env:/app/.env:ro
+    ports:
+      - 127.0.0.1:8080:80
+    networks:
+        - internal
+    restart: unless-stopped
 
   main:
     image: maasuncion/cedrik-backend:latest
