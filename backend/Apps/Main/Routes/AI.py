@@ -9,6 +9,8 @@ from werkzeug.datastructures import FileStorage
 import random
 import json
 from backend.Apps.Main.Database.Models import Audit
+from backend.Apps.Main.Database.Models import Message, Conversation
+from backend.Apps.Main.Utils.UserToken import get_object_id
 from backend.Apps.Main.Filter.Filter import FILTER_ERR_MSG, m_filter
 from backend.Apps.Main.Utils.Audit import audit_message
 from backend.Apps.Main.Utils.Enum import AuditType
@@ -38,8 +40,6 @@ class ChatBody:
 def chat_stream():
     '''
     Streaming version of chat endpoint.
-    Supports real-time response streaming and proper cancellation.
-    Returns Server-Sent Events (SSE) stream.
     '''
     body = None
 
@@ -78,6 +78,7 @@ def chat_stream():
         conv_id = body.conversation
         full_reply = ""
         embeddings = []
+        ai_message_id = None  # ✅ Track the AI message ID
         
         try:
             audit_message(f"user: {user_token.username}\nquery: \"{body.prompt.content}\"").save()
@@ -101,7 +102,6 @@ def chat_stream():
                 prompt=body.prompt,
                 overrides=body.overrides
             ):
-                # Check if client disconnected
                 try:
                     if isinstance(item, dict):
                         # This is the final metadata chunk
@@ -133,7 +133,8 @@ def chat_stream():
                     prompt=body.prompt
                 )
 
-                conv_id = create_chat(
+                # ✅ Get all three IDs from create_chat
+                result = create_chat(
                     session,
                     col_audit,
                     col_conversation,
@@ -144,12 +145,17 @@ def chat_stream():
                     body.prompt,
                     user_token
                 )
+                
+                # ✅ Unpack the tuple
+                conv_id, user_message_id, ai_message_id = result
 
                 if conv_id != None:
                     conv_id = str(conv_id)
+                if ai_message_id != None:
+                    ai_message_id = str(ai_message_id)
             
-            # Send completion with conversation ID
-            yield f"data: {json.dumps({'type': 'done', 'conversation': conv_id})}\n\n"
+            # ✅ Send completion with both conversation ID and AI message ID
+            yield f"data: {json.dumps({'type': 'done', 'conversation': conv_id, 'ai_message_id': ai_message_id})}\n\n"
             
         except Exception as e:
             Logger.log.error(f"Streaming error: {repr(e)}")
@@ -166,6 +172,61 @@ def chat_stream():
             'Connection': 'keep-alive'
         }
     )
+
+@ai.route("/truncate-message", methods=["POST"])
+@jwt_required(optional=False)
+def truncate_message():
+    """
+    Truncate a message to its currently displayed length when generation is stopped.
+    This allows the stopped state to persist across devices.
+    """
+    try:
+        data = request.get_json()
+        message_id = data.get("message_id")
+        truncated_content = data.get("content")
+        
+        if not message_id or truncated_content is None:
+            raise BadBody()
+        
+        user_token = get_token()
+        if user_token is None:
+            raise HttpInvalidId()
+        
+        # Get the message object ID
+        msg_obj_id = get_object_id(message_id)
+        
+        # Find the message
+        message = Message.objects(id=msg_obj_id).first()
+        
+        if not message:
+            return jsonify({"error": "Message not found"}), 404
+        
+        # Verify the message belongs to the user's conversation
+        conversation = Conversation.objects(id=message.conversation).first()
+        if not conversation or str(conversation.owner) != user_token.id:
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        # Update the message content
+        message.text = truncated_content
+        message.save()
+        
+        Logger.log.info(f"✂️ Truncated message {message_id} to {len(truncated_content)} chars")
+        
+        # Audit log
+        audit_message(
+            f"user: {user_token.username}\ntruncated message: {message_id}",
+            AuditType.UPDATE
+        ).save()
+        
+        return jsonify({
+            "success": True,
+            "message_id": message_id,
+            "content": truncated_content
+        }), 200
+        
+    except Exception as e:
+        Logger.log.error(f"Error truncating message: {repr(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @ai.route("/chat", methods=["POST"])
 @jwt_required(optional=False)

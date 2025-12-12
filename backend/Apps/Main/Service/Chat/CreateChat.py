@@ -311,6 +311,9 @@ def create_chat(
   this method will create 2 `Message` entry in the `db`
   the `user prompt` and the `model reply`
 
+  Returns:
+    tuple: (conv_id, user_message_id, ai_message_id)
+
   Throws:
     `Error.InvalidId`
     `mongoengine.ValidationError`
@@ -387,4 +390,8 @@ def create_chat(
   col_audit.insert_many(messages_audits, session=session)
   # ============
 
-  return conv_id
+  # ✅ Return conversation ID and both message IDs
+  user_message_id = messages_id[0]
+  ai_message_id = messages_id[1]
+  
+  return (conv_id, user_message_id, ai_message_id)

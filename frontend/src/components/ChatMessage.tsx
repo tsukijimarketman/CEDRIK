@@ -20,6 +20,8 @@ interface ChatMessageProps {
   messageId: string;
   copyToClipboard: (text: string) => Promise<boolean>;
   isNewMessage?: boolean;
+  isStopping?: boolean;
+  onMessageStopped?: (messageId: string, displayedContent: string) => void;
   onTypewriterComplete?: (messageId: string) => void;
 }
 
@@ -33,6 +35,8 @@ export function ChatMessage({
   messageId,
   copyToClipboard,
   isNewMessage = false,
+  isStopping = false,
+  onMessageStopped,
   onTypewriterComplete,
 }: ChatMessageProps) {
   const messageRef = useRef<HTMLDivElement>(null);
@@ -45,6 +49,7 @@ export function ChatMessage({
     "none"
   );
   const hasCalledCallback = useRef(false);
+  const hasReportedStop = useRef(false);
 
   const { user } = useUser();
 
@@ -52,9 +57,40 @@ export function ChatMessage({
 
   // Track if this is the first time this message content is received
   const isFirstRender = useRef(true);
+// The isStopping effect should be FIRST and check displayedContent
+useEffect(() => {
+  if (isStopping && !hasReportedStop.current && onMessageStopped) {
+    hasReportedStop.current = true;
+    console.log("🛑 Stopping typewriter NOW");
+    console.log("📊 Current displayedContent:", displayedContent);
+    console.log("📊 Full content:", content);
+    
+    // Freeze at current position
+    setIsTypingComplete(true);
+    
+    // Report the displayed content back to parent
+    // Use displayedContent if we're mid-typewriter, otherwise use content
+    const contentToReport = displayedContent.length > 0 ? displayedContent : content;
+    console.log("📤 Reporting back:", contentToReport.length, "chars");
+    onMessageStopped(messageId, contentToReport);
+    
+    // Call typewriter complete callback
+    if (onTypewriterComplete && !hasCalledCallback.current) {
+      hasCalledCallback.current = true;
+      onTypewriterComplete(messageId);
+    }
+  }
+}, [isStopping, displayedContent, content, messageId, onMessageStopped, onTypewriterComplete]);
 
-  // Typewriter effect only for new assistant messages
-  useEffect(() => {
+// The typewriter effect should check isStopping and stop immediately
+useEffect(() => {
+  // If stopping, don't do anything
+  if (isStopping) {
+    console.log("⏸️ Typewriter paused due to stopping flag");
+    return;
+  }
+
+  // Handle immediate display cases
   if (
     isUser ||
     content === "CEDRIK is thinking..." ||
@@ -63,48 +99,44 @@ export function ChatMessage({
   ) {
     setDisplayedContent(content);
     setIsTypingComplete(true);
+    isFirstRender.current = false;
     return;
   }
 
+  // If not a new message (e.g., edit), update immediately
+  if (!isNewMessage && content !== displayedContent) {
+    setDisplayedContent(content);
+    setIsTypingComplete(true);
+    isFirstRender.current = false;
+    return;
+  }
+
+  // Typewriter effect for new assistant messages
   if (isNewMessage && isFirstRender.current) {
     if (currentIndex < content.length) {
-      console.log(`⌨️ Typewriter for ${messageId}: ${currentIndex}/${content.length}`);
       const timer = setTimeout(() => {
-        const charsToAdd = Math.min(3, content.length - currentIndex);
-        setDisplayedContent(content.slice(0, currentIndex + charsToAdd));
-        setCurrentIndex(currentIndex + charsToAdd);
+        // Double-check stopping flag before updating
+        if (!isStopping) {
+          const charsToAdd = Math.min(3, content.length - currentIndex);
+          setDisplayedContent(content.slice(0, currentIndex + charsToAdd));
+          setCurrentIndex(currentIndex + charsToAdd);
+        }
       }, 5);
 
       return () => clearTimeout(timer);
     } else {
-      console.log(`✅ Typewriter COMPLETE for ${messageId} - calling callback`);
       setIsTypingComplete(true);
       isFirstRender.current = false;
       
-      // ✅ Only call the callback once
       if (onTypewriterComplete && !hasCalledCallback.current && content.length > 0) {
         hasCalledCallback.current = true;
         onTypewriterComplete(messageId);
       }
     }
-  } else {
-    console.log(`⚡ Message ${messageId} - instant render (not new or not first render)`);
-    setDisplayedContent(content);
-    setIsTypingComplete(true);
   }
-}, [currentIndex, content, isUser, isNewMessage, onTypewriterComplete, messageId]);
-
-  useEffect(() => {
-    if (content !== displayedContent && !isNewMessage) {
-      // If content changed but this isn't a new message (likely an edit), update immediately
-      setDisplayedContent(content);
-      setIsTypingComplete(true);
-      isFirstRender.current = false;
-    }
-  }, [content, displayedContent, isNewMessage]);
-
-  // Reset typewriter effect when we get a truly new message
-  useEffect(() => {
+}, [currentIndex, content, isUser, isNewMessage, isStopping, onTypewriterComplete, messageId, displayedContent]);
+// Reset effect for new messages
+useEffect(() => {
   if (
     !isUser &&
     isNewMessage &&
@@ -116,10 +148,8 @@ export function ChatMessage({
     setCurrentIndex(0);
     setIsTypingComplete(false);
     isFirstRender.current = true;
-    hasCalledCallback.current = false; // ✅ Reset the flag for new messages
-  } else if (!isNewMessage) {
-    setDisplayedContent(content);
-    setIsTypingComplete(true);
+    hasCalledCallback.current = false;
+    hasReportedStop.current = false;
   }
 }, [content, isUser, isNewMessage]);
 

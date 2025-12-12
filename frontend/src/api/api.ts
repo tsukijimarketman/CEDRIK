@@ -372,12 +372,19 @@ export const aiApi = {
       signal,
     });
   },
+  truncateMessage: async (messageId: string, content: string) => {
+    return api.post("/ai/truncate-message", {
+      message_id: messageId,
+      content: content
+    });
+  },
+
 
   chatStream: async (
   data: ChatRequest,
   onChunk: (chunk: string) => void,
   signal?: AbortSignal
-): Promise<{ conversation: string }> => {
+): Promise<{ conversation: string; ai_message_id?: string }> => {
   const formData = new FormData();
   formData.append("conversation", data.conversation || "");
   formData.append("content", data.content);
@@ -422,6 +429,7 @@ export const aiApi = {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   let conversationId = "";
+  let aiMessageId: string | undefined;  // ✅ Add this
 
   if (!reader) {
     throw new Error("No response body");
@@ -447,8 +455,8 @@ export const aiApi = {
             onChunk(data.content);
           } else if (data.type === "done") {
             conversationId = data.conversation || "";
-            console.log("✅ Received 'done' event with conversation:", conversationId);
-            // ✅ DON'T break here - let the stream finish naturally
+            aiMessageId = data.ai_message_id;  // ✅ Capture this
+            console.log("✅ Received 'done' event with conversation:", conversationId, "ai_message_id:", aiMessageId);
           } else if (data.type === "error") {
             throw new Error(data.content);
           }
@@ -459,8 +467,8 @@ export const aiApi = {
     reader.releaseLock();
   }
 
-  console.log("✅ Returning from chatStream with conversation:", conversationId);
-  return { conversation: conversationId };
+  console.log("✅ Returning from chatStream");
+  return { conversation: conversationId, ai_message_id: aiMessageId };  // ✅ Return both
 },
 };
 

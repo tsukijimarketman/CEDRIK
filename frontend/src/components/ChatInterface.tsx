@@ -53,6 +53,8 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
   }
 };
 
+
+
 const updateChatTitle = async (
   conversationId: string,
   title: string
@@ -97,6 +99,8 @@ export function ChatInterface() {
   const { currentAgent } = useAgent();
   const [activeTypingMessageId, setActiveTypingMessageId] = useState<string | null>(null);
   const { activeChatId, setActiveChatId } = useChat();
+  const [stoppingMessageId, setStoppingMessageId] = useState<string | null>(null);
+  const [stoppedMessageIds, setStoppedMessageIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     console.log("🔐 ChatInterface Auth Debug:", {
@@ -170,6 +174,10 @@ export function ChatInterface() {
       });
     }
   };
+
+  const isMessageStopped = (messageId: string): boolean => {
+  return stoppedMessageIds.has(messageId);
+};
 
   const isNewMessage = (messageId: string, index: number): boolean => {
     const message = messages[index];
@@ -356,143 +364,187 @@ export function ChatInterface() {
   };
 
   const handleStopGeneration = () => {
-    if (abortController) {
-      abortController.abort();
-      setAbortController(null);
-      setIsLoading(false); // ✅ Clear loading immediately when stopped
-      setIsStreaming(false);
+  if (abortController && activeTypingMessageId) {
+    console.log("🛑 Stopping generation for message:", activeTypingMessageId);
+    
+    
+    setStoppingMessageId(activeTypingMessageId);
+    
+    
+    abortController.abort();
+    
+  }
+};
+
+const handleMessageStopped = async (messageId: string, displayedContent: string) => {
+  console.log("✂️ Message stopped at", displayedContent.length, "chars");
+  console.log("📝 Displayed content:", displayedContent);
+  
+  // Update the message in state immediately
+  setMessages((prev) =>
+    prev.map((m) =>
+      m.id === messageId ? { ...m, content: displayedContent } : m
+    )
+  );
+  
+  // Update in backend (only if it's a real message ID, not a thinking ID)
+  if (!messageId.startsWith("thinking-")) {
+    try {
+      console.log("💾 Truncating message in backend...");
+      await aiApi.truncateMessage(messageId, displayedContent);
+      console.log("✅ Message truncated in backend");
+    } catch (err) {
+      console.error("❌ Failed to truncate message in backend:", err);
     }
-  };
+  } else {
+    console.log("⚠️ Cannot truncate thinking- message, it hasn't been saved to DB yet");
+  }
+  
+  // ✅ Now clear all the states
+  setStoppingMessageId(null);
+  setActiveTypingMessageId(null);
+  setAbortController(null);
+  setIsLoading(false);
+  setIsStreaming(false);
+};
+
+  
 
   const handleSendMessage = async (content: string) => {
-    if (!user) {
-      console.log("Please log in to send messages");
-      return;
-    }
+  if (!user) {
+    console.log("Please log in to send messages");
+    return;
+  }
 
-    const controller = new AbortController();
-    setAbortController(controller);
+  const controller = new AbortController();
+  setAbortController(controller);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: content,
-      timestamp: new Date().toLocaleTimeString(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-
-    const thinkingId = `thinking-${Date.now()}`;
-    const assistantMessage: Message = {
-      id: thinkingId,
-      role: "assistant",
-      content: "",
-      timestamp: new Date().toLocaleTimeString(),
-    };
-
-    setMessages((prev) => [...prev, assistantMessage]);
-    markMessageAsNew(thinkingId);
-    setActiveTypingMessageId(thinkingId);
-    
-    console.log("🚀 Setting isLoading and isStreaming to TRUE");
-    setIsLoading(true);
-    setIsStreaming(true);
-    
-    console.log("🔴 Stop button should appear now - isStreaming:", true, "abortController:", !!controller);
-
-    try {
-      let streamedContent = "";
-
-      const result = await aiApi.chatStream(
-        {
-          conversation: activeChatId,
-          content: content,
-          file: null,
-          agent: currentAgent,
-        },
-        (chunk) => {
-          streamedContent += chunk;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === thinkingId ? { ...m, content: streamedContent } : m
-            )
-          );
-        },
-        controller.signal
-      );
-      console.log("✅ STREAMING DONE - but NOT clearing states yet");
-  console.log("📊 Current state:", {
-    isStreaming,
-    hasAbortController: !!abortController,
-    activeTypingMessageId,
-    thinkingId
-  });
-
-      console.log("✅ Streaming complete, content length:", streamedContent.length);
-
-      const returnedConvId = result.conversation;
-      const generatedTitle =
-        content.slice(0, 50) + (content.length > 50 ? "..." : "");
-
-      if (returnedConvId && !activeChatId) {
-        setActiveChatId(returnedConvId);
-        setCurrentChatTitle(generatedTitle);
-        await updateChatTitle(returnedConvId, generatedTitle);
-      } else if (activeChatId) {
-        const nonThinkingMessages = messages.filter(
-          (msg) => !msg.id.startsWith("thinking-")
-        );
-        const isFirstRealMessage = nonThinkingMessages.length === 0;
-
-        if (isFirstRealMessage) {
-          setCurrentChatTitle(generatedTitle);
-          await updateChatTitle(activeChatId, generatedTitle);
-        }
-      }
-
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("refreshSidebar"));
-      }, 300);
-
-      markMessageAsNew(thinkingId);
-      
-      
-    } catch (err: any) {
-      console.log("❌ ERROR in handleSendMessage - clearing states immediately");
-      if (err.name === "AbortError") {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === thinkingId
-              ? {
-                  ...m,
-                  content: m.content || "Response generation stopped.",
-                  timestamp: new Date().toLocaleTimeString(),
-                }
-              : m
-          )
-        );
-      } else {
-        const message = getErrorMessage(err);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === thinkingId
-              ? {
-                  ...m,
-                  content: `Error: ${message}`,
-                  timestamp: new Date().toLocaleTimeString(),
-                }
-              : m
-          )
-        );
-      }
-      setIsStreaming(false);
-      setIsLoading(false);
-      setAbortController(null);
-      setActiveTypingMessageId(null);
-    } finally {
-      console.log("🏁 FINALLY block - NOT clearing anything");
-    }
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    role: "user",
+    content: content,
+    timestamp: new Date().toLocaleTimeString(),
   };
+
+  setMessages((prev) => [...prev, userMessage]);
+
+  const thinkingId = `thinking-${Date.now()}`;
+  const assistantMessage: Message = {
+    id: thinkingId,
+    role: "assistant",
+    content: "",
+    timestamp: new Date().toLocaleTimeString(),
+  };
+
+  setMessages((prev) => [...prev, assistantMessage]);
+  markMessageAsNew(thinkingId);
+  setActiveTypingMessageId(thinkingId);
+  
+  console.log("🚀 Setting isLoading and isStreaming to TRUE");
+  setIsLoading(true);
+  setIsStreaming(true);
+
+  try {
+    let streamedContent = "";
+
+    const result = await aiApi.chatStream(
+      {
+        conversation: activeChatId,
+        content: content,
+        file: null,
+        agent: currentAgent,
+      },
+      (chunk) => {
+        streamedContent += chunk;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId ? { ...m, content: streamedContent } : m
+          )
+        );
+      },
+      controller.signal
+    );
+
+    console.log("✅ STREAMING DONE");
+    console.log("📊 Received:", { 
+      conversation: result.conversation, 
+      ai_message_id: result.ai_message_id 
+    });
+
+    const returnedConvId = result.conversation;
+    const aiMessageId = result.ai_message_id;
+    
+    // ✅ Replace the thinking ID with the real message ID
+    if (aiMessageId) {
+      console.log(`🔄 Replacing thinking ID ${thinkingId} with real ID ${aiMessageId}`);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === thinkingId ? { ...m, id: aiMessageId } : m
+        )
+      );
+      
+      // ✅ IMPORTANT: Update the active typing message ID to the real ID
+      setActiveTypingMessageId(aiMessageId);
+      
+      // Update new message IDs
+      setNewMessageIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(thinkingId);
+        newSet.add(aiMessageId);
+        return newSet;
+      });
+    }
+
+    const generatedTitle =
+      content.slice(0, 50) + (content.length > 50 ? "..." : "");
+
+    if (returnedConvId && !activeChatId) {
+      setActiveChatId(returnedConvId);
+      setCurrentChatTitle(generatedTitle);
+      await updateChatTitle(returnedConvId, generatedTitle);
+    } else if (activeChatId) {
+      const nonThinkingMessages = messages.filter(
+        (msg) => !msg.id.startsWith("thinking-")
+      );
+      const isFirstRealMessage = nonThinkingMessages.length === 0;
+
+      if (isFirstRealMessage) {
+        setCurrentChatTitle(generatedTitle);
+        await updateChatTitle(activeChatId, generatedTitle);
+      }
+    }
+
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("refreshSidebar"));
+    }, 300);
+
+  } catch (err: any) {
+    console.log("❌ ERROR in handleSendMessage");
+    if (err.name === "AbortError") {
+      // Don't clear content - keep what we have
+      console.log("⏸️ Stream aborted - keeping current content");
+    } else {
+      const message = getErrorMessage(err);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === thinkingId
+            ? {
+                ...m,
+                content: `Error: ${message}`,
+                timestamp: new Date().toLocaleTimeString(),
+              }
+            : m
+        )
+      );
+    }
+    setIsStreaming(false);
+    setIsLoading(false);
+    setAbortController(null);
+    setActiveTypingMessageId(null);
+  } finally {
+    console.log("🏁 FINALLY block");
+  }
+};
 
   const handleOpenMessage = async (conversation: string) => {
     if (!user) return;
@@ -604,6 +656,8 @@ export function ChatInterface() {
                 timestamp={message.timestamp}
                 isEdited={message.isEdited}
                 isNewMessage={isNewMessage(message.id, index)}
+                isStopping={message.id === stoppingMessageId}  // ✅ Tell message to stop
+                onMessageStopped={handleMessageStopped}
                 onEditMessage={isAuthenticated ? handleEditMessage : undefined}
                 onRegenerate={
                   isAuthenticated ? () => handleRegenerateResponse() : undefined
