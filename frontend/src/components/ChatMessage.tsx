@@ -59,7 +59,7 @@ export function ChatMessage({
   const isFirstRender = useRef(true);
 // The isStopping effect should be FIRST and check displayedContent
 useEffect(() => {
-  if (isStopping && !hasReportedStop.current && onMessageStopped) {
+  if (isStopping && !hasReportedStop.current && onMessageStopped && isNewMessage) {
     hasReportedStop.current = true;
     console.log("🛑 Stopping typewriter NOW");
     console.log("📊 Current displayedContent:", displayedContent);
@@ -80,7 +80,7 @@ useEffect(() => {
       onTypewriterComplete(messageId);
     }
   }
-}, [isStopping, displayedContent, content, messageId, onMessageStopped, onTypewriterComplete]);
+}, [isStopping, displayedContent, content, messageId, onMessageStopped, onTypewriterComplete, isNewMessage]);
 
 // The typewriter effect should check isStopping and stop immediately
 useEffect(() => {

@@ -53,8 +53,6 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
   }
 };
 
-
-
 const updateChatTitle = async (
   conversationId: string,
   title: string
@@ -101,6 +99,7 @@ export function ChatInterface() {
   const { activeChatId, setActiveChatId } = useChat();
   const [stoppingMessageId, setStoppingMessageId] = useState<string | null>(null);
   const [stoppedMessageIds, setStoppedMessageIds] = useState<Set<string>>(new Set());
+  const stoppedBeforeSaveRef = useRef<{ messageId: string; content: string } | null>(null);
 
   useEffect(() => {
     console.log("🔐 ChatInterface Auth Debug:", {
@@ -377,40 +376,60 @@ export function ChatInterface() {
 };
 
 const handleMessageStopped = async (messageId: string, displayedContent: string) => {
-  console.log("✂️ Message stopped at", displayedContent.length, "chars");
-  console.log("📝 Displayed content:", displayedContent);
+  console.log("═══════════════════════════════════════════════");
+  console.log("✂️ STOPPING MESSAGE");
+  console.log("═══════════════════════════════════════════════");
+  console.log("📝 Message ID:", messageId);
+  console.log("📏 Content length:", displayedContent.length);
+  console.log("🏷️ Is thinking ID?", messageId.startsWith("thinking-"));
+
+  if (!newMessageIds.has(messageId)) {
+    console.log("⚠️ Message not in newMessageIds - ignoring stop request (likely from page reload)");
+    return;
+  }
   
   // Update the message in state immediately
   setMessages((prev) =>
-    prev.map((m) =>
-      m.id === messageId ? { ...m, content: displayedContent } : m
-    )
+    prev.map((m) => {
+      if (m.id === messageId) {
+        console.log("✅ Updated message in state");
+        return { ...m, content: displayedContent };
+      }
+      return m;
+    })
   );
   
-  // Update in backend (only if it's a real message ID, not a thinking ID)
-  if (!messageId.startsWith("thinking-")) {
-    try {
-      console.log("💾 Truncating message in backend...");
-      await aiApi.truncateMessage(messageId, displayedContent);
-      console.log("✅ Message truncated in backend");
-    } catch (err) {
-      console.error("❌ Failed to truncate message in backend:", err);
-    }
+  // Check if this is a thinking- ID (not yet saved to DB)
+  if (messageId.startsWith("thinking-")) {
+    console.log("⚠️ Message not yet saved to DB - storing for later truncation");
+    // Store the truncated content for when the real ID comes back
+    stoppedBeforeSaveRef.current = {
+      messageId: messageId,
+      content: displayedContent
+    };
   } else {
-    console.log("⚠️ Cannot truncate thinking- message, it hasn't been saved to DB yet");
+    // It's a real ID, truncate in backend immediately
+    try {
+      console.log("💾 Calling backend API to truncate...");
+      const response = await aiApi.truncateMessage(messageId, displayedContent);
+      console.log("✅ Backend response:", response);
+      console.log("✅ Message truncated in backend successfully");
+    } catch (err: any) {
+      console.error("❌ Failed to truncate message in backend");
+      console.error("❌ Error details:", err);
+    }
   }
   
-  // ✅ Now clear all the states
+  // Clear all the states
   setStoppingMessageId(null);
   setActiveTypingMessageId(null);
   setAbortController(null);
   setIsLoading(false);
   setIsStreaming(false);
+  console.log("═══════════════════════════════════════════════");
 };
 
-  
-
-  const handleSendMessage = async (content: string) => {
+const handleSendMessage = async (content: string) => {
   if (!user) {
     console.log("Please log in to send messages");
     return;
@@ -466,13 +485,37 @@ const handleMessageStopped = async (messageId: string, displayedContent: string)
     );
 
     console.log("✅ STREAMING DONE");
-    console.log("📊 Received:", { 
-      conversation: result.conversation, 
-      ai_message_id: result.ai_message_id 
-    });
 
     const returnedConvId = result.conversation;
     const aiMessageId = result.ai_message_id;
+    
+    // ✅ Check if this message was stopped before being saved
+    if (stoppedBeforeSaveRef.current?.messageId === thinkingId) {
+      const truncatedContent = stoppedBeforeSaveRef.current.content;
+      console.log("🔄 Message was stopped before save - using truncated content");
+      console.log("📏 Truncated length:", truncatedContent.length);
+      
+      // Update the message with truncated content
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === thinkingId ? { ...m, content: truncatedContent } : m
+        )
+      );
+      
+      // If we got a real message ID, truncate it in the backend
+      if (aiMessageId) {
+        console.log("💾 Truncating newly saved message in backend...");
+        try {
+          await aiApi.truncateMessage(aiMessageId, truncatedContent);
+          console.log("✅ Truncated in backend");
+        } catch (err) {
+          console.error("❌ Failed to truncate:", err);
+        }
+      }
+      
+      // Clear the stopped reference
+      stoppedBeforeSaveRef.current = null;
+    }
     
     // ✅ Replace the thinking ID with the real message ID
     if (aiMessageId) {
@@ -483,10 +526,8 @@ const handleMessageStopped = async (messageId: string, displayedContent: string)
         )
       );
       
-      // ✅ IMPORTANT: Update the active typing message ID to the real ID
       setActiveTypingMessageId(aiMessageId);
       
-      // Update new message IDs
       setNewMessageIds((prev) => {
         const newSet = new Set(prev);
         newSet.delete(thinkingId);
@@ -521,8 +562,13 @@ const handleMessageStopped = async (messageId: string, displayedContent: string)
   } catch (err: any) {
     console.log("❌ ERROR in handleSendMessage");
     if (err.name === "AbortError") {
-      // Don't clear content - keep what we have
       console.log("⏸️ Stream aborted - keeping current content");
+      
+      // ✅ If aborted and we have stopped content, keep it
+      if (stoppedBeforeSaveRef.current?.messageId === thinkingId) {
+        console.log("✅ Using stopped content from memory");
+        // Content already updated in handleMessageStopped
+      }
     } else {
       const message = getErrorMessage(err);
       setMessages((prev) =>
@@ -551,6 +597,11 @@ const handleMessageStopped = async (messageId: string, displayedContent: string)
 
     try {
       clearNewMessageFlags();
+      setStoppingMessageId(null);
+      setActiveTypingMessageId(null);
+      setAbortController(null);
+      setIsStreaming(false);
+      setIsLoading(false);
 
       const res = await sidebarConversationOpen.conversationOpen(conversation);
       const fetchedMessages = res.data.map(

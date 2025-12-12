@@ -185,47 +185,75 @@ def truncate_message():
         message_id = data.get("message_id")
         truncated_content = data.get("content")
         
+        Logger.log.info(f"🛑 Truncate request: message_id={message_id}, content_length={len(truncated_content) if truncated_content else 0}")
+        
         if not message_id or truncated_content is None:
+            Logger.log.error("Missing message_id or content")
             raise BadBody()
         
         user_token = get_token()
         if user_token is None:
+            Logger.log.error("No user token")
             raise HttpInvalidId()
         
+        Logger.log.info(f"👤 User: {user_token.username} ({user_token.id})")
+        
         # Get the message object ID
-        msg_obj_id = get_object_id(message_id)
+        try:
+            msg_obj_id = get_object_id(message_id)
+            Logger.log.info(f"📝 Message ObjectId: {msg_obj_id}")
+        except Exception as e:
+            Logger.log.error(f"Invalid message ID: {e}")
+            return jsonify({"error": "Invalid message ID"}), 400
         
         # Find the message
         message = Message.objects(id=msg_obj_id).first()
         
         if not message:
+            Logger.log.error(f"Message not found: {msg_obj_id}")
             return jsonify({"error": "Message not found"}), 404
         
-        # Verify the message belongs to the user's conversation
-        conversation = Conversation.objects(id=message.conversation).first()
-        if not conversation or str(conversation.owner) != user_token.id:
-            return jsonify({"error": "Unauthorized"}), 403
+        Logger.log.info(f"✅ Message found, conversation: {message.conversation}")
+
+# ✅ FIX: message.conversation is already a Conversation object (ReferenceField)
+        conversation = message.conversation
+        if not conversation:
+           Logger.log.error(f"Conversation not found")
+           return jsonify({"error": "Conversation not found"}), 404
+
+# ✅ FIX: Access the .id attribute of the User objects
+        conversation_owner_id = str(conversation.owner.id)
+        user_id = str(user_token.id)
+
+        Logger.log.info(f"🔐 Authorization check: owner={conversation_owner_id}, user={user_id}")
+
+        if conversation_owner_id != user_id:
+          Logger.log.error(f"Unauthorized: user {user_id} tried to modify conversation owned by {conversation_owner_id}")
+          return jsonify({"error": "Unauthorized"}), 403
         
         # Update the message content
+        Logger.log.info(f"✂️ Truncating from {len(message.text)} to {len(truncated_content)} chars")
         message.text = truncated_content
         message.save()
         
-        Logger.log.info(f"✂️ Truncated message {message_id} to {len(truncated_content)} chars")
+        Logger.log.info(f"✅ Truncated message {message_id} successfully")
         
         # Audit log
         audit_message(
-            f"user: {user_token.username}\ntruncated message: {message_id}",
+            f"user: {user_token.username}\ntruncated message: {message_id} to {len(truncated_content)} chars",
             AuditType.UPDATE
         ).save()
         
         return jsonify({
             "success": True,
             "message_id": message_id,
-            "content": truncated_content
+            "content_length": len(truncated_content)
         }), 200
         
     except Exception as e:
-        Logger.log.error(f"Error truncating message: {repr(e)}")
+        Logger.log.error(f"❌ Error truncating message: {repr(e)}")
+        import traceback
+        Logger.log.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @ai.route("/chat", methods=["POST"])
