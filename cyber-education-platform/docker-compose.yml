@@ -14,7 +14,7 @@ services:
     networks:
       - hack-lab-network
     ports:
-      - "5901:5901"
+      - "127.0.0.1:5901:5901"
     restart: unless-stopped
     cap_add:
       - NET_RAW
@@ -25,7 +25,7 @@ services:
     # image: cedrikai/cyber-education-platform-novnc:latest
     container_name: novnc
     ports:
-      - "6080:6080"
+      - "127.0.0.1:6080:6080"
     networks:
       - hack-lab-network
     depends_on:
@@ -40,7 +40,7 @@ services:
     networks:
       - hack-lab-network
     ports:
-      - "8081:80"
+      - "127.0.0.1:8081:80"
     environment:
       - MYSQL_ROOT_PASSWORD=dvwa
       - MYSQL_DATABASE=dvwa
@@ -56,7 +56,7 @@ services:
     networks:
       - hack-lab-network
     ports:
-      - "8082:80"
+      - "127.0.0.1:8082:80"
     restart: unless-stopped
 
   # Scenario 3: Vulnerable WordPress
@@ -67,8 +67,8 @@ services:
     networks:
       - hack-lab-network
     ports:
-      - "8083:80"
-      - "3306:3306"
+      - "127.0.0.1:8083:80"
+      - "127.0.0.1:3306:3306"
     restart: unless-stopped
 
   # Scenario 4: Metasploitable (Vulnerable Linux)
@@ -79,10 +79,10 @@ services:
     networks:
       - hack-lab-network
     ports:
-      - "2222:22"
-      - "8084:80"
-      - "21:21"
-      - "23:23"
+      - "127.0.0.1:2222:22"
+      - "127.0.0.1:8084:80"
+      - "127.0.0.1:21:21"
+      - "127.0.0.1:23:23"
     tty: true            # REQUIRED
     stdin_open: true     # REQUIRED
     restart: unless-stopped
@@ -95,7 +95,7 @@ services:
     networks:
       - hack-lab-network
     ports:
-      - "8085:8080"
+      - "127.0.0.1:8085:8080"
     environment:
       - WEBGOAT_HOST=0.0.0.0
       - WEBGOAT_PORT=8080
@@ -109,7 +109,7 @@ services:
     networks:
       - hack-lab-network
     ports:
-      - "8086:3000"
+      - "127.0.0.1:8086:3000"
     restart: unless-stopped
 
   # Database for user progress
@@ -125,7 +125,7 @@ services:
     networks:
       - hack-lab-network
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cyber_admin -d cyber_education"]
       interval: 5s
@@ -139,7 +139,7 @@ services:
     # image: cedrikai/cyber-education-platform-bridge-server:latest
     container_name: cyber-bridge
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     networks:
       - hack-lab-network
     environment:
@@ -168,7 +168,7 @@ services:
     # image: cedrikai/cyber-education-platform-web-ui:latest
     container_name: cyber-web-ui
     ports:
-      - "8069:80"
+      - "127.0.0.1:8069:80"
     networks:
       - hack-lab-network
     environment:
