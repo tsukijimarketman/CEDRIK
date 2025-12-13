@@ -15,7 +15,7 @@
     - Git
     - Crontab (optional)
 
-> NOTE
+> [!NOTE]
 > commands prefixed with $ must be run under root user
 > do not add user with UID >= 1000 to sudo group
 
@@ -81,9 +81,10 @@ before copying fix the paths first
 # And paste after running the command
 $ sudo systemctl edit --full --force cedrik.service
 ```
-> if you have a preferred cli editor you can run with
-> `sudo EDITOR=<editor> systemctl edit --full --force cedrik.service`
-> example
+> [!TIP]
+> if you have a preferred cli editor you can run with\
+> `sudo EDITOR=<editor> systemctl edit --full --force cedrik.service`\
+> example\
 > `sudo EDITOR=vim systemctl edit --full --force cedrik.service`
 
 ## enable the service
@@ -109,5 +110,6 @@ crontab -l
 ```
 cd ~/CEDRIK/ && ./deployment/frontend.sh && ./deployment/run.sh
 ```
+> [!NOTE]
 > run.sh will create a tmux session
 > access it via `tmux a`
