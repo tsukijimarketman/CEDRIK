@@ -196,44 +196,51 @@ export function SignUpDialog({
 
       onClose();
     } catch (error: any) {
-      // Error handling
-      let errorMessage = "Failed to create account. Please try again.";
-      
-      console.log("Signup error:", error); // Debug log
-      
-      // The axios interceptor extracts error.response.data, so error IS the data object
-      if (error?.error) {
-        // This is the main error message from the backend
-        errorMessage = error.error;
-      } else if (error?.description) {
-        // Fallback to description if error field not present
-        errorMessage = error.description;
-      } else if (error?.validation_error) {
-        // Handle validation errors from mongoengine
-        const validationErrors = error.validation_error;
-        const errorMessages = [];
-        
-        for (const [field, messages] of Object.entries(validationErrors)) {
-          if (Array.isArray(messages)) {
-            errorMessages.push(`${field}: ${messages.join(", ")}`);
-          } else {
-            errorMessages.push(`${field}: ${messages}`);
-          }
-        }
-        errorMessage = errorMessages.join("; ");
-      } else if (error?.msg) {
-        errorMessage = error.msg;
-      } else if (error?.message) {
-        errorMessage = error.message;
+  let errorMessage = "Failed to create account. Please try again.";
+  
+  console.log("Signup error:", error);
+  
+  // Your backend returns errors in format: { error: "message", type: "ErrorType" }
+  if (error?.error && typeof error.error === 'string') {
+    // This handles: UserAlreadyExist, HttpValidationError, BadBody, etc.
+    errorMessage = error.error;
+  } 
+  // Handle mongoengine validation errors (nested object)
+  else if (error?.error && typeof error.error === 'object') {
+    // Format: { error: { username: ["error1", "error2"], email: ["error3"] } }
+    const fieldErrors: string[] = [];
+    for (const [field, messages] of Object.entries(error.error)) {
+      if (Array.isArray(messages)) {
+        fieldErrors.push(`${field}: ${messages.join(", ")}`);
+      } else if (typeof messages === 'string') {
+        fieldErrors.push(`${field}: ${messages}`);
       }
-
-      setErrors({ general: errorMessage });
-      // Also generate a new CAPTCHA on error
-      generateCaptcha();
-    } finally {
-      setIsLoading(false);
     }
-  };
+    if (fieldErrors.length > 0) {
+      errorMessage = fieldErrors.join("; ");
+    }
+  }
+  // Fallback to other common error fields
+  else if (error?.description) {
+    errorMessage = error.description;
+  }
+  else if (error?.msg) {
+    errorMessage = error.msg;
+  }
+  else if (error?.message) {
+    errorMessage = error.message;
+  }
+  // If error is a plain string
+  else if (typeof error === 'string') {
+    errorMessage = error;
+  }
+
+  setErrors({ general: errorMessage });
+  generateCaptcha();
+} finally {
+  setIsLoading(false);
+}
+  }
 
   return (
     <>
