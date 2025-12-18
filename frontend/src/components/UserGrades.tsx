@@ -44,34 +44,16 @@ export function UserGrades() {
   const [selectedUser, setSelectedUser] = useState<UserAllGrades | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const PAGE_SIZE = 7;
+  const [showDummy, setShowDummy] = useState(false);
+  const PAGE_SIZE = 10;
 
   const fetchAllUsersGrades = async () => {
     setLoading(true);
     try {
-      const LABS_BASE = import.meta.env.VITE_LABS_URL || "http://localhost:3000/api";
-      const url = `${LABS_BASE.replace(/\/$/, "")}/grades/all`;
-      console.log("Fetching grades from:", url);
+      const resp = await cedrikLabsApi.getAllUsersGrades();
+      const labsUsers = Array.isArray(resp?.data?.users) ? resp.data.users : [];
 
-      const resp = await fetch(url, {
-        method: "GET",
-        headers: { Accept: "application/json" },
-      });
-
-      if (!resp.ok) {
-        const text = await resp.text().catch(() => "");
-        console.error("Labs API returned non-OK status", resp.status, text);
-        throw new Error(`Labs API returned status ${resp.status}`);
-      }
-
-      const data = await resp.json().catch((e) => {
-        console.error("Failed to parse JSON from Labs API", e);
-        return null;
-      });
-
-      const labsUsers = Array.isArray(data?.users) ? data.users : [];
-
-      // Fetch main backend users 
+      // Fetch main backend users
       const usersRes = await authApi.listUsers().catch((e) => {
         console.warn("Failed to fetch main backend users, proceeding with labs data only", e);
         return null;
@@ -79,13 +61,11 @@ export function UserGrades() {
 
       const mainUsers = usersRes && Array.isArray((usersRes as any).data) ? (usersRes as any).data : [];
 
-      // Build a map of labs users by id for quick lookup
       const labsMap = new Map<string, any>();
       labsUsers.forEach((u: any) => labsMap.set(String(u.userId || u.user_id || u.username), u));
 
       const merged: UserAllGrades[] = [];
 
-      // Add all main users 
       mainUsers.forEach((mu: any) => {
         const id = String(mu.id || mu.userId || mu.username || mu.email || "");
         const lab = labsMap.get(id);
@@ -97,11 +77,10 @@ export function UserGrades() {
           totalExercisesCompleted: lab?.totalCompleted || lab?.totalExercisesCompleted || 0,
           totalExercisesAvailable: lab?.totalAvailable || lab?.totalExercisesAvailable || 0,
         });
-        
+
         if (labsMap.has(id)) labsMap.delete(id);
       });
 
-      // Add any remaining labs-only users 
       for (const [, lu] of labsMap) {
         merged.push({
           userId: lu.userId || String(lu.userId ?? ""),
@@ -119,7 +98,7 @@ export function UserGrades() {
         toast({ title: "No users found", description: "No users available in Labs or main backend.", variant: "default" });
       }
     } catch (err) {
-      console.error("Failed to fetch user grades:", err);
+      console.error("Failed to fetch user grades via labsApi:", err);
       // fallback to main backend users list (no grades)
       try {
         const usersRes = await authApi.listUsers();
@@ -150,33 +129,85 @@ export function UserGrades() {
     setLoading(true);
     try {
       console.log(`Fetching details for user: ${userId} (${username})`);
-      const LABS_BASE = import.meta.env.VITE_LABS_URL || "http://localhost:3000/api";
-      const base = LABS_BASE.replace(/\/$/, "");
-      const url = `${base}/grades/user/${encodeURIComponent(userId)}${username ? `?username=${encodeURIComponent(username)}` : ""}`;
-      console.log("User details URL:", url);
 
-      const resp = await fetch(url, { method: "GET", headers: { Accept: "application/json" } });
-      if (!resp.ok) {
-        const text = await resp.text().catch(() => "");
-        console.error("Labs API user details returned non-OK", resp.status, text);
-        throw new Error(`Labs API returned status ${resp.status}`);
+      // If dummy mode is enabled, try to find the user locally and show details
+      if (showDummy) {
+        const found = allUsers.find((u) => String(u.userId) === String(userId));
+        if (found) {
+          setSelectedUser(found);
+          setDetailsOpen(true);
+          return;
+        }
+
+        // If not found, generate a single dummy user matching the id/username
+        const scenarios: ScenarioGrades[] = [
+          {
+            scenarioId: `${userId}-sc-1`,
+            scenarioName: `Demo Scenario A`,
+            exercises: [
+              { exerciseId: 1, exerciseTitle: "Recon", challengesCompleted: 2, challengesRequired: 3, mitigationScore: 80, reflectionScore: 70, overallScore: 75, completed: true },
+              { exerciseId: 2, exerciseTitle: "Exploit", challengesCompleted: 1, challengesRequired: 2, mitigationScore: 60, reflectionScore: 50, overallScore: 55, completed: false },
+            ],
+            averageScore: 75,
+            completionRate: 60,
+          },
+          {
+            scenarioId: `${userId}-sc-2`,
+            scenarioName: `Demo Scenario B`,
+            exercises: [
+              { exerciseId: 3, exerciseTitle: "Defend", challengesCompleted: 3, challengesRequired: 3, mitigationScore: 90, reflectionScore: 85, overallScore: 88, completed: true },
+            ],
+            averageScore: 88,
+            completionRate: 100,
+          },
+        ];
+
+        const totalAvailable = scenarios.reduce((s, sc) => s + sc.exercises.length, 0);
+        const totalCompleted = scenarios.reduce((s, sc) => s + sc.exercises.filter((e) => e.completed).length, 0);
+
+        setSelectedUser({
+          userId: userId,
+          username: username || String(userId),
+          scenarios,
+          overallAverage: Math.round((scenarios.reduce((a, b) => a + (b.averageScore || 0), 0) / scenarios.length) || 0),
+          totalExercisesCompleted: totalCompleted,
+          totalExercisesAvailable: totalAvailable,
+        });
+        setDetailsOpen(true);
+        return;
       }
 
-      const data = await resp.json().catch((e) => {
-        console.error("Failed to parse user details JSON", e);
-        return null;
-      });
+      const resp = await cedrikLabsApi.getUserGrades(userId, username);
+      const data = resp?.data;
 
       if (!data) throw new Error("No data returned from Labs API");
 
-      // Normalize response into UserAllGrades shape if necessary
+      const normalizedTotalCompleted =
+        typeof (data as any).totalExercisesCompleted === "number"
+          ? (data as any).totalExercisesCompleted
+          : typeof (data as any).totalCompleted === "number"
+          ? (data as any).totalCompleted
+          : 0;
+
+      const normalizedTotalAvailable =
+        typeof (data as any).totalExercisesAvailable === "number"
+          ? (data as any).totalExercisesAvailable
+          : typeof (data as any).totalAvailable === "number"
+          ? (data as any).totalAvailable
+          : 0;
+
       const userData: UserAllGrades = {
         userId: data.userId || userId,
         username: data.username || username || String(data.userId || userId),
         scenarios: data.scenarios || [],
-        overallAverage: typeof data.overallAverage === "number" ? data.overallAverage : (data.overallAverage ? Number(data.overallAverage) : 0),
-        totalExercisesCompleted: data.totalExercisesCompleted || data.totalCompleted || 0,
-        totalExercisesAvailable: data.totalExercisesAvailable || 0,
+        overallAverage:
+          typeof data.overallAverage === "number"
+            ? data.overallAverage
+            : data.overallAverage
+            ? Number(data.overallAverage)
+            : 0,
+        totalExercisesCompleted: normalizedTotalCompleted,
+        totalExercisesAvailable: normalizedTotalAvailable,
       };
 
       setSelectedUser(userData);
@@ -191,9 +222,94 @@ export function UserGrades() {
     }
   };
 
+  // Dummy data generator (includes scenario metadata used by web-ui/index.html)
+  const generateDummyUsers = (count = 12): UserAllGrades[] => {
+    const users: UserAllGrades[] = [];
+    for (let i = 1; i <= count; i++) {
+      const scenarios: ScenarioGrades[] & any = [
+        {
+          scenarioId: `sc-${i}-1`,
+          scenarioName: `Scenario ${i}A`,
+          // Additional fields matching web-ui/index.html scenario card
+          name: `Scenario ${i}A`,
+          description: `Practice scenario ${i}A focusing on reconnaissance and enumeration.`,
+          difficulty: i % 3 === 0 ? "advanced" : i % 2 === 0 ? "intermediate" : "beginner",
+          estimated_time: `${20 + (i % 3) * 10} mins`,
+          skills: ["recon", "enum"],
+          exercise_count: 2,
+          target: `10.0.0.${i}`,
+          external_url: "",
+          exercises: [
+            { exerciseId: 1, exerciseTitle: "Recon", challengesCompleted: 2, challengesRequired: 3, mitigationScore: 80, reflectionScore: 70, overallScore: 75, completed: true },
+            { exerciseId: 2, exerciseTitle: "Exploit", challengesCompleted: 1, challengesRequired: 2, mitigationScore: 60, reflectionScore: 50, overallScore: 55, completed: false },
+          ],
+          averageScore: Math.round(50 + Math.random() * 50),
+          completionRate: Math.round(40 + Math.random() * 60),
+        },
+        {
+          scenarioId: `sc-${i}-2`,
+          scenarioName: `Scenario ${i}B`,
+          name: `Scenario ${i}B`,
+          description: `Hands-on defensive scenario ${i}B with incident response focus.`,
+          difficulty: i % 2 === 0 ? "advanced" : "all-levels",
+          estimated_time: `${30 + (i % 2) * 15} mins`,
+          skills: ["defense", "response"],
+          exercise_count: 1,
+          target: `10.0.1.${i}`,
+          external_url: "",
+          exercises: [
+            { exerciseId: 3, exerciseTitle: "Defend", challengesCompleted: 3, challengesRequired: 3, mitigationScore: 90, reflectionScore: 85, overallScore: 88, completed: true },
+          ],
+          averageScore: Math.round(60 + Math.random() * 40),
+          completionRate: Math.round(50 + Math.random() * 50),
+        },
+      ];
+
+      const totalExercisesAvailable = scenarios.reduce((s, sc) => s + sc.exercises.length, 0);
+      const totalExercisesCompleted = scenarios.reduce((s, sc) => s + sc.exercises.filter((e) => e.completed).length, 0);
+
+      users.push({
+        userId: `dummy-${i}`,
+        username: `demo_user_${i}`,
+        scenarios,
+        overallAverage: Math.round((scenarios.reduce((a, b) => a + (b.averageScore || 0), 0) / scenarios.length) || 0),
+        totalExercisesCompleted,
+        totalExercisesAvailable,
+        // optional lastActivity for CSV/table compatibility
+        lastActivity: new Date(Date.now() - i * 86400000).toISOString(),
+      });
+    }
+    return users;
+  };
+
   useEffect(() => {
-    fetchAllUsersGrades();
-  }, []);
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      if (showDummy) {
+        const dummy = generateDummyUsers(12);
+        if (!mounted) return;
+        setAllUsers(dummy);
+        setFilteredUsers(dummy);
+        setCurrentPage(1);
+        // expose dummy dataset globally so other static pages (web-ui/index.html) can read it
+        try {
+          // @ts-ignore - attach for debugging/demo purposes
+          window.__CEDRIK_DUMMY_DATA__ = { users: dummy };
+        } catch (_) {}
+        setLoading(false);
+        return;
+      }
+
+      await fetchAllUsersGrades();
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDummy]);
 
   // Check backend URL for debugging
   useEffect(() => {
@@ -309,10 +425,22 @@ export function UserGrades() {
               Monitor and analyze student performance across all scenarios
             </p>
           </div>
-          <Button onClick={exportGradesAsCSV} variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={showDummy}
+                onChange={(e) => setShowDummy(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">Show dummy data</span>
+            </label>
+
+            <Button onClick={exportGradesAsCSV} variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         {/* Summary Cards */}

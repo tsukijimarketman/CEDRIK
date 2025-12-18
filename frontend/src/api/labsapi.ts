@@ -147,6 +147,7 @@ export type UserAllGrades = {
   overallAverage: number;
   totalExercisesCompleted: number;
   totalExercisesAvailable: number;
+  lastActivity?: string;
 };
 
 // ===== API IMPLEMENTATIONS =====
