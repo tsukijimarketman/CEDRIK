@@ -11,7 +11,7 @@ RemainAfterExit=yes
 WorkingDirectory=/home/cedrik/
 User=1000
 ExecStart=/bin/bash /home/cedrik/CEDRIK/deployment/run.sh
-ExecReload=/bin/bash /home/cedrik/CEDRIK/deployment/run.sh -s && /bin/bash /home/ubuntu/app/CEDRIK/deployment/run.sh
+ExecReload=git pull && /bin/bash /home/cedrik/CEDRIK/deployment/run.sh
 ExecStop=/bin/bash /home/cedrik/CEDRIK/deployment/run.sh stop
 
 [Install]
