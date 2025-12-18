@@ -45,13 +45,44 @@ export function UserGrades() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showDummy, setShowDummy] = useState(false);
+  const [dataSource, setDataSource] = useState<"labs" | "fallback" | "dummy" | "unknown">("unknown");
   const PAGE_SIZE = 10;
 
   const fetchAllUsersGrades = async () => {
     setLoading(true);
     try {
-      const resp = await cedrikLabsApi.getAllUsersGrades();
-      const labsUsers = Array.isArray(resp?.data?.users) ? resp.data.users : [];
+      console.log("Labs API baseURL:", (cedrikLabsApi as any).baseURL || import.meta.env.VITE_LABS_URL);
+      let resp;
+      try {
+        resp = await cedrikLabsApi.getAllUsersGrades();
+        console.log("cedrikLabsApi.getAllUsersGrades response:", resp?.status, resp?.data);
+      } catch (apiErr) {
+        console.error("cedrikLabsApi.getAllUsersGrades failed:", apiErr);
+        // try a direct fetch to the expected URL for diagnostics
+        try {
+          const base = (import.meta.env.VITE_LABS_URL || "http://localhost:3000/api").replace(/\/$/, "");
+          const diagnosticUrl = `${base}/grades/all`;
+          console.log("Attempting direct fetch to:", diagnosticUrl);
+          const direct = await fetch(diagnosticUrl, { method: "GET", headers: { Accept: "application/json" } });
+          const text = await direct.text().catch(() => "");
+          console.log("Direct fetch status:", direct.status, "body:", text);
+        } catch (fetchErr) {
+          console.error("Direct fetch to /grades/all failed:", fetchErr);
+        }
+        throw apiErr;
+      }
+
+      const rawLabsUsers = Array.isArray(resp?.data?.users) ? resp.data.users : [];
+      // normalize fields from the admin `/grades/all` response
+      const labsUsers = rawLabsUsers.map((u: any) => ({
+        userId: String(u.userId || u.user_id || u.username || ""),
+        username: u.username || String(u.userId || u.username || ""),
+        overallAverage: typeof u.overallAverage === "number" ? u.overallAverage : (u.overallAverage ? Number(u.overallAverage) : 0),
+        totalExercisesCompleted: typeof u.totalCompleted === "number" ? u.totalCompleted : (typeof u.totalExercisesCompleted === "number" ? u.totalExercisesCompleted : 0),
+        totalExercisesAvailable: typeof u.totalAvailable === "number" ? u.totalAvailable : (typeof u.totalExercisesAvailable === "number" ? u.totalExercisesAvailable : 0),
+        lastActivity: u.lastActivity || null,
+        scenarios: u.scenarios || [],
+      }));
 
       // Fetch main backend users
       const usersRes = await authApi.listUsers().catch((e) => {
@@ -97,6 +128,8 @@ export function UserGrades() {
       if (merged.length === 0) {
         toast({ title: "No users found", description: "No users available in Labs or main backend.", variant: "default" });
       }
+      setDataSource("labs");
+      toast({ title: "Loaded from Labs API", description: "Grades loaded from the Labs API.", variant: "default" });
     } catch (err) {
       console.error("Failed to fetch user grades via labsApi:", err);
       // fallback to main backend users list (no grades)
@@ -113,11 +146,13 @@ export function UserGrades() {
         }));
         setAllUsers(mapped as UserAllGrades[]);
         setFilteredUsers(mapped as UserAllGrades[]);
-        toast({ title: "Fallback data", description: "Loaded users from main backend (no grades).", variant: "default" });
+        setDataSource("fallback");
+        toast({ title: "Fallback data", description: "Loaded users from main backend (no grades).", variant: "destructive" });
       } catch (fbErr) {
         console.error("Fallback failed:", fbErr);
         setAllUsers([]);
         setFilteredUsers([]);
+        setDataSource("fallback");
         toast({ title: "Error", description: "Failed to fetch user grades. Make sure the Labs API is running on http://localhost:3000.", variant: "destructive" });
       }
     } finally {
@@ -297,6 +332,8 @@ export function UserGrades() {
           // @ts-ignore - attach for debugging/demo purposes
           window.__CEDRIK_DUMMY_DATA__ = { users: dummy };
         } catch (_) {}
+        setDataSource("dummy");
+        toast({ title: "Dummy data enabled", description: "Showing generated demo data.", variant: "default" });
         setLoading(false);
         return;
       }
