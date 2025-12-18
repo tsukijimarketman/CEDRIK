@@ -4,11 +4,12 @@ import { UserManagement } from "@/components/UserManagement";
 import { AuditLogs } from "@/components/AuditLogs";
 import { KnowledgeBase } from "@/components/KnowledgeBase";
 import { MemoryArchive } from "@/components/MemoryArchive";
+import { UserGrades } from "@/components/UserGrades";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
 import { Moon, Sun } from "lucide-react";
 
-type ActiveSection = "user-management" | "audit-logs" | "knowledge-base" | "archive";
+type ActiveSection = "user-management" | "audit-logs" | "knowledge-base" | "archive" | "user-grades";
 
 const SuperAdmin = () => {
   const [activeSection, setActiveSection] = useState<ActiveSection>("user-management");
@@ -25,6 +26,8 @@ const SuperAdmin = () => {
         return <KnowledgeBase />;
       case "archive":
         return <MemoryArchive />;
+      case "user-grades":
+        return <UserGrades />;
       default:
         return <UserManagement />;
     }
