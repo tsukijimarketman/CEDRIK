@@ -65,10 +65,10 @@ services:
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
-    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    # command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
 
     # Reduce processes for encoder, model, filter-model (to reduce load of server)
-    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
+    command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
     networks:
         - internal
     # ports:
@@ -91,8 +91,8 @@ services:
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
-    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
+    # command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
     networks:
       - internal
     # ports:
@@ -115,8 +115,8 @@ services:
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
       - ./hf_cache:/app/hf_cache
-    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
-    # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
+    # command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
+    command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 2 --threads 4 -w $${FLASK_APP}:app" ]
     networks:
       - internal
     # ports:

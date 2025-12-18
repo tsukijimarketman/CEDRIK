@@ -1127,408 +1127,6 @@ async function getAIGuidance(
     }
   }
 
-  // ==================== GRADES API ENDPOINTS ====================
-
-// Get all grades for a specific user
-app.get("/api/grades/user/:userId", async (req, res) => {
-  const { userId } = req.params;
-  const { username } = req.query; // Optional: for display purposes
-
-  try {
-    // Get all scenarios the user has started
-    const scenariosResult = await pool.query(
-      `SELECT DISTINCT scenario_id FROM user_progress WHERE user_id = $1`,
-      [userId]
-    );
-
-    const userGrades = {
-      userId,
-      username: username || userId,
-      scenarios: [],
-      overallAverage: 0,
-      totalExercisesCompleted: 0,
-      totalExercisesAvailable: 0,
-    };
-
-    let totalScores = [];
-
-    // For each scenario, get detailed grades
-    for (const row of scenariosResult.rows) {
-      const scenarioId = row.scenario_id;
-      const scenario = SCENARIOS[scenarioId];
-
-      if (!scenario) continue;
-
-      const scenarioGrades = {
-        scenarioId,
-        scenarioName: scenario.name,
-        exercises: [],
-        averageScore: 0,
-        completionRate: 0,
-      };
-
-      let exerciseScores = [];
-      let completedCount = 0;
-
-      // Get grades for each exercise
-      for (const exercise of scenario.exercises) {
-        const exerciseId = exercise.id;
-
-        // Get challenge completions
-        const challengesResult = await pool.query(
-          `SELECT COUNT(*) as count FROM challenge_completions 
-           WHERE user_id = $1 AND scenario_id = $2`,
-          [userId, scenarioId]
-        );
-        const challengesCompleted = parseInt(challengesResult.rows[0].count);
-
-        // Get mitigation note with score
-        const mitigationResult = await pool.query(
-          `SELECT note, is_valid, score FROM mitigation_notes 
-           WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
-          [userId, scenarioId, exerciseId]
-        );
-
-        let mitigationScore = null;
-        if (mitigationResult.rows.length > 0) {
-          mitigationScore = mitigationResult.rows[0].score || 0;
-        }
-
-        // Get reflection with score
-        const reflectionResult = await pool.query(
-          `SELECT evidence, prevention, detection, is_complete, score 
-           FROM reflections 
-           WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
-          [userId, scenarioId, exerciseId]
-        );
-
-        let reflectionScore = null;
-        if (reflectionResult.rows.length > 0) {
-          reflectionScore = reflectionResult.rows[0].score || 0;
-        }
-
-        // Get completion status
-        const progressResult = await pool.query(
-          `SELECT completed FROM user_progress 
-           WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
-          [userId, scenarioId, exerciseId]
-        );
-
-        const completed = progressResult.rows[0]?.completed || false;
-        if (completed) completedCount++;
-
-        // Calculate overall score for this exercise
-        let overallScore = null;
-        if (mitigationScore !== null && reflectionScore !== null) {
-          // Weight: Challenges (20%), Mitigation (40%), Reflection (40%)
-          const challengeScore = Math.min(
-            (challengesCompleted / 3) * 100,
-            100
-          );
-          overallScore =
-            challengeScore * 0.2 +
-            mitigationScore * 0.4 +
-            reflectionScore * 0.4;
-          
-          exerciseScores.push(overallScore);
-          totalScores.push(overallScore);
-        }
-
-        scenarioGrades.exercises.push({
-          exerciseId,
-          exerciseTitle: exercise.title,
-          challengesCompleted,
-          challengesRequired: 3,
-          mitigationScore,
-          reflectionScore,
-          overallScore: overallScore ? Math.round(overallScore) : null,
-          completed,
-        });
-      }
-
-      // Calculate scenario averages
-      if (exerciseScores.length > 0) {
-        scenarioGrades.averageScore =
-          Math.round(
-            exerciseScores.reduce((a, b) => a + b, 0) / exerciseScores.length
-          );
-      }
-
-      scenarioGrades.completionRate =
-        Math.round((completedCount / scenario.exercises.length) * 100);
-
-      userGrades.scenarios.push(scenarioGrades);
-      userGrades.totalExercisesCompleted += completedCount;
-      userGrades.totalExercisesAvailable += scenario.exercises.length;
-    }
-
-    // Calculate overall average
-    if (totalScores.length > 0) {
-      userGrades.overallAverage =
-        Math.round(totalScores.reduce((a, b) => a + b, 0) / totalScores.length);
-    }
-
-    res.json(userGrades);
-  } catch (error) {
-    console.error("Error fetching user grades:", error);
-    res.status(500).json({ error: "Failed to fetch grades" });
-  }
-});
-
-// Get grades for a specific scenario
-app.get("/api/grades/user/:userId/scenario/:scenarioId", async (req, res) => {
-  const { userId, scenarioId } = req.params;
-
-  try {
-    const scenario = SCENARIOS[scenarioId];
-
-    if (!scenario) {
-      return res.status(404).json({ error: "Scenario not found" });
-    }
-
-    const scenarioGrades = {
-      scenarioId,
-      scenarioName: scenario.name,
-      exercises: [],
-      averageScore: 0,
-      completionRate: 0,
-    };
-
-    let exerciseScores = [];
-    let completedCount = 0;
-
-    // Get grades for each exercise
-    for (const exercise of scenario.exercises) {
-      const exerciseId = exercise.id;
-
-      // Get challenge completions
-      const challengesResult = await pool.query(
-        `SELECT COUNT(*) as count FROM challenge_completions 
-         WHERE user_id = $1 AND scenario_id = $2`,
-        [userId, scenarioId]
-      );
-      const challengesCompleted = parseInt(challengesResult.rows[0].count);
-
-      // Get mitigation note with score
-      const mitigationResult = await pool.query(
-        `SELECT note, is_valid, score FROM mitigation_notes 
-         WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
-        [userId, scenarioId, exerciseId]
-      );
-
-      let mitigationScore = null;
-      if (mitigationResult.rows.length > 0) {
-        mitigationScore = mitigationResult.rows[0].score || 0;
-      }
-
-      // Get reflection with score
-      const reflectionResult = await pool.query(
-        `SELECT evidence, prevention, detection, is_complete, score 
-         FROM reflections 
-         WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
-        [userId, scenarioId, exerciseId]
-      );
-
-      let reflectionScore = null;
-      if (reflectionResult.rows.length > 0) {
-        reflectionScore = reflectionResult.rows[0].score || 0;
-      }
-
-      // Get completion status
-      const progressResult = await pool.query(
-        `SELECT completed FROM user_progress 
-         WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
-        [userId, scenarioId, exerciseId]
-      );
-
-      const completed = progressResult.rows[0]?.completed || false;
-      if (completed) completedCount++;
-
-      // Calculate overall score for this exercise
-      let overallScore = null;
-      if (mitigationScore !== null && reflectionScore !== null) {
-        const challengeScore = Math.min((challengesCompleted / 3) * 100, 100);
-        overallScore =
-          challengeScore * 0.2 + mitigationScore * 0.4 + reflectionScore * 0.4;
-        exerciseScores.push(overallScore);
-      }
-
-      scenarioGrades.exercises.push({
-        exerciseId,
-        exerciseTitle: exercise.title,
-        challengesCompleted,
-        challengesRequired: 3,
-        mitigationScore,
-        reflectionScore,
-        overallScore: overallScore ? Math.round(overallScore) : null,
-        completed,
-      });
-    }
-
-    // Calculate scenario averages
-    if (exerciseScores.length > 0) {
-      scenarioGrades.averageScore =
-        Math.round(
-          exerciseScores.reduce((a, b) => a + b, 0) / exerciseScores.length
-        );
-    }
-
-    scenarioGrades.completionRate =
-      Math.round((completedCount / scenario.exercises.length) * 100);
-
-    res.json(scenarioGrades);
-  } catch (error) {
-    console.error("Error fetching scenario grades:", error);
-    res.status(500).json({ error: "Failed to fetch scenario grades" });
-  }
-});
-
-// Get overall lab summary for a user
-app.get("/api/grades/user/:userId/summary", async (req, res) => {
-  const { userId } = req.params;
-
-  try {
-    // Get all scenarios started
-    const scenariosStartedResult = await pool.query(
-      `SELECT DISTINCT scenario_id FROM user_progress WHERE user_id = $1`,
-      [userId]
-    );
-
-    const scenariosStarted = scenariosStartedResult.rows.length;
-
-    // Get completed exercises count
-    const completedResult = await pool.query(
-      `SELECT COUNT(*) as count FROM user_progress 
-       WHERE user_id = $1 AND completed = true`,
-      [userId]
-    );
-
-    const exercisesCompleted = parseInt(completedResult.rows[0].count);
-
-    // Get total exercises available (from started scenarios)
-    let totalExercises = 0;
-    let scenariosCompleted = 0;
-
-    for (const row of scenariosStartedResult.rows) {
-      const scenario = SCENARIOS[row.scenario_id];
-      if (scenario) {
-        totalExercises += scenario.exercises.length;
-
-        // Check if all exercises completed
-        const scenarioCompletedResult = await pool.query(
-          `SELECT COUNT(*) as count FROM user_progress 
-           WHERE user_id = $1 AND scenario_id = $2 AND completed = true`,
-          [userId, row.scenario_id]
-        );
-
-        const scenarioCompletedCount = parseInt(
-          scenarioCompletedResult.rows[0].count
-        );
-        if (scenarioCompletedCount === scenario.exercises.length) {
-          scenariosCompleted++;
-        }
-      }
-    }
-
-    // Get average score
-    const scoresResult = await pool.query(
-      `SELECT AVG(score) as avg_mitigation FROM mitigation_notes WHERE user_id = $1 AND is_valid = true
-       UNION ALL
-       SELECT AVG(score) as avg_reflection FROM reflections WHERE user_id = $1 AND is_complete = true`,
-      [userId]
-    );
-
-    let averageScore = 0;
-    if (scoresResult.rows.length > 0) {
-      const scores = scoresResult.rows
-        .map((r) => parseFloat(r.avg_mitigation || r.avg_reflection))
-        .filter((s) => !isNaN(s));
-
-      if (scores.length > 0) {
-        averageScore = Math.round(
-          scores.reduce((a, b) => a + b, 0) / scores.length
-        );
-      }
-    }
-
-    const summary = {
-      totalScenarios: Object.keys(SCENARIOS).length,
-      scenariosStarted,
-      scenariosCompleted,
-      totalExercises,
-      exercisesCompleted,
-      overallCompletionRate:
-        totalExercises > 0
-          ? Math.round((exercisesCompleted / totalExercises) * 100)
-          : 0,
-      averageScore,
-    };
-
-    res.json(summary);
-  } catch (error) {
-    console.error("Error fetching lab summary:", error);
-    res.status(500).json({ error: "Failed to fetch lab summary" });
-  }
-});
-
-// ADMIN: Get all users' grades
-app.get("/api/grades/all", async (req, res) => {
-  try {
-    // Get all unique users who have progress
-    const usersResult = await pool.query(
-      `SELECT DISTINCT user_id FROM user_progress`
-    );
-
-    const allUsersGrades = [];
-
-    for (const row of usersResult.rows) {
-      const userId = row.user_id;
-
-      // Get completed exercises count
-      const completedResult = await pool.query(
-        `SELECT COUNT(*) as count FROM user_progress 
-         WHERE user_id = $1 AND completed = true`,
-        [userId]
-      );
-
-      const totalCompleted = parseInt(completedResult.rows[0].count);
-
-      // Get average score
-      const scoresResult = await pool.query(
-        `SELECT AVG(score) as avg FROM (
-           SELECT score FROM mitigation_notes WHERE user_id = $1 AND is_valid = true
-           UNION ALL
-           SELECT score FROM reflections WHERE user_id = $1 AND is_complete = true
-         ) as scores`,
-        [userId]
-      );
-
-      const overallAverage = scoresResult.rows[0]?.avg
-        ? Math.round(parseFloat(scoresResult.rows[0].avg))
-        : 0;
-
-      // Get last activity
-      const lastActivityResult = await pool.query(
-        `SELECT MAX(updated_at) as last_activity FROM user_progress WHERE user_id = $1`,
-        [userId]
-      );
-
-      allUsersGrades.push({
-        userId,
-        username: userId, // You might want to join with a users table if you have one
-        overallAverage,
-        totalCompleted,
-        lastActivity: lastActivityResult.rows[0]?.last_activity || null,
-      });
-    }
-
-    res.json({ users: allUsersGrades });
-  } catch (error) {
-    console.error("Error fetching all users grades:", error);
-    res.status(500).json({ error: "Failed to fetch all users grades" });
-  }
-});
-
    // ===== NEW: RAG INTEGRATION =====
   // Search knowledge base for relevant information
   const ragContext = ragManager.enhancedSearch(
@@ -2154,6 +1752,409 @@ app.get("/api/vnc/info", (req, res) => {
     resolution: "1920x1080",
   })
 })
+
+// ==================== GRADES API ENDPOINTS ====================
+
+// Get all grades for a specific user
+app.get("/api/grades/user/:userId", async (req, res) => {
+  const { userId } = req.params;
+  const { username } = req.query; // Optional: for display purposes
+
+  try {
+    // Get all scenarios the user has started
+    const scenariosResult = await pool.query(
+      `SELECT DISTINCT scenario_id FROM user_progress WHERE user_id = $1`,
+      [userId]
+    );
+
+    const userGrades = {
+      userId,
+      username: username || userId,
+      scenarios: [],
+      overallAverage: 0,
+      totalExercisesCompleted: 0,
+      totalExercisesAvailable: 0,
+    };
+
+    let totalScores = [];
+
+    // For each scenario, get detailed grades
+    for (const row of scenariosResult.rows) {
+      const scenarioId = row.scenario_id;
+      const scenario = SCENARIOS[scenarioId];
+
+      if (!scenario) continue;
+
+      const scenarioGrades = {
+        scenarioId,
+        scenarioName: scenario.name,
+        exercises: [],
+        averageScore: 0,
+        completionRate: 0,
+      };
+
+      let exerciseScores = [];
+      let completedCount = 0;
+
+      // Get grades for each exercise
+      for (const exercise of scenario.exercises) {
+        const exerciseId = exercise.id;
+
+        // Get challenge completions
+        const challengesResult = await pool.query(
+          `SELECT COUNT(*) as count FROM challenge_completions 
+           WHERE user_id = $1 AND scenario_id = $2`,
+          [userId, scenarioId]
+        );
+        const challengesCompleted = parseInt(challengesResult.rows[0].count);
+
+        // Get mitigation note with score
+        const mitigationResult = await pool.query(
+          `SELECT note, is_valid, score FROM mitigation_notes 
+           WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
+          [userId, scenarioId, exerciseId]
+        );
+
+        let mitigationScore = null;
+        if (mitigationResult.rows.length > 0) {
+          mitigationScore = mitigationResult.rows[0].score || 0;
+        }
+
+        // Get reflection with score
+        const reflectionResult = await pool.query(
+          `SELECT evidence, prevention, detection, is_complete, score 
+           FROM reflections 
+           WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
+          [userId, scenarioId, exerciseId]
+        );
+
+        let reflectionScore = null;
+        if (reflectionResult.rows.length > 0) {
+          reflectionScore = reflectionResult.rows[0].score || 0;
+        }
+
+        // Get completion status
+        const progressResult = await pool.query(
+          `SELECT completed FROM user_progress 
+           WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
+          [userId, scenarioId, exerciseId]
+        );
+
+        const completed = progressResult.rows[0]?.completed || false;
+        if (completed) completedCount++;
+
+        // Calculate overall score for this exercise
+        let overallScore = null;
+        if (mitigationScore !== null && reflectionScore !== null) {
+          // Weight: Challenges (20%), Mitigation (40%), Reflection (40%)
+          const challengeScore = Math.min(
+            (challengesCompleted / 3) * 100,
+            100
+          );
+          overallScore =
+            challengeScore * 0.2 +
+            mitigationScore * 0.4 +
+            reflectionScore * 0.4;
+          
+          exerciseScores.push(overallScore);
+          totalScores.push(overallScore);
+        }
+
+        scenarioGrades.exercises.push({
+          exerciseId,
+          exerciseTitle: exercise.title,
+          challengesCompleted,
+          challengesRequired: 3,
+          mitigationScore,
+          reflectionScore,
+          overallScore: overallScore ? Math.round(overallScore) : null,
+          completed,
+        });
+      }
+
+      // Calculate scenario averages
+      if (exerciseScores.length > 0) {
+        scenarioGrades.averageScore =
+          Math.round(
+            exerciseScores.reduce((a, b) => a + b, 0) / exerciseScores.length
+          );
+      }
+
+      scenarioGrades.completionRate =
+        Math.round((completedCount / scenario.exercises.length) * 100);
+
+      userGrades.scenarios.push(scenarioGrades);
+      userGrades.totalExercisesCompleted += completedCount;
+      userGrades.totalExercisesAvailable += scenario.exercises.length;
+    }
+
+    // Calculate overall average
+    if (totalScores.length > 0) {
+      userGrades.overallAverage =
+        Math.round(totalScores.reduce((a, b) => a + b, 0) / totalScores.length);
+    }
+
+    res.json(userGrades);
+  } catch (error) {
+    console.error("Error fetching user grades:", error);
+    res.status(500).json({ error: "Failed to fetch grades" });
+  }
+});
+
+// Get grades for a specific scenario
+app.get("/api/grades/user/:userId/scenario/:scenarioId", async (req, res) => {
+  const { userId, scenarioId } = req.params;
+
+  try {
+    const scenario = SCENARIOS[scenarioId];
+
+    if (!scenario) {
+      return res.status(404).json({ error: "Scenario not found" });
+    }
+
+    const scenarioGrades = {
+      scenarioId,
+      scenarioName: scenario.name,
+      exercises: [],
+      averageScore: 0,
+      completionRate: 0,
+    };
+
+    let exerciseScores = [];
+    let completedCount = 0;
+
+    // Get grades for each exercise
+    for (const exercise of scenario.exercises) {
+      const exerciseId = exercise.id;
+
+      // Get challenge completions
+      const challengesResult = await pool.query(
+        `SELECT COUNT(*) as count FROM challenge_completions 
+         WHERE user_id = $1 AND scenario_id = $2`,
+        [userId, scenarioId]
+      );
+      const challengesCompleted = parseInt(challengesResult.rows[0].count);
+
+      // Get mitigation note with score
+      const mitigationResult = await pool.query(
+        `SELECT note, is_valid, score FROM mitigation_notes 
+         WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
+        [userId, scenarioId, exerciseId]
+      );
+
+      let mitigationScore = null;
+      if (mitigationResult.rows.length > 0) {
+        mitigationScore = mitigationResult.rows[0].score || 0;
+      }
+
+      // Get reflection with score
+      const reflectionResult = await pool.query(
+        `SELECT evidence, prevention, detection, is_complete, score 
+         FROM reflections 
+         WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
+        [userId, scenarioId, exerciseId]
+      );
+
+      let reflectionScore = null;
+      if (reflectionResult.rows.length > 0) {
+        reflectionScore = reflectionResult.rows[0].score || 0;
+      }
+
+      // Get completion status
+      const progressResult = await pool.query(
+        `SELECT completed FROM user_progress 
+         WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
+        [userId, scenarioId, exerciseId]
+      );
+
+      const completed = progressResult.rows[0]?.completed || false;
+      if (completed) completedCount++;
+
+      // Calculate overall score for this exercise
+      let overallScore = null;
+      if (mitigationScore !== null && reflectionScore !== null) {
+        const challengeScore = Math.min((challengesCompleted / 3) * 100, 100);
+        overallScore =
+          challengeScore * 0.2 + mitigationScore * 0.4 + reflectionScore * 0.4;
+        exerciseScores.push(overallScore);
+      }
+
+      scenarioGrades.exercises.push({
+        exerciseId,
+        exerciseTitle: exercise.title,
+        challengesCompleted,
+        challengesRequired: 3,
+        mitigationScore,
+        reflectionScore,
+        overallScore: overallScore ? Math.round(overallScore) : null,
+        completed,
+      });
+    }
+
+    // Calculate scenario averages
+    if (exerciseScores.length > 0) {
+      scenarioGrades.averageScore =
+        Math.round(
+          exerciseScores.reduce((a, b) => a + b, 0) / exerciseScores.length
+        );
+    }
+
+    scenarioGrades.completionRate =
+      Math.round((completedCount / scenario.exercises.length) * 100);
+
+    res.json(scenarioGrades);
+  } catch (error) {
+    console.error("Error fetching scenario grades:", error);
+    res.status(500).json({ error: "Failed to fetch scenario grades" });
+  }
+});
+
+// Get overall lab summary for a user
+app.get("/api/grades/user/:userId/summary", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Get all scenarios started
+    const scenariosStartedResult = await pool.query(
+      `SELECT DISTINCT scenario_id FROM user_progress WHERE user_id = $1`,
+      [userId]
+    );
+
+    const scenariosStarted = scenariosStartedResult.rows.length;
+
+    // Get completed exercises count
+    const completedResult = await pool.query(
+      `SELECT COUNT(*) as count FROM user_progress 
+       WHERE user_id = $1 AND completed = true`,
+      [userId]
+    );
+
+    const exercisesCompleted = parseInt(completedResult.rows[0].count);
+
+    // Get total exercises available (from started scenarios)
+    let totalExercises = 0;
+    let scenariosCompleted = 0;
+
+    for (const row of scenariosStartedResult.rows) {
+      const scenario = SCENARIOS[row.scenario_id];
+      if (scenario) {
+        totalExercises += scenario.exercises.length;
+
+        // Check if all exercises completed
+        const scenarioCompletedResult = await pool.query(
+          `SELECT COUNT(*) as count FROM user_progress 
+           WHERE user_id = $1 AND scenario_id = $2 AND completed = true`,
+          [userId, row.scenario_id]
+        );
+
+        const scenarioCompletedCount = parseInt(
+          scenarioCompletedResult.rows[0].count
+        );
+        if (scenarioCompletedCount === scenario.exercises.length) {
+          scenariosCompleted++;
+        }
+      }
+    }
+
+    // Get average score
+    const scoresResult = await pool.query(
+      `SELECT AVG(score) as avg_mitigation FROM mitigation_notes WHERE user_id = $1 AND is_valid = true
+       UNION ALL
+       SELECT AVG(score) as avg_reflection FROM reflections WHERE user_id = $1 AND is_complete = true`,
+      [userId]
+    );
+
+    let averageScore = 0;
+    if (scoresResult.rows.length > 0) {
+      const scores = scoresResult.rows
+        .map((r) => parseFloat(r.avg_mitigation || r.avg_reflection))
+        .filter((s) => !isNaN(s));
+
+      if (scores.length > 0) {
+        averageScore = Math.round(
+          scores.reduce((a, b) => a + b, 0) / scores.length
+        );
+      }
+    }
+
+    const summary = {
+      totalScenarios: Object.keys(SCENARIOS).length,
+      scenariosStarted,
+      scenariosCompleted,
+      totalExercises,
+      exercisesCompleted,
+      overallCompletionRate:
+        totalExercises > 0
+          ? Math.round((exercisesCompleted / totalExercises) * 100)
+          : 0,
+      averageScore,
+    };
+
+    res.json(summary);
+  } catch (error) {
+    console.error("Error fetching lab summary:", error);
+    res.status(500).json({ error: "Failed to fetch lab summary" });
+  }
+});
+
+// ADMIN: Get all users' grades
+app.get("/api/grades/all", async (req, res) => {
+  try {
+    // Get all unique users who have progress
+    const usersResult = await pool.query(
+      `SELECT DISTINCT user_id FROM user_progress`
+    );
+
+    const allUsersGrades = [];
+
+    for (const row of usersResult.rows) {
+      const userId = row.user_id;
+
+      // Get completed exercises count
+      const completedResult = await pool.query(
+        `SELECT COUNT(*) as count FROM user_progress 
+         WHERE user_id = $1 AND completed = true`,
+        [userId]
+      );
+
+      const totalCompleted = parseInt(completedResult.rows[0].count);
+
+      // Get average score
+      const scoresResult = await pool.query(
+        `SELECT AVG(score) as avg FROM (
+           SELECT score FROM mitigation_notes WHERE user_id = $1 AND is_valid = true
+           UNION ALL
+           SELECT score FROM reflections WHERE user_id = $1 AND is_complete = true
+         ) as scores`,
+        [userId]
+      );
+
+      const overallAverage = scoresResult.rows[0]?.avg
+        ? Math.round(parseFloat(scoresResult.rows[0].avg))
+        : 0;
+
+      // Get last activity
+      const lastActivityResult = await pool.query(
+        `SELECT MAX(updated_at) as last_activity FROM user_progress WHERE user_id = $1`,
+        [userId]
+      );
+
+      allUsersGrades.push({
+        userId,
+        username: userId, // You might want to join with a users table if you have one
+        overallAverage,
+        totalCompleted,
+        lastActivity: lastActivityResult.rows[0]?.last_activity || null,
+      });
+    }
+
+    res.json({ users: allUsersGrades });
+  } catch (error) {
+    console.error("Error fetching all users grades:", error);
+    res.status(500).json({ error: "Failed to fetch all users grades" });
+  }
+});
+
 // New RAG Stuff
 app.get("/api/knowledge/:category", async (req, res) => {
   try {

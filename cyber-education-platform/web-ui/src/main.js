@@ -1,8 +1,8 @@
-// const API_URL = 'http://localhost:3000/api';
-const API_URL = `/cyber-education/api`;
-// const VNC_URL =
-//   'http://localhost:6080/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123';
-const VNC_URL = `/cyber-education/vnc/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`
+const API_URL = 'http://localhost:3000/api';
+//const API_URL = `/cyber-education/api`;
+const VNC_URL =
+  'http://localhost:6080/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123';
+//const VNC_URL = `/cyber-education/vnc/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`
 
 let currentScenario = null;
 let conversationHistory = [];
@@ -1614,3 +1614,4 @@ window.manualChallengeComplete = manualChallengeComplete;
 window.handleChallengeCheckbox = handleChallengeCheckbox;
 window.submitMitigation = submitMitigation;
 window.submitReflection = submitReflection;
+window.markExerciseComplete = markExerciseComplete;
