@@ -91,7 +91,7 @@ else
     echo "TMUX session $cedrik_service_ses_name already exists"
     echo "Restarting services and deploying frontend"
 
-    cmd_1="cd \"${cwd}\" && docker compose restart"
+    cmd_1="cd \"${cwd}\" && docker compose build frontend && docker compose restart"
     cmd_2="cd \"${cwd}/${d_cyber_education_platform}\" && docker compose restart"
     # cmd_3="${cwd}/${d_deployment}/frontend.sh"
 
