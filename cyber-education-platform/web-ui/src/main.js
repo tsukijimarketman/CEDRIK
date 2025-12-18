@@ -1614,3 +1614,4 @@ window.manualChallengeComplete = manualChallengeComplete;
 window.handleChallengeCheckbox = handleChallengeCheckbox;
 window.submitMitigation = submitMitigation;
 window.submitReflection = submitReflection;
+window.markExerciseComplete = markExerciseComplete;
