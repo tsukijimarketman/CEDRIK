@@ -13,7 +13,8 @@ import {
   Users,
   FileText,
   Database,
-  Archive, // Add this import
+  Archive,
+  BarChart3 // Add this import
 } from "lucide-react";
 import { SettingsDialog } from "./dialogs/SettingsDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
@@ -23,8 +24,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 
 interface SuperAdminSidebarProps {
-  activeSection: "user-management" | "audit-logs" | "knowledge-base" | "archive"; // Add "archive"
-  onSectionChange: (section: "user-management" | "audit-logs" | "knowledge-base" | "archive") => void; // Add "archive"
+  activeSection: "user-management" | "audit-logs" | "knowledge-base" | "archive" | "user-grades"; // Add "archive"
+  onSectionChange: (section: "user-management" | "audit-logs" | "knowledge-base" | "archive" | "user-grades") => void; // Add "archive"
 }
 
 export function SuperAdminSidebar({
@@ -170,6 +171,12 @@ export function SuperAdminSidebar({
       title: "Archive",
       icon: Archive,
     },
+   {
+    id: "user-grades" as const,
+    title: "User Grades",
+    icon: BarChart3,
+  },
+    
   ];
 
   return (
