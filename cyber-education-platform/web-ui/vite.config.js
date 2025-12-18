@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: "",
+  base: "/cyber-education/",
   root: '.',
   build: {
     outDir: 'dist',
