@@ -309,7 +309,8 @@ export const cedrikLabsApi = {
 
   // ===== ADMIN: Get all users' grades =====
   getAllUsersGrades: async () => {
-    return labsApi.get<{
+    const url = `${LABS_API_BASE_URL.replace(/\/$/, "")}/grades/all`;
+    return axios.get<{
       users: Array<{
         userId: string;
         username: string;
@@ -317,7 +318,7 @@ export const cedrikLabsApi = {
         totalCompleted: number;
         lastActivity: string;
       }>;
-    }>("/grades/all");
+    }>(url, { headers: { Accept: "application/json" }, withCredentials: false });
   },
 };
 
