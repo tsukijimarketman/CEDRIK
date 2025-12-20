@@ -91,11 +91,19 @@ else
     echo "TMUX session $cedrik_service_ses_name already exists"
     echo "Restarting services and deploying frontend"
 
-    cmd_1="cd \"${cwd}\" && docker compose build frontend && docker compose restart"
-    cmd_2="cd \"${cwd}/${d_cyber_education_platform}\" && docker compose restart"
-    # cmd_3="${cwd}/${d_deployment}/frontend.sh"
+    echo "Building Frontend image"
+    cd "${cwd}"
+    docker compose build frontend
 
-    tmux send-keys -t "$cedrik_service_ses_name:$window_3" "$cmd_1 && $cmd_2" ENTER 2>/dev/null
+    echo "Starting restart process..."
+    echo "Stopping CEDRIK Services"
+    docker compose down frontend
+    docker compose stop
+
+    echo "Starting CEDRIK Services"
+    tmux send-keys -t "$cedrik_service_ses_name:$window_1" "docker compose up" ENTER 2>/dev/null
+    cd "${cwd}/${d_cyber_education_platform}" && docker compose restart
+
     echo "Command exited with code $?"
 fi
 
