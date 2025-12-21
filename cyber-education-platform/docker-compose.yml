@@ -1,3 +1,4 @@
+name: cedrik
 services:
   # FIXED: Now builds from custom Dockerfile instead of installing on every startup
   kali-workstation:
