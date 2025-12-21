@@ -6,3 +6,4 @@ class LabsSessionData:
   user_id: str
   session_id: str
   expiry: datetime
+  refresh: bool = False

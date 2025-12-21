@@ -12,6 +12,16 @@ class UserDoesNotExist(HTTPException):
         super().__init__("User Does not exist", Response(status=400))
         self.code = 400
 
+class CouldNotCreateSession(HTTPException):
+    def __init__(self):
+        super().__init__("Could not create a session", Response(status=400))
+        self.code = 400
+
+class InvalidSession(HTTPException):
+    def __init__(self):
+        super().__init__("Invalid Session", Response(status=400))
+        self.code = 400
+
 class UserAlreadyExist(HTTPException):
     def __init__(self, field: str = "user"):
         if field == "username":

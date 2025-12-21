@@ -22,7 +22,7 @@ def create_session(user_id: str) -> LabsSessionData | None:
     expiry=datetime.fromisoformat(session_info["exp"])
   )
 
-def get_and_validate_session(sid: str) -> LabsSessionData | None:
+def get_session(sid: str, refresh: bool = False) -> LabsSessionData | None:
   """
   Validates and removes if the session is not valid
   """
@@ -36,7 +36,9 @@ def get_and_validate_session(sid: str) -> LabsSessionData | None:
   if exp > now:
     exp_refresh_threshold = int(LABS_SESSION_EXPIRE_SEC * .1)
     diff = exp-now
-    if diff.seconds < exp_refresh_threshold:
+    is_refresh = False
+    if refresh and (diff.seconds < exp_refresh_threshold):
+      is_refresh = True
       session_info =  service.set(sid, {
         "uid": session_info["uid"],
         "sid": sid
@@ -44,7 +46,8 @@ def get_and_validate_session(sid: str) -> LabsSessionData | None:
     return LabsSessionData(
       user_id=session_info["uid"],
       session_id=sid,
-      expiry=datetime.fromisoformat(session_info["exp"])
+      expiry=datetime.fromisoformat(session_info["exp"]),
+      refresh=is_refresh
     )
 
   service.delete(sid)
