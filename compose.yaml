@@ -40,6 +40,9 @@ services:
     # command: [ "/bin/bash" ]
     # stdin_open: true
     # tty: true
+    depends_on:
+      redis:
+        condition: service_started
     networks:
         - internal
     ports:
@@ -130,6 +133,15 @@ services:
       NO_RELOAD: --no-reload
       HF_HOME: /app/hf_cache
     restart: unless-stopped
+
+  redis:
+    image: redis:8.4-alpine
+    command: [ "/bin/sh", "-c", "redis-server --bind $${REDIS_HOST} --port $${REDIS_PORT} --loadmodule /usr/local/lib/redis/modules//rejson.so" ]
+    environment:
+      REDIS_HOST: 0.0.0.0
+      REDIS_PORT: 5004
+    networks:
+      - internal
 
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan

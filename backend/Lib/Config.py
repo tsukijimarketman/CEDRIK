@@ -70,3 +70,8 @@ CHUNK_SIZE_BYTES = int(_get_env_or_default("CHUNK_SIZE_BYTES", 256, lambda x:  i
 CHUNK_OFFSET_BYTES = int(_get_env_or_default("CHUNK_OFFSET_BYTES", 28, lambda x:  int(x)))
 DEBUG = bool(_get_env_or_default("DEBUG", False, lambda x: x != None or len(x) > 0))
 AI_NAME = str(_get_env_or_default("AI_NAME", "CEDRIK"))
+
+REDIS_HOST = str(_get_env_or_default("REDIS_HOST", "localhost"))
+REDIS_PORT = int(_get_env_or_default("REDIS_PORT", 5004, lambda x: int(x)))
+# 30 min = 1800
+LABS_SESSION_EXPIRE_SEC = int(_get_env_or_default("LABS_SESSION_EXPIRE_SEC", 1800, lambda x: int(x)))
