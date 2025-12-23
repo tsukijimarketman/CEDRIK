@@ -46,8 +46,8 @@ def create():
   return jsonify(
     asdict(
       SessionCreateResult(
-        uid=session.user_id,
-        sid=session.session_id,
+        uid=session.uid,
+        sid=session.sid,
         expiry=session.expiry.astimezone(timezone.utc).isoformat()
       )
     )
@@ -66,7 +66,7 @@ def verify():
     raise Unauthorized()
 
   if session.refresh:
-    audit_message(f"user: {session.user_id} refreshed the labs session").save()
+    audit_message(f"user: {session.uid} refreshed the labs session").save()
 
   return "", 200
 
@@ -82,8 +82,8 @@ def get():
     raise Unauthorized()
 
   return jsonify(SessionGetResult(
-    uid=session.user_id,
-    sid=session.session_id,
+    uid=session.uid,
+    sid=session.sid,
     expiry=session.expiry.astimezone(timezone.utc).isoformat(),
     refresh=session.refresh
   )), 200

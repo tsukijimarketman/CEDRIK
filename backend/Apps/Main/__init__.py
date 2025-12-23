@@ -46,7 +46,7 @@ cors = CORS(
     app,
     resources={
         r"/*": {
-            "origins": [FRONTEND_SERVER],
+            "origins": FRONTEND_SERVER,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization", "X-CSRF-TOKEN"],
             "supports_credentials": True,

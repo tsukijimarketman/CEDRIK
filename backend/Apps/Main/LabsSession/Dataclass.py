@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class LabsSessionData:
-  user_id: str
-  session_id: str
+  uid: str
+  sid: str
   expiry: datetime
   refresh: bool = False

@@ -1,6 +1,7 @@
 import os
-from typing import Any, Callable
+from typing import Any, Callable, List
 from dotenv import load_dotenv
+import json
 load_dotenv()
 
 print("DEBUG: Current working directory:", os.getcwd())
@@ -48,7 +49,8 @@ MAIN_SERVER = str(_get_env_or_default("SERVER_MAIN", "http://localhost:5000"))
 ENCODER_SERVER = str( _get_env_or_default("SERVER_ENCODER" , "http://localhost:5001/encode") )
 MODEL_SERVER = str( _get_env_or_default("SERVER_MODEL", "http://localhost:5002/generate-reply") )
 FILTER_SERVER = str( _get_env_or_default("SERVER_FILTER", "http://localhost:5003/generate-reply") )
-FRONTEND_SERVER = str( _get_env_or_default("SERVER_FRONTEND", "http://localhost:5173") )
+# TODO: Rename to ALLOWED_ORIGIN
+FRONTEND_SERVER = list( _get_env_or_default("SERVER_FRONTEND", ["http://localhost:5173"], lambda x: json.loads(x)) )
 DATABASE_URI = str(_get_required_env("CyberSync_DatabaseUri"))
 JWT_SECRET = str(_get_required_env("JWT_SECRET"))
 RESOURCE_DIR = str(_get_env_or_default("RESOURCE_DIR", "Uploads/"))

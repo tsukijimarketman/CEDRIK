@@ -18,7 +18,7 @@ def create_session(user_id: str) -> LabsSessionData | None:
   });
 
   return LabsSessionData(
-    user_id=user_id, session_id=sid,
+    uid=user_id, sid=sid,
     expiry=datetime.fromisoformat(session_info["exp"])
   )
 
@@ -44,8 +44,8 @@ def get_session(sid: str, refresh: bool = False) -> LabsSessionData | None:
         "sid": sid
       })
     return LabsSessionData(
-      user_id=session_info["uid"],
-      session_id=sid,
+      uid=session_info["uid"],
+      sid=sid,
       expiry=datetime.fromisoformat(session_info["exp"]),
       refresh=is_refresh
     )
