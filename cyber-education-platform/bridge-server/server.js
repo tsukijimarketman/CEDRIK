@@ -667,9 +667,9 @@ Score 70+ to pass. Response must be valid JSON only.`
 
 async function get_uid_from_session(sid) {
   try {
-    const resp = await fetch(`${BACKEND_MAIN_API_URL}/labs/session/get?sid=${sid}refresh=1`);
+    const resp = await fetch(`${BACKEND_MAIN_API_URL}/labs/session/get?sid=${sid}&refresh=1`);
     if (!resp.ok) throw new Error("Invalid Sesssion");
-    const json = resp.json();
+    const json = await resp.json();
     return {
         uid: json.uid
     };
@@ -685,8 +685,8 @@ async function get_uid_from_session(sid) {
 
 // Also update the mitigation submission endpoint with better logging
 app.post("/api/mitigation/submit", async (req, res) => {
-  const { userId, scenarioId, exerciseId, note } = req.body;
-  const uid_res = get_uid_from_session();
+  let { userId, scenarioId, exerciseId, note } = req.body;
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -747,8 +747,8 @@ app.post("/api/mitigation/submit", async (req, res) => {
 
 // Also update the reflection submission endpoint with better logging
 app.post("/api/reflection/submit", async (req, res) => {
-  const { userId, scenarioId, exerciseId, reflection } = req.body;
-  const uid_res = get_uid_from_session();
+  let { userId, scenarioId, exerciseId, reflection } = req.body;
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -1512,6 +1512,7 @@ CREATE INDEX IF NOT EXISTS idx_artifacts_user
 // ==================== API ENDPOINTS ====================
 
 app.get("/health", (req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json({ status: "healthy", timestamp: new Date().toISOString() })
 })
 
@@ -1532,8 +1533,8 @@ app.get("/api/scenarios", (req, res) => {
 
 // Reset progress for a scenario (fresh start)
 app.post("/api/progress/reset", async (req, res) => {
-  const { userId, scenarioId } = req.body;
-  const uid_res = get_uid_from_session();
+  let { userId, scenarioId } = req.body;
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -1580,13 +1581,14 @@ app.get("/api/scenarios/:id", (req, res) => {
 // NEW: Test connectivity endpoint
 app.get("/api/scenarios/:id/test-connectivity", async (req, res) => {
   const result = await testContainerConnectivity(req.params.id)
+  res.set('Cache-Control', 'no-store');
   res.json(result)
 })
 
 // Start scenario with auto-launch and connectivity testing
 app.post("/api/scenarios/:id/start", async (req, res) => {
-  const { userId } = req.body
-  const uid_res = get_uid_from_session();
+  let { userId } = req.body
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -1643,8 +1645,8 @@ app.post("/api/scenarios/:id/start", async (req, res) => {
 })
 
 app.post("/api/execute", async (req, res) => {
-  const { command, userId, scenarioId, sessionId = "default" } = req.body
-  const uid_res = get_uid_from_session();
+  let { command, userId, scenarioId, sessionId = "default" } = req.body
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -1671,14 +1673,14 @@ app.post("/api/execute", async (req, res) => {
 })
 
 app.post("/api/ai/guidance", async (req, res) => {
-  const {
+  let {
     scenarioId,
     exerciseId,
     message,
     userId,
     conversationHistory = [],
   } = req.body
-  const uid_res = get_uid_from_session();
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -1751,6 +1753,7 @@ app.get("/api/users/:userId/progress", async (req, res) => {
       "SELECT * FROM user_progress WHERE user_id = $1 ORDER BY started_at DESC",
       [req.params.userId],
     )
+    res.set('Cache-Control', 'no-store');
     res.json({ progress: result.rows })
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch progress" })
@@ -1758,8 +1761,8 @@ app.get("/api/users/:userId/progress", async (req, res) => {
 })
 
 app.post("/api/progress/complete", async (req, res) => {
-  const { userId, scenarioId, exerciseId } = req.body
-  const uid_res = get_uid_from_session();
+  let { userId, scenarioId, exerciseId } = req.body
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -1793,6 +1796,7 @@ app.get("/api/users/:userId/commands", async (req, res) => {
     query += " ORDER BY timestamp DESC LIMIT 50"
 
     const result = await pool.query(query, params)
+    res.set('Cache-Control', 'no-store');
     res.json({ commands: result.rows })
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch command history" })
@@ -1949,6 +1953,7 @@ app.get("/api/grades/user/:userId", async (req, res) => {
         Math.round(totalScores.reduce((a, b) => a + b, 0) / totalScores.length);
     }
 
+    res.set('Cache-Control', 'no-store');
     res.json(userGrades);
   } catch (error) {
     console.error("Error fetching user grades:", error);
@@ -2057,6 +2062,7 @@ app.get("/api/grades/user/:userId/scenario/:scenarioId", async (req, res) => {
     scenarioGrades.completionRate =
       Math.round((completedCount / scenario.exercises.length) * 100);
 
+    res.set('Cache-Control', 'no-store');
     res.json(scenarioGrades);
   } catch (error) {
     console.error("Error fetching scenario grades:", error);
@@ -2145,6 +2151,7 @@ app.get("/api/grades/user/:userId/summary", async (req, res) => {
       averageScore,
     };
 
+    res.set('Cache-Control', 'no-store');
     res.json(summary);
   } catch (error) {
     console.error("Error fetching lab summary:", error);
@@ -2203,6 +2210,7 @@ app.get("/api/grades/all", async (req, res) => {
       });
     }
 
+    res.set('Cache-Control', 'no-store');
     res.json({ users: allUsersGrades });
   } catch (error) {
     console.error("Error fetching all users grades:", error);
@@ -2216,6 +2224,7 @@ app.get("/api/knowledge/:category", async (req, res) => {
     const { category } = req.params;
     const { query } = req.query;
 
+    res.set('Cache-Control', 'no-store');
     if (query) {
       // Search for specific query
       const results = ragManager.search(query, 5);
@@ -2325,6 +2334,7 @@ app.get("/api/challenges/completed/:scenarioId", async (req, res) => {
       [userId, scenarioId]
     );
 
+    res.set('Cache-Control', 'no-store');
     res.json({
       success: true,
       challenges: result.rows,
@@ -2341,13 +2351,12 @@ app.get("/api/challenges/completed/:scenarioId", async (req, res) => {
 
 // Save challenge completion with evidence
 app.post("/api/challenges/complete", async (req, res) => {
-  const { userId, scenarioId, challengeId, evidence } = req.body;
-  const uid_res = get_uid_from_session();
+  let { userId, scenarioId, challengeId, evidence } = req.body;
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
   userId = uid_res.uid;
-
   if (!userId || !scenarioId || !challengeId) {
     return res.status(400).json({ error: "Missing required fields" });
   }
@@ -2388,8 +2397,8 @@ app.post("/api/challenges/complete", async (req, res) => {
 
 // Submit mitigation note for validation
 app.post("/api/mitigation/submit", async (req, res) => {
-  const { userId, scenarioId, exerciseId, note } = req.body;
-  const uid_res = get_uid_from_session();
+  let { userId, scenarioId, exerciseId, note } = req.body;
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -2437,8 +2446,8 @@ app.post("/api/mitigation/submit", async (req, res) => {
 
 // Submit three bullets reflection
 app.post("/api/reflection/submit", async (req, res) => {
-  const { userId, scenarioId, exerciseId, reflection } = req.body;
-  const uid_res = get_uid_from_session();
+  let { userId, scenarioId, exerciseId, reflection } = req.body;
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }
@@ -2504,7 +2513,12 @@ app.post("/api/reflection/submit", async (req, res) => {
 // Get exercise validation status
 app.get("/api/exercise/:scenarioId/:exerciseId/status", async (req, res) => {
   const { scenarioId, exerciseId } = req.params;
-  const { userId } = req.query;
+  let { userId } = req.query;
+  const uid_res = await get_uid_from_session(userId);
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   if (!userId) {
     return res.status(400).json({ error: "userId is required" });
@@ -2559,6 +2573,7 @@ app.get("/api/exercise/:scenarioId/:exerciseId/status", async (req, res) => {
       canComplete: challengeCount >= EXERCISE_REQUIREMENTS.MIN_CHALLENGES && hasMitigation && hasReflection
     };
 
+    res.set('Cache-Control', 'no-store');
     res.json(status);
   } catch (error) {
     console.error("Error getting exercise status:", error);
@@ -2568,8 +2583,8 @@ app.get("/api/exercise/:scenarioId/:exerciseId/status", async (req, res) => {
 
 // Enhanced coach API with ladder-based guidance
 app.post("/api/coach/ladder", async (req, res) => {
-  const { userId, scenarioId, exerciseId, message, currentStep } = req.body;
-  const uid_res = get_uid_from_session();
+  let { userId, scenarioId, exerciseId, message, currentStep } = req.body;
+  const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
       return res.status(uid_res.status).json({ error: uid_res.error });
   }

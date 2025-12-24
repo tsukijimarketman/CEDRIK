@@ -144,8 +144,9 @@ services:
       - "127.0.0.1:3000:3000"
     networks:
       - hack-lab-network
+      - internal
     environment:
-      - BACKEND_MAIN_API_URL=${VITE_BACKEND_URL}
+      - BACKEND_MAIN_API_URL=http://main:5000/api
       - KALI_CONTAINER=kali-workstation
       - DOCKER_HOST=unix:///var/run/docker.sock
       - DATABASE_URL=postgresql://cyber_admin:secure_pass_123@postgres:5432/cyber_education
@@ -187,6 +188,9 @@ services:
     restart: unless-stopped
 
 networks:
+  internal:
+    name: cedrik-internal
+    external: true
   hack-lab-network:
     driver: bridge
     ipam:

@@ -1,6 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 const VNC_BASE_URL = import.meta.env.VITE_VNC_URL;
-const BACKEND_MAIN_URL = import.meta.env.VITE_BACKEND_URL;
 const API_URL = `${API_BASE_URL}/api`;
 // const API_URL = `/cyber-education/api`;
 const VNC_URL =

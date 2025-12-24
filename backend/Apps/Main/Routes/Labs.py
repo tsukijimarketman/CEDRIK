@@ -54,32 +54,36 @@ def create():
   ), 200
 
 
-@b_labs.route("/session/verify")
-def verify():
-  args = request.args
-  sid: str | None = args.get("sid", None)
-  if sid == None:
-    raise InvalidSession()
-
-  session = get_session(sid, True)
-  if session == None:
-    raise Unauthorized()
-
-  if session.refresh:
-    audit_message(f"user: {session.uid} refreshed the labs session").save()
-
-  return "", 200
+# @b_labs.route("/session/verify")
+# def verify():
+#   args = request.args
+#   sid: str | None = args.get("sid", None)
+#   if sid == None:
+#     raise InvalidSession()
+#
+#   session = get_session(sid, True)
+#   if session == None:
+#     raise Unauthorized()
+#
+#   if session.refresh:
+#     audit_message(f"user: {session.uid} refreshed the labs session").save()
+#
+#   return "", 200
 
 @b_labs.route("/session/get")
 def get():
   args = request.args
   sid: str | None = args.get("sid", None)
+  refresh: bool = args.get("refresh", "0") != "1"
   if sid == None:
     raise InvalidSession()
 
-  session = get_session(sid)
+  session = get_session(sid, refresh)
   if session == None:
     raise Unauthorized()
+
+  if session.refresh:
+    audit_message(f"user: {session.uid} refreshed the labs session").save()
 
   return jsonify(SessionGetResult(
     uid=session.uid,
@@ -88,7 +92,7 @@ def get():
     refresh=session.refresh
   )), 200
 
-@b_labs.route("/session/delete", methods=["DELETE"])
+@b_labs.route("/session/delete", methods=["POST"])
 def delete():
   args = request.args
   sid: str | None = args.get("sid", None)

@@ -7,6 +7,7 @@ from backend.Lib.Config import LABS_SESSION_EXPIRE_SEC
 import uuid
 
 from backend.Apps.Main.LabsSession.LabsSessionService import LabsSessionService
+from backend.Lib.Logger import Logger
 
 def create_session(user_id: str) -> LabsSessionData | None:
   service: LabsSessionService = current_app.extensions[KEY]
@@ -39,6 +40,7 @@ def get_session(sid: str, refresh: bool = False) -> LabsSessionData | None:
     is_refresh = False
     if refresh and (diff.seconds < exp_refresh_threshold):
       is_refresh = True
+      Logger.log.info(f"expiry is less than {exp_refresh_threshold} refreshing session")
       session_info =  service.set(sid, {
         "uid": session_info["uid"],
         "sid": sid
