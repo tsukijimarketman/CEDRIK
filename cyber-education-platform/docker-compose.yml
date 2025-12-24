@@ -123,6 +123,7 @@ services:
       - POSTGRES_PASSWORD=secure_pass_123
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./dbinit/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - hack-lab-network
     ports:
@@ -144,6 +145,7 @@ services:
     networks:
       - hack-lab-network
     environment:
+      - BACKEND_MAIN_API_URL=${VITE_BACKEND_URL}
       - KALI_CONTAINER=kali-workstation
       - DOCKER_HOST=unix:///var/run/docker.sock
       - DATABASE_URL=postgresql://cyber_admin:secure_pass_123@postgres:5432/cyber_education

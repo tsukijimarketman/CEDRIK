@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 const VNC_BASE_URL = import.meta.env.VITE_VNC_URL;
+const BACKEND_MAIN_URL = import.meta.env.VITE_BACKEND_URL;
 const API_URL = `${API_BASE_URL}/api`;
 // const API_URL = `/cyber-education/api`;
 const VNC_URL =
@@ -8,7 +9,12 @@ const VNC_URL =
 
 let currentScenario = null;
 let conversationHistory = [];
-let userId = 'demo-user';
+let sparam = new URLSearchParams(window.location.search);
+let session_id = sparam.get("sid");
+if (session_id == undefined || session_id.length == 0) {
+    session_id = "guest-user";
+}
+let userId = session_id;
 let vncScaling = 'scale';
 let currentExerciseId = 1;
 let completedExercises = new Set();

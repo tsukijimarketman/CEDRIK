@@ -7,6 +7,8 @@ const jwt = require("jsonwebtoken")
 const Groq = require("groq-sdk")
 const RAGManager = require('./rag-manager');
 
+const BACKEND_MAIN_API_URL = process.env.BACKEND_MAIN_API_URL;
+
 const app = express()
 const PORT = 3000
 
@@ -663,9 +665,32 @@ Score 70+ to pass. Response must be valid JSON only.`
   }
 }
 
+async function get_uid_from_session(sid) {
+  try {
+    const resp = await fetch(`${BACKEND_MAIN_API_URL}/labs/session/get?sid=${sid}refresh=1`);
+    if (!resp.ok) throw new Error("Invalid Sesssion");
+    const json = resp.json();
+    return {
+        uid: json.uid
+    };
+  }
+  catch (error) {
+    console.error("Error fetch session:", error);
+    return {
+        status: 401,
+        error: "Invalid Session"
+    };
+  }
+}
+
 // Also update the mitigation submission endpoint with better logging
 app.post("/api/mitigation/submit", async (req, res) => {
   const { userId, scenarioId, exerciseId, note } = req.body;
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   if (!userId || !scenarioId || !exerciseId || !note) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -723,6 +748,11 @@ app.post("/api/mitigation/submit", async (req, res) => {
 // Also update the reflection submission endpoint with better logging
 app.post("/api/reflection/submit", async (req, res) => {
   const { userId, scenarioId, exerciseId, reflection } = req.body;
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   if (!userId || !scenarioId || !exerciseId || !reflection) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -1477,7 +1507,7 @@ CREATE INDEX IF NOT EXISTS idx_artifacts_user
   }
 }
 
-initDatabase().catch(console.error)
+// initDatabase().catch(console.error)
 
 // ==================== API ENDPOINTS ====================
 
@@ -1503,6 +1533,11 @@ app.get("/api/scenarios", (req, res) => {
 // Reset progress for a scenario (fresh start)
 app.post("/api/progress/reset", async (req, res) => {
   const { userId, scenarioId } = req.body;
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   try {
     // Delete all progress for this user/scenario combination
@@ -1551,6 +1586,11 @@ app.get("/api/scenarios/:id/test-connectivity", async (req, res) => {
 // Start scenario with auto-launch and connectivity testing
 app.post("/api/scenarios/:id/start", async (req, res) => {
   const { userId } = req.body
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
   const scenario = SCENARIOS[req.params.id]
 
   if (!scenario) {
@@ -1604,6 +1644,11 @@ app.post("/api/scenarios/:id/start", async (req, res) => {
 
 app.post("/api/execute", async (req, res) => {
   const { command, userId, scenarioId, sessionId = "default" } = req.body
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   if (!command) {
     return res.status(400).json({ error: "Command is required" })
@@ -1633,6 +1678,11 @@ app.post("/api/ai/guidance", async (req, res) => {
     userId,
     conversationHistory = [],
   } = req.body
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   const scenario = SCENARIOS[scenarioId]
   if (!scenario) {
@@ -1709,6 +1759,11 @@ app.get("/api/users/:userId/progress", async (req, res) => {
 
 app.post("/api/progress/complete", async (req, res) => {
   const { userId, scenarioId, exerciseId } = req.body
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   try {
     await pool.query(
@@ -2287,6 +2342,11 @@ app.get("/api/challenges/completed/:scenarioId", async (req, res) => {
 // Save challenge completion with evidence
 app.post("/api/challenges/complete", async (req, res) => {
   const { userId, scenarioId, challengeId, evidence } = req.body;
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   if (!userId || !scenarioId || !challengeId) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -2329,6 +2389,11 @@ app.post("/api/challenges/complete", async (req, res) => {
 // Submit mitigation note for validation
 app.post("/api/mitigation/submit", async (req, res) => {
   const { userId, scenarioId, exerciseId, note } = req.body;
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   if (!userId || !scenarioId || !exerciseId || !note) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -2373,6 +2438,11 @@ app.post("/api/mitigation/submit", async (req, res) => {
 // Submit three bullets reflection
 app.post("/api/reflection/submit", async (req, res) => {
   const { userId, scenarioId, exerciseId, reflection } = req.body;
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   if (!userId || !scenarioId || !exerciseId || !reflection) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -2499,6 +2569,11 @@ app.get("/api/exercise/:scenarioId/:exerciseId/status", async (req, res) => {
 // Enhanced coach API with ladder-based guidance
 app.post("/api/coach/ladder", async (req, res) => {
   const { userId, scenarioId, exerciseId, message, currentStep } = req.body;
+  const uid_res = get_uid_from_session();
+  if (uid_res.error) {
+      return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
 
   // Check rate limit
   const rateLimit = Guardrails.checkRateLimit(userId);
