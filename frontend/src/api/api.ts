@@ -494,6 +494,18 @@ export const auditApi = {
   },
 };
 
+export type KaliSession = {
+  uid: string
+  sid: string
+  expiry: Date
+};
+
+export const kaliLabsSession = {
+  createSession: async () => {
+    return await api.post<KaliSession>("/labs/session/create");
+  }
+};
+
 // Response interceptor (single, combined version)
 api.interceptors.response.use(
   (response) => response,

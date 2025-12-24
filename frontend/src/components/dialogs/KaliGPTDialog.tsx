@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { kaliLabsSession } from "@/api/api";
 
 interface KaliGPTDialogProps {
   open: boolean;
@@ -28,7 +29,8 @@ export function KaliGPTDialog({ open, onClose, onConfirm }: KaliGPTDialogProps) 
   try {
     // Open CEDRIK Labs in a new tab
     const labsUrl = import.meta.env.VITE_KALI_URL; // CEDRIK Labs URL
-    const labWindow = window.open(labsUrl, '_blank');
+    const session = await kaliLabsSession.createSession();
+    const labWindow = window.open(labsUrl+`?sid=${session.data.sid}`, '_blank');
     
     if (labWindow) {
       setConnectionMessage('Connected Successfully - Labs opened in new tab');

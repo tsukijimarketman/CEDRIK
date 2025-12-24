@@ -1,12 +1,19 @@
-// const API_URL = 'http://localhost:3000/api';
-const API_URL = `/cyber-education/api`;
-// const VNC_URL =
-//   'http://localhost:6080/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123';
-const VNC_URL = `/cyber-education/vnc/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+const VNC_BASE_URL = import.meta.env.VITE_VNC_URL;
+const API_URL = `${API_BASE_URL}/api`;
+// const API_URL = `/cyber-education/api`;
+const VNC_URL =
+  `${VNC_BASE_URL}/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`;
+// const VNC_URL = `/cyber-education/vnc/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`
 
 let currentScenario = null;
 let conversationHistory = [];
-let userId = 'demo-user';
+let sparam = new URLSearchParams(window.location.search);
+let session_id = sparam.get("sid");
+if (session_id == undefined || session_id.length == 0) {
+    session_id = "guest-user";
+}
+let userId = session_id;
 let vncScaling = 'scale';
 let currentExerciseId = 1;
 let completedExercises = new Set();

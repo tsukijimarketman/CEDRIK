@@ -5,11 +5,12 @@ from backend.Lib.Error import InvalidId
 from backend.Lib.Logger import Logger
 
 class UserToken:
-    id = ""
-    aud = ""
-    username = ""
-    email = ""
     def __init__(self, token):
+        self.id: str | None     = None
+        self.aud: str           = ""
+        self.username: str      = ""
+        self.email: str         = ""
+
         if token == None:
             return
 

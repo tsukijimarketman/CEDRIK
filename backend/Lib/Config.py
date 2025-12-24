@@ -1,6 +1,7 @@
 import os
-from typing import Any, Callable
+from typing import Any, Callable, List
 from dotenv import load_dotenv
+import json
 load_dotenv()
 
 print("DEBUG: Current working directory:", os.getcwd())
@@ -48,7 +49,8 @@ MAIN_SERVER = str(_get_env_or_default("SERVER_MAIN", "http://localhost:5000"))
 ENCODER_SERVER = str( _get_env_or_default("SERVER_ENCODER" , "http://localhost:5001/encode") )
 MODEL_SERVER = str( _get_env_or_default("SERVER_MODEL", "http://localhost:5002/generate-reply") )
 FILTER_SERVER = str( _get_env_or_default("SERVER_FILTER", "http://localhost:5003/generate-reply") )
-FRONTEND_SERVER = str( _get_env_or_default("SERVER_FRONTEND", "http://localhost:5173") )
+# TODO: Rename to ALLOWED_ORIGIN
+FRONTEND_SERVER = list( _get_env_or_default("SERVER_FRONTEND", ["http://localhost:5173"], lambda x: json.loads(x)) )
 DATABASE_URI = str(_get_required_env("CyberSync_DatabaseUri"))
 JWT_SECRET = str(_get_required_env("JWT_SECRET"))
 RESOURCE_DIR = str(_get_env_or_default("RESOURCE_DIR", "Uploads/"))
@@ -70,3 +72,8 @@ CHUNK_SIZE_BYTES = int(_get_env_or_default("CHUNK_SIZE_BYTES", 256, lambda x:  i
 CHUNK_OFFSET_BYTES = int(_get_env_or_default("CHUNK_OFFSET_BYTES", 28, lambda x:  int(x)))
 DEBUG = bool(_get_env_or_default("DEBUG", False, lambda x: x != None or len(x) > 0))
 AI_NAME = str(_get_env_or_default("AI_NAME", "CEDRIK"))
+
+REDIS_HOST = str(_get_env_or_default("REDIS_HOST", "redis"))
+REDIS_PORT = int(_get_env_or_default("REDIS_PORT", 5004, lambda x: int(x)))
+# 30 min = 1800
+LABS_SESSION_EXPIRE_SEC = int(_get_env_or_default("LABS_SESSION_EXPIRE_SEC", 1800, lambda x: int(x)))

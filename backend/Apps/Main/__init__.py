@@ -1,4 +1,5 @@
 from backend.Apps.Main.Filter import FilterExtension
+from backend.Apps.Main.LabsSession.LabsSessionExtension import LabsSessionExtension
 from backend.Lib.Config import JWT_SECRET
 from werkzeug.exceptions import HTTPException, InternalServerError
 from backend.Lib.Error import ErrHTTPExceptionHandler
@@ -30,6 +31,7 @@ app.config["JWT_COOKIE_SAMESITE"] = "Lax"
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
 FilterExtension(app)
+LabsSessionExtension(app)
 
 app.wsgi_app = ProxyFix(
     app.wsgi_app,
@@ -44,7 +46,7 @@ cors = CORS(
     app,
     resources={
         r"/*": {
-            "origins": [FRONTEND_SERVER],
+            "origins": FRONTEND_SERVER,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization", "X-CSRF-TOKEN"],
             "supports_credentials": True,
