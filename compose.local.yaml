@@ -15,6 +15,7 @@ services:
     build:
       context: ./frontend/
       dockerfile: Dockerfile
+    profiles: ["frontend"]
     command: ["nginx", "-g", "daemon off;"]
     volumes:
       - ./frontend/.env:/app/.env:ro
@@ -33,7 +34,7 @@ services:
       - ./.env:/app/.env:ro
       - ./tokenizer_config.json:/app/tokenizer_config.json:ro
       - ./pipe_config.json:/app/pipe_config.json:ro
-    command: [ "/bin/sh", "-c", "flask run $${NO_RELOAD}" ]
+    command: [ "/bin/sh", "-c", "flask run $${DEBUG} $${NO_RELOAD}" ]
     # Only one process for main, mongoengine document writes is not thread safe
     # command: [ "/bin/sh", "-c", "uwsgi --http $${FLASK_RUN_HOST}:$${FLASK_RUN_PORT} --master --processes 1 --threads 1 -w $${FLASK_APP}:app" ]
     # command: [ "/bin/bash" ]
@@ -47,12 +48,12 @@ services:
         - internal
     # scale: 5
     ports:
-      # - 127.0.0.1:4996-5000:5000
       - 127.0.0.1:5000:5000
     environment:
       FLASK_RUN_HOST: 0.0.0.0
       FLASK_RUN_PORT: 5000
       FLASK_APP: backend.Apps.Main
+      DEBUG: --debug
       NO_RELOAD: --no-reload
     develop:
       watch:

@@ -110,3 +110,34 @@ ON reflections(user_id, scenario_id, exercise_id, score);
 
 CREATE INDEX IF NOT EXISTS idx_user_progress_completed 
 ON user_progress(user_id, scenario_id, completed);
+
+CREATE OR REPLACE FUNCTION update_user_progress(
+    p_user_id user_progress.user_id%TYPE,
+    p_scenario_id user_progress.scenario_id%TYPE,
+    p_exercise_id user_progress.exercise_id%TYPE
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM user_progress up
+        WHERE up.user_id = p_user_id
+          AND up.scenario_id = p_scenario_id
+          AND up.exercise_id = p_exercise_id
+    ) THEN
+        INSERT INTO user_progress (
+            user_id, scenario_id, exercise_id, completed, completed_at
+        )
+        VALUES (p_user_id, p_scenario_id, p_exercise_id, TRUE, CURRENT_TIMESTAMP);
+    ELSE
+        UPDATE user_progress
+        SET completed = TRUE,
+            completed_at = CURRENT_TIMESTAMP
+        WHERE user_id = p_user_id
+          AND scenario_id = p_scenario_id
+          AND exercise_id = p_exercise_id;
+    END IF;
+END;
+$$;
