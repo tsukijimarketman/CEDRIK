@@ -1770,9 +1770,7 @@ app.post("/api/progress/complete", async (req, res) => {
 
   try {
     await pool.query(
-      `UPDATE user_progress 
-             SET completed = TRUE, completed_at = CURRENT_TIMESTAMP 
-             WHERE user_id = $1 AND scenario_id = $2 AND exercise_id = $3`,
+      `select update_user_progress($1, $2, $3);`,
       [userId, scenarioId, exerciseId],
     )
     res.json({ success: true })
@@ -2197,7 +2195,7 @@ app.get("/api/grades/all", async (req, res) => {
 
       // Get last activity
       const lastActivityResult = await pool.query(
-        `SELECT MAX(updated_at) as last_activity FROM user_progress WHERE user_id = $1`,
+        `SELECT MAX(completed_at) as last_activity FROM user_progress WHERE user_id = $1`,
         [userId]
       );
 
