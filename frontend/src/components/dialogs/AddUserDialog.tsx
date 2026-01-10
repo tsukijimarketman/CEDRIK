@@ -69,7 +69,7 @@ export function AddUserDialog({
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.error || "Failed to add user",
+        description: error.error.password || error.error || "Failed to add user",
         variant: "destructive",
       });
     } finally {
