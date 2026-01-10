@@ -62,16 +62,16 @@ export function UserGrades() {
       const mainUsers = usersRes && Array.isArray((usersRes as any).data) ? (usersRes as any).data : [];
 
       const labsMap = new Map<string, any>();
-      labsUsers.forEach((u: any) => labsMap.set(String(u.userId || u.user_id || u.username), u));
+      labsUsers.forEach((u: any) => labsMap.set(String(u.userId || u.username), u));
 
       const merged: UserAllGrades[] = [];
 
       mainUsers.forEach((mu: any) => {
-        const id = String(mu.id || mu.userId || mu.username || mu.email || "");
+        const id = String(mu.id);
         const lab = labsMap.get(id);
         merged.push({
-          userId: lab?.userId || id,
-          username: lab?.username || mu.username || mu.email || id,
+          userId: mu.id,
+          username: mu.username || mu.email,
           scenarios: lab?.scenarios || [],
           overallAverage: typeof lab?.overallAverage === "number" ? lab.overallAverage : (lab?.overallAverage ? Number(lab.overallAverage) : 0),
           totalExercisesCompleted: lab?.totalCompleted || lab?.totalExercisesCompleted || 0,
