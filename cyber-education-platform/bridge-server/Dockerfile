@@ -9,6 +9,7 @@ RUN npm install --production
 
 COPY server.js .
 COPY rag-manager.js .
+COPY kali-manager.js .
 
 EXPOSE 3000
 

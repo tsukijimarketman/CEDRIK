@@ -82,6 +82,31 @@ CREATE TABLE IF NOT EXISTS artifacts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- User container assignments
+CREATE TABLE IF NOT EXISTS user_containers (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL UNIQUE,
+    username VARCHAR(255),
+    container_id VARCHAR(100) NOT NULL UNIQUE,
+    container_name VARCHAR(255) NOT NULL,
+    vnc_port INTEGER NOT NULL UNIQUE,
+    novnc_port INTEGER NOT NULL UNIQUE,
+    status VARCHAR(50) DEFAULT 'running',
+    current_scenario_id VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    stopped_at TIMESTAMP
+);
+
+-- Port allocations
+CREATE TABLE IF NOT EXISTS port_allocations (
+    port INTEGER PRIMARY KEY,
+    port_type VARCHAR(20) NOT NULL,
+    is_available BOOLEAN DEFAULT TRUE,
+    allocated_to VARCHAR(100),
+    allocated_at TIMESTAMP
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_challenge_completions_user 
 ON challenge_completions(user_id, scenario_id);
@@ -95,10 +120,13 @@ ON reflections(user_id, scenario_id, exercise_id);
 CREATE INDEX IF NOT EXISTS idx_artifacts_user 
 ON artifacts(user_id, scenario_id, exercise_id);
 
--- Add score column to mitigation_notes if it doesn't exist
-ALTER TABLE mitigation_notes ADD COLUMN IF NOT EXISTS score INTEGER;
+CREATE INDEX IF NOT EXISTS idx_user_containers_user ON user_containers(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_containers_status ON user_containers(status);
+CREATE INDEX IF NOT EXISTS idx_user_containers_activity ON user_containers(last_activity);
+CREATE INDEX IF NOT EXISTS idx_user_containers_scenario ON user_containers(current_scenario_id);
 
--- Add score column to reflections if it doesn't exist
+-- Add score columns if they don't exist
+ALTER TABLE mitigation_notes ADD COLUMN IF NOT EXISTS score INTEGER;
 ALTER TABLE reflections ADD COLUMN IF NOT EXISTS score INTEGER;
 
 -- Create index for faster grade queries
@@ -140,4 +168,27 @@ BEGIN
           AND exercise_id = p_exercise_id;
     END IF;
 END;
+$$;
+
+-- Pre-populate VNC ports (5901-5920)
+-- Modified: Check if table is empty first to avoid unnecessary inserts
+DO $$
+DECLARE
+    port_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO port_count FROM port_allocations;
+    
+    IF port_count = 0 THEN
+        FOR i IN 5901..5920 LOOP
+            INSERT INTO port_allocations (port, port_type, is_available)
+            VALUES (i, 'vnc', TRUE);
+        END LOOP;
+        
+        -- NoVNC ports (6080-6099)
+        FOR i IN 6080..6099 LOOP
+            INSERT INTO port_allocations (port, port_type, is_available)
+            VALUES (i, 'novnc', TRUE);
+        END LOOP;
+    END IF;
+END
 $$;

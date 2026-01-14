@@ -1,39 +1,29 @@
 name: cedrik
 services:
-  # FIXED: Now builds from custom Dockerfile instead of installing on every startup
-  kali-workstation:
+  # ===== NO MORE SINGLE KALI WORKSTATION =====
+  # We don't pre-create a single kali-workstation anymore
+  # Instead, we'll spawn them dynamically from the pre-built image
+  
+  # ===== BUILD THE KALI IMAGE (one-time) =====
+  # This service ONLY builds the image, doesn't run a container
+  kali-base:
     build: ./kali-custom
-    # image: cedrikai/cyber-education-platform-kali-workstation:latest
-    container_name: kali-workstation
-    hostname: kali-workstation
-    environment:
-      - DISPLAY=:1
-      - VNC_PASSWORD=${VNC_PASSWORD}
-    volumes:
-      - kali-home:/root
-      - ./shared:/shared
-    networks:
-      - hack-lab-network
-    ports:
-      - "127.0.0.1:5901:5901"
-    restart: unless-stopped
-    cap_add:
-      - NET_RAW
-      - NET_ADMIN
+    image: kali-custom:latest
+    profiles: ["build-only"]  # This means it won't start with docker-compose up
+    # We only run this when we want to rebuild: docker-compose build kali-base
 
+  # ===== NOVNC PROXY (Keep for now, though each user will get their own) =====
+   # ===== NOVNC PROXY =====
   novnc:
     build: ./novnc-custom
-    # image: cedrikai/cyber-education-platform-novnc:latest
     container_name: novnc
     ports:
       - "127.0.0.1:6080:6080"
     networks:
       - hack-lab-network
-    depends_on:
-      - kali-workstation
     restart: unless-stopped
 
-  # Scenario 1: Web Application Security (DVWA)
+  # ===== SCENARIO CONTAINERS =====
   scenario-webapp:
     image: vulnerables/web-dvwa
     container_name: scenario-webapp
@@ -49,7 +39,6 @@ services:
       - MYSQL_PASSWORD=p@ssw0rd
     restart: unless-stopped
 
-  # Scenario 2: SQL Injection Lab
   scenario-sqli:
     image: acgpiano/sqli-labs
     container_name: scenario-sqli
@@ -60,7 +49,6 @@ services:
       - "127.0.0.1:8082:80"
     restart: unless-stopped
 
-  # Scenario 3: Vulnerable WordPress
   scenario-wordpress:
     image: eystsen/vulnerablewordpress
     container_name: scenario-wordpress
@@ -72,7 +60,6 @@ services:
       - "127.0.0.1:3306:3306"
     restart: unless-stopped
 
-  # Scenario 4: Metasploitable (Vulnerable Linux)
   scenario-metasploitable:
     image: tleemcjr/metasploitable2
     container_name: scenario-metasploitable
@@ -84,11 +71,10 @@ services:
       - "127.0.0.1:8084:80"
       - "127.0.0.1:21:21"
       - "127.0.0.1:23:23"
-    tty: true            # REQUIRED
-    stdin_open: true     # REQUIRED
+    tty: true
+    stdin_open: true
     restart: unless-stopped
 
-  # Scenario 5: WebGoat (OWASP)
   scenario-webgoat:
     image: webgoat/webgoat-8.0
     container_name: scenario-webgoat
@@ -102,7 +88,6 @@ services:
       - WEBGOAT_PORT=8080
     restart: unless-stopped
 
-  # Scenario 6: Juice Shop (Modern Web App)
   scenario-juiceshop:
     image: bkimminich/juice-shop
     container_name: scenario-juiceshop
@@ -113,7 +98,7 @@ services:
       - "127.0.0.1:8086:3000"
     restart: unless-stopped
 
-  # Database for user progress
+  # ===== DATABASE =====
   postgres:
     image: postgres:15-alpine
     container_name: cyber-db
@@ -127,8 +112,7 @@ services:
     networks:
       - hack-lab-network
     ports:
-      # In FIREWALL specify ip address who can only access this db
-      - "0.0.0.0:5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cyber_admin -d cyber_education"]
       interval: 5s
@@ -136,52 +120,53 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # Enhanced Bridge Server with AI Integration
+  # ===== BRIDGE SERVER (Enhanced with Container Management) =====
   bridge-server:
     build: ./bridge-server
-    # image: cedrikai/cyber-education-platform-bridge-server:latest
     container_name: cyber-bridge
     ports:
       - "127.0.0.1:3000:3000"
     networks:
       - hack-lab-network
-      - internal
+      - cedrik-internal  # ✅ Connect to cedrik's network
     environment:
-      - BACKEND_MAIN_API_URL=http://main:5000/api
-      - KALI_CONTAINER=kali-workstation
+      - BACKEND_MAIN_API_URL=http://cedrik-main-1:5000/api
       - DOCKER_HOST=unix:///var/run/docker.sock
       - DATABASE_URL=postgresql://cyber_admin:secure_pass_123@postgres:5432/cyber_education
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - JWT_SECRET=your-secret-key-change-this
+      # Container Management Config
+      - KALI_IMAGE=kali-custom:latest
+      - MAX_CONCURRENT_CONTAINERS=10
+      - CONTAINER_IDLE_TIMEOUT=1800000
+      - POOL_SIZE=3
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./shared:/shared
       - ./logs:/app/logs
       - ./.env:/app/.env:ro
     depends_on:
-      kali-workstation:
-        condition: service_started
       postgres:
         condition: service_healthy
+      scenario-webapp:
+        condition: service_started
     restart: unless-stopped
+    privileged: true
 
-  # Web UI for scenario selection
+  # ===== WEB UI ===== (✅ RESTORED - We definitely need this!)
   web-ui:
     build: ./web-ui
-    # image: cedrikai/cyber-education-platform-web-ui:latest
     container_name: cyber-web-ui
     ports:
       - "127.0.0.1:8069:80"
     networks:
       - hack-lab-network
+      - cedrik-internal  # ✅ Also connect to cedrik network for main backend access
     environment:
-      # put this env in .env of server
-      # not working must install dotenv in web-ui
       - VITE_CYBER_EDUCATION_API_BASE_URL=http://localhost:3000
       - VITE_CYBER_EDUCATION_VNC_BASE_URL=http://localhost:6080
-      # ---
       - API_URL=http://bridge-server:3000
       - VNC_URL=http://novnc:8080
     depends_on:
@@ -189,16 +174,13 @@ services:
     restart: unless-stopped
 
 networks:
-  internal:
+  cedrik-internal:
     name: cedrik-internal
-    external: true
+    external: true  # ✅ Created by main cedrik compose
   hack-lab-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+    name: hack-lab-network
 
 volumes:
-  kali-home:
   postgres-data:
-
+  # Note: We don't have kali-home volume anymore since each user gets their own container

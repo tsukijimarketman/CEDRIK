@@ -145,6 +145,23 @@ async function startScenario(scenarioId) {
     button.disabled = false;
   }
 }
+let heartbeatInterval;
+
+function startHeartbeat() {
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  
+  heartbeatInterval = setInterval(async () => {
+    try {
+      await fetch(`${API_URL}/container/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+    } catch (error) {
+      console.warn('Heartbeat failed:', error);
+    }
+  }, 60000); // Every minute
+}
 
 function openLabModal() {
   document.getElementById('modalTitle').textContent = currentScenario.name;
@@ -267,6 +284,7 @@ function openLabModal() {
 
   document.getElementById('labModal').classList.add('active');
   updateExerciseSidebarWithValidation(1);
+  startHeartbeat();
 }
 
 async function markExerciseComplete(exerciseId, exerciseIndex) {
@@ -421,6 +439,7 @@ function selectExercise(exerciseId, exerciseIndex) {
 }
 
 function closeModal() {
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
   document.getElementById('labModal').classList.remove('active');
   document.getElementById('vncFrame').src = 'about:blank';
   currentScenario = null;

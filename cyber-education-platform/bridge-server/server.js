@@ -6,6 +6,9 @@ const { Pool } = require("pg")
 const jwt = require("jsonwebtoken")
 const Groq = require("groq-sdk")
 const RAGManager = require('./rag-manager');
+const kaliManager = require('./kali-manager');
+const Docker = require('dockerode');
+const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 const BACKEND_MAIN_API_URL = process.env.BACKEND_MAIN_API_URL;
 
@@ -1585,64 +1588,114 @@ app.get("/api/scenarios/:id/test-connectivity", async (req, res) => {
   res.json(result)
 })
 
-// Start scenario with auto-launch and connectivity testing
+// Start scenario 
 app.post("/api/scenarios/:id/start", async (req, res) => {
-  let { userId } = req.body
+  let { userId } = req.body;
   const uid_res = await get_uid_from_session(userId);
   if (uid_res.error) {
-      return res.status(uid_res.status).json({ error: uid_res.error });
+    return res.status(uid_res.status).json({ error: uid_res.error });
   }
   userId = uid_res.uid;
-  const scenario = SCENARIOS[req.params.id]
 
+  const scenario = SCENARIOS[req.params.id];
   if (!scenario) {
-    return res.status(404).json({ error: "Scenario not found" })
+    return res.status(404).json({ error: "Scenario not found" });
   }
 
   try {
-    // Check if container is running
-    const checkCmd = `docker ps --filter "name=${scenario.container}" --format "{{.Names}}"`
-    exec(checkCmd, async (error, stdout) => {
-      if (!stdout.includes(scenario.container)) {
-        return res.status(503).json({
-          error: "Scenario container is not running",
-          container: scenario.container,
-          hint: `Run: docker-compose up -d ${scenario.container}`,
-        })
-      }
+    // Assign or create container for this user
+    const containerInfo = await kaliManager.assignContainer(userId, scenario.id);
+    
+    // Update activity heartbeat
+    await kaliManager.updateActivity(userId);
 
-      // Record start in database
-      if (userId) {
-        await pool.query(
-          "INSERT INTO user_progress (user_id, scenario_id, exercise_id, completed) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
-          [userId, scenario.id, 1, false],
-        )
-      }
+    // Launch scenario in the user's container
+    await launchScenarioInContainer(containerInfo.container_id, scenario.target);
 
-      // Test connectivity and auto-launch
-      const launchResult = await launchScenarioInKali(scenario.id)
+    res.json({
+      success: true,
+      container: {
+        containerId: containerInfo.container_id,
+        vncPort: containerInfo.vnc_port,
+        novncPort: containerInfo.novnc_port,
+        vncUrl: containerInfo.vncUrl,
+        novncUrl: containerInfo.novncUrl,
+      },
+      scenario: scenario,
+      reusedContainer: containerInfo.reused,
+      fromPool: containerInfo.fromPool || false,
+      message: containerInfo.reused 
+        ? 'Reconnected to your Kali session'
+        : 'Your personal Kali container is ready!'
+    });
 
-      res.json({
-        success: true,
-        scenario: scenario,
-        launched_in_kali: launchResult.success,
-        launch_message: launchResult.message || launchResult.error,
-        launch_details: launchResult,
-        access_url: scenario.external_url,
-        kali_url: scenario.target,
-        vnc_url: "http://localhost:6080/vnc.html",
-        message: launchResult.success
-          ? `${scenario.name} opened in Kali Firefox at ${scenario.target}!`
-          : `Scenario started but Firefox failed to launch. Error: ${launchResult.error}`,
-      })
-    })
   } catch (error) {
-    console.error("Scenario start error:", error)
-    res
-      .status(500)
-      .json({ error: "Failed to start scenario", details: error.message })
+    console.error('Start scenario error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      hint: error.message.includes('capacity') ? 'Please try again in a few minutes' : undefined
+    });
   }
-})
+});
+
+// Helper to launch scenario in specific container
+async function launchScenarioInContainer(containerId, targetUrl) {
+  const container = docker.getContainer(containerId);
+  
+  // Kill existing Firefox
+  await container.exec({
+    Cmd: ['pkill', '-9', 'firefox'],
+    AttachStdout: false
+  }).then(exec => exec.start({ Detach: true })).catch(() => {});
+
+  await new Promise(r => setTimeout(r, 2000));
+
+  // Launch Firefox
+  const exec = await container.exec({
+    Cmd: ['bash', '-c', `DISPLAY=:1 firefox "${targetUrl}" > /tmp/firefox.log 2>&1 &`],
+    AttachStdout: true,
+    AttachStderr: true
+  });
+
+  await exec.start({ Detach: true });
+}
+
+// Add heartbeat endpoint
+app.post("/api/container/heartbeat", async (req, res) => {
+  let { userId } = req.body;
+  const uid_res = await get_uid_from_session(userId);
+  if (uid_res.error) {
+    return res.status(uid_res.status).json({ error: uid_res.error });
+  }
+  userId = uid_res.uid;
+
+  try {
+    await kaliManager.updateActivity(userId);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add container stats endpoint
+app.get("/api/container/stats", async (req, res) => {
+  const count = await kaliManager.getActiveCount();
+  res.json({
+    active: count,
+    max: kaliManager.maxContainers,
+    utilization: Math.round((count / kaliManager.maxContainers) * 100)
+  });
+});
+
+// Emergency cleanup endpoint
+app.post('/api/admin/cleanup-pool', async (req, res) => {
+  try {
+    await kaliManager.cleanupOldPoolContainers();
+    res.json({ success: true, message: 'Pool cleaned up successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.post("/api/execute", async (req, res) => {
   let { command, userId, scenarioId, sessionId = "default" } = req.body
@@ -2686,4 +2739,28 @@ app.post("/api/validate/command", async (req, res) => {
       ? "✅ Command passed safety validation"
       : "⚠️ This command may be destructive and has been blocked for safety"
   });
+});
+
+//graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully...');
+  
+  // Stop accepting new requests
+  server.close();
+  
+  // Clean up pool containers
+  await kaliManager.cleanupOldPoolContainers();
+  
+  // Close database
+  await pool.end();
+  
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('🛑 SIGINT received, shutting down gracefully...');
+  server.close();
+  await kaliManager.cleanupOldPoolContainers();
+  await pool.end();
+  process.exit(0);
 });
