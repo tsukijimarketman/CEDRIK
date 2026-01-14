@@ -44,7 +44,6 @@ export function UserGrades() {
   const [selectedUser, setSelectedUser] = useState<UserAllGrades | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showDummy, setShowDummy] = useState(false);
   const PAGE_SIZE = 10;
 
   const fetchAllUsersGrades = async () => {
@@ -73,7 +72,7 @@ export function UserGrades() {
           userId: mu.id,
           username: mu.username || mu.email,
           scenarios: lab?.scenarios || [],
-          overallAverage: typeof lab?.overallAverage === "number" ? lab.overallAverage : (lab?.overallAverage ? Number(lab.overallAverage) : 0),
+          overallAverage: Math.min(100, typeof lab?.overallAverage === "number" ? lab.overallAverage : (lab?.overallAverage ? Number(lab.overallAverage) : 0)),
           totalExercisesCompleted: lab?.totalCompleted || lab?.totalExercisesCompleted || 0,
           totalExercisesAvailable: lab?.totalAvailable || lab?.totalExercisesAvailable || 0,
         });
@@ -86,7 +85,7 @@ export function UserGrades() {
           userId: lu.userId || String(lu.userId ?? ""),
           username: lu.username || String(lu.userId ?? "Unknown"),
           scenarios: lu.scenarios || [],
-          overallAverage: typeof lu.overallAverage === "number" ? lu.overallAverage : (lu.overallAverage ? Number(lu.overallAverage) : 0),
+          overallAverage: Math.min(100, typeof lu.overallAverage === "number" ? lu.overallAverage : (lu.overallAverage ? Number(lu.overallAverage) : 0)),
           totalExercisesCompleted: lu.totalCompleted || lu.totalExercisesCompleted || 0,
           totalExercisesAvailable: lu.totalAvailable || lu.totalExercisesAvailable || 0,
         });
@@ -129,53 +128,6 @@ export function UserGrades() {
     setLoading(true);
     try {
       console.log(`Fetching details for user: ${userId} (${username})`);
-
-      // If dummy mode is enabled, try to find the user locally and show details
-      if (showDummy) {
-        const found = allUsers.find((u) => String(u.userId) === String(userId));
-        if (found) {
-          setSelectedUser(found);
-          setDetailsOpen(true);
-          return;
-        }
-
-        // If not found, generate a single dummy user matching the id/username
-        const scenarios: ScenarioGrades[] = [
-          {
-            scenarioId: `${userId}-sc-1`,
-            scenarioName: `Demo Scenario A`,
-            exercises: [
-              { exerciseId: 1, exerciseTitle: "Recon", challengesCompleted: 2, challengesRequired: 3, mitigationScore: 80, reflectionScore: 70, overallScore: 75, completed: true },
-              { exerciseId: 2, exerciseTitle: "Exploit", challengesCompleted: 1, challengesRequired: 2, mitigationScore: 60, reflectionScore: 50, overallScore: 55, completed: false },
-            ],
-            averageScore: 75,
-            completionRate: 60,
-          },
-          {
-            scenarioId: `${userId}-sc-2`,
-            scenarioName: `Demo Scenario B`,
-            exercises: [
-              { exerciseId: 3, exerciseTitle: "Defend", challengesCompleted: 3, challengesRequired: 3, mitigationScore: 90, reflectionScore: 85, overallScore: 88, completed: true },
-            ],
-            averageScore: 88,
-            completionRate: 100,
-          },
-        ];
-
-        const totalAvailable = scenarios.reduce((s, sc) => s + sc.exercises.length, 0);
-        const totalCompleted = scenarios.reduce((s, sc) => s + sc.exercises.filter((e) => e.completed).length, 0);
-
-        setSelectedUser({
-          userId: userId,
-          username: username || String(userId),
-          scenarios,
-          overallAverage: Math.round((scenarios.reduce((a, b) => a + (b.averageScore || 0), 0) / scenarios.length) || 0),
-          totalExercisesCompleted: totalCompleted,
-          totalExercisesAvailable: totalAvailable,
-        });
-        setDetailsOpen(true);
-        return;
-      }
 
       const resp = await cedrikLabsApi.getUserGrades(userId, username);
       const data = resp?.data;
@@ -222,85 +174,10 @@ export function UserGrades() {
     }
   };
 
-  // Dummy data generator (includes scenario metadata used by web-ui/index.html)
-  const generateDummyUsers = (count = 12): UserAllGrades[] => {
-    const users: UserAllGrades[] = [];
-    for (let i = 1; i <= count; i++) {
-      const scenarios: ScenarioGrades[] & any = [
-        {
-          scenarioId: `sc-${i}-1`,
-          scenarioName: `Scenario ${i}A`,
-          // Additional fields matching web-ui/index.html scenario card
-          name: `Scenario ${i}A`,
-          description: `Practice scenario ${i}A focusing on reconnaissance and enumeration.`,
-          difficulty: i % 3 === 0 ? "advanced" : i % 2 === 0 ? "intermediate" : "beginner",
-          estimated_time: `${20 + (i % 3) * 10} mins`,
-          skills: ["recon", "enum"],
-          exercise_count: 2,
-          target: `10.0.0.${i}`,
-          external_url: "",
-          exercises: [
-            { exerciseId: 1, exerciseTitle: "Recon", challengesCompleted: 2, challengesRequired: 3, mitigationScore: 80, reflectionScore: 70, overallScore: 75, completed: true },
-            { exerciseId: 2, exerciseTitle: "Exploit", challengesCompleted: 1, challengesRequired: 2, mitigationScore: 60, reflectionScore: 50, overallScore: 55, completed: false },
-          ],
-          averageScore: Math.round(50 + Math.random() * 50),
-          completionRate: Math.round(40 + Math.random() * 60),
-        },
-        {
-          scenarioId: `sc-${i}-2`,
-          scenarioName: `Scenario ${i}B`,
-          name: `Scenario ${i}B`,
-          description: `Hands-on defensive scenario ${i}B with incident response focus.`,
-          difficulty: i % 2 === 0 ? "advanced" : "all-levels",
-          estimated_time: `${30 + (i % 2) * 15} mins`,
-          skills: ["defense", "response"],
-          exercise_count: 1,
-          target: `10.0.1.${i}`,
-          external_url: "",
-          exercises: [
-            { exerciseId: 3, exerciseTitle: "Defend", challengesCompleted: 3, challengesRequired: 3, mitigationScore: 90, reflectionScore: 85, overallScore: 88, completed: true },
-          ],
-          averageScore: Math.round(60 + Math.random() * 40),
-          completionRate: Math.round(50 + Math.random() * 50),
-        },
-      ];
-
-      const totalExercisesAvailable = scenarios.reduce((s, sc) => s + sc.exercises.length, 0);
-      const totalExercisesCompleted = scenarios.reduce((s, sc) => s + sc.exercises.filter((e) => e.completed).length, 0);
-
-      users.push({
-        userId: `dummy-${i}`,
-        username: `demo_user_${i}`,
-        scenarios,
-        overallAverage: Math.round((scenarios.reduce((a, b) => a + (b.averageScore || 0), 0) / scenarios.length) || 0),
-        totalExercisesCompleted,
-        totalExercisesAvailable,
-        // optional lastActivity for CSV/table compatibility
-        lastActivity: new Date(Date.now() - i * 86400000).toISOString(),
-      });
-    }
-    return users;
-  };
-
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      if (showDummy) {
-        const dummy = generateDummyUsers(12);
-        if (!mounted) return;
-        setAllUsers(dummy);
-        setFilteredUsers(dummy);
-        setCurrentPage(1);
-        // expose dummy dataset globally so other static pages (web-ui/index.html) can read it
-        try {
-          // @ts-ignore - attach for debugging/demo purposes
-          window.__CEDRIK_DUMMY_DATA__ = { users: dummy };
-        } catch (_) {}
-        setLoading(false);
-        return;
-      }
-
       await fetchAllUsersGrades();
     };
 
@@ -309,7 +186,7 @@ export function UserGrades() {
       mounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showDummy]);
+  }, []);
 
   // Check backend URL for debugging
   useEffect(() => {
@@ -346,28 +223,30 @@ export function UserGrades() {
   }, [totalPages]);
 
   // Prepare data for overall performance chart
+  // Maps each user to their average score and exercises completed
   const overallPerformanceData = filteredUsers.map((user) => ({
     username: user.username,
     average: parseFloat((user.overallAverage || 0).toFixed(2)),
     completed: user.totalExercisesCompleted,
   }));
 
-  // Prepare completion rate pie chart
-  const completionData = [
-    {
-      name: "Completed",
-      value: allUsers.reduce((sum, u) => sum + u.totalExercisesCompleted, 0),
-    },
-    {
-      name: "Remaining",
-      value: Math.max(
-        0,
-        allUsers.reduce((sum, u) => sum + (u.totalExercisesAvailable - u.totalExercisesCompleted), 0)
-      ),
-    },
+  // Calculate score distribution for pie chart
+  // Groups users into score ranges: 0-25%, 25-50%, 50-75%, 75-100%
+  const scoreDistribution = {
+    "0-25%": allUsers.filter((u) => (u.overallAverage || 0) < 25).length,
+    "25-50%": allUsers.filter((u) => (u.overallAverage || 0) >= 25 && (u.overallAverage || 0) < 50).length,
+    "50-75%": allUsers.filter((u) => (u.overallAverage || 0) >= 50 && (u.overallAverage || 0) < 75).length,
+    "75-100%": allUsers.filter((u) => (u.overallAverage || 0) >= 75 && (u.overallAverage || 0) <= 100).length,
+  };
+
+  const scoreDistributionData = [
+    { name: "0-25%", value: scoreDistribution["0-25%"] },
+    { name: "25-50%", value: scoreDistribution["25-50%"] },
+    { name: "50-75%", value: scoreDistribution["50-75%"] },
+    { name: "75-100%", value: scoreDistribution["75-100%"] },
   ];
 
-  const COLORS = ["#3b82f6", "#e5e7eb"];
+  const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
 
   const exportGradesAsCSV = () => {
     const headers = [
@@ -426,16 +305,6 @@ export function UserGrades() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={showDummy}
-                onChange={(e) => setShowDummy(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm">Show dummy data</span>
-            </label>
-
             <Button onClick={exportGradesAsCSV} variant="outline" className="gap-2">
               <Download className="h-4 w-4" />
               Export CSV
@@ -444,7 +313,7 @@ export function UserGrades() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -453,28 +322,6 @@ export function UserGrades() {
               <div className="text-2xl font-bold">{allUsers.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Active users with assessments
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">
-                Avg. Overall Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {allUsers.length > 0
-                  ? (
-                      allUsers.reduce((sum, u) => sum + (u.overallAverage || 0), 0) /
-                      allUsers.length
-                    ).toFixed(1)
-                  : "0"}
-                %
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Across all users
               </p>
             </CardContent>
           </Card>
@@ -504,7 +351,7 @@ export function UserGrades() {
             <CardContent>
               <div className="text-2xl font-bold">
                 {allUsers.length > 0
-                  ? (
+                  ? Math.min(100, (
                       (allUsers.reduce((sum, u) => sum + u.totalExercisesCompleted, 0) /
                         Math.max(
                           1,
@@ -514,7 +361,7 @@ export function UserGrades() {
                           )
                         )) *
                       100
-                    ).toFixed(1)
+                    )).toFixed(1)
                   : "0"}
                 %
               </div>
@@ -531,7 +378,7 @@ export function UserGrades() {
           <Card>
             <CardHeader>
               <CardTitle>User Performance Overview</CardTitle>
-              <CardDescription>Average scores by user</CardDescription>
+              <CardDescription>Individual average scores by user (based on all scenarios)</CardDescription>
             </CardHeader>
             <CardContent>
               {overallPerformanceData.length > 0 ? (
@@ -539,9 +386,15 @@ export function UserGrades() {
                   <BarChart data={overallPerformanceData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="username" angle={-45} textAnchor="end" height={80} />
-                    <YAxis label={{ value: "Score (%)", angle: -90, position: "insideLeft" }} />
-                    <Tooltip formatter={(value: unknown) => `${(typeof value === 'number' ? value : 0).toFixed(1)}%`} />
-                    <Bar dataKey="average" fill="#3b82f6" name="Average Score" />
+                    <YAxis 
+                      domain={[0, 100]} 
+                      label={{ value: "Score (%)", angle: -90, position: "insideLeft" }} 
+                    />
+                    <Tooltip 
+                      formatter={(value: unknown) => `${(typeof value === 'number' ? value : 0).toFixed(1)}%`}
+                      labelFormatter={(label: unknown) => `User: ${label}`}
+                    />
+                    <Bar dataKey="average" fill="#3b82f6" name="Average Score" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -552,38 +405,61 @@ export function UserGrades() {
             </CardContent>
           </Card>
 
-          {/* Completion Summary */}
+          {/* Score Distribution Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Exercise Completion Summary</CardTitle>
-              <CardDescription>Overall completion status</CardDescription>
+              <CardTitle>Score Distribution Analysis</CardTitle>
+              <CardDescription>Number of users grouped by performance level</CardDescription>
             </CardHeader>
             <CardContent>
-              {completionData[0].value > 0 || completionData[1].value > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={completionData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) =>
-                        `${name}: ${(percent * 100).toFixed(0)}%`
-                      }
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {COLORS.map((color, index) => (
-                        <Cell key={`cell-${index}`} fill={color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+              {scoreDistributionData.some((d) => d.value > 0) ? (
+                <div className="flex flex-col items-center">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={scoreDistributionData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => {
+                          const total = scoreDistributionData.reduce((sum, d) => sum + d.value, 0);
+                          const percentage = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
+                          return `${name}: ${value} (${percentage}%)`;
+                        }}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {COLORS.map((color, index) => (
+                          <Cell key={`cell-${index}`} fill={color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: unknown) => {
+                          const total = scoreDistributionData.reduce((sum, d) => sum + d.value, 0);
+                          const percentage = total > 0 ? ((Number(value) / total) * 100).toFixed(1) : 0;
+                          return `${value} users (${percentage}%)`;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 w-full grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    {scoreDistributionData.map((item, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: COLORS[index] }}
+                        ></div>
+                        <span className="text-muted-foreground">
+                          {item.name}: {item.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <div className="h-300 flex items-center justify-center text-muted-foreground">
-                  No completion data available
+                  No data available
                 </div>
               )}
             </CardContent>
