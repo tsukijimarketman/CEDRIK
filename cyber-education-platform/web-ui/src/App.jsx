@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Trophy, Target, Clock, BookOpen, Brain, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Terminal, Trophy, Target, Clock, BookOpen, Brain, CheckCircle, XCircle, AlertCircle, Shield, Lightbulb } from 'lucide-react';
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -10,6 +10,12 @@ const API_URL = `${API_BASE_URL}/api`;
 const sparam = new URLSearchParams(window.location.search);
 const session_id = sparam.get("sid") || "guest-user";
 const userId = session_id;
+
+const EXERCISE_REQUIREMENTS = {
+  MIN_CHALLENGES: 3,
+  REFLECTION_BULLETS: 3,
+  REFLECTION_TYPES: ['evidence', 'prevention', 'detection'],
+};
 
 const App = () => {
   const [scenarios, setScenarios] = useState([]);
@@ -22,8 +28,10 @@ const App = () => {
   const [currentExerciseId, setCurrentExerciseId] = useState(1);
   const [exercises, setExercises] = useState([]);
   const [completedExercises, setCompletedExercises] = useState(new Set());
+  const [completedChallenges, setCompletedChallenges] = useState(new Set());
   const [vncUrl, setVncUrl] = useState('');
   const [containerInfo, setContainerInfo] = useState(null);
+  const [validationStatus, setValidationStatus] = useState(null);
 
   // Heartbeat for container
   useEffect(() => {
@@ -38,7 +46,7 @@ const App = () => {
         } catch (error) {
           console.warn('Heartbeat failed:', error);
         }
-      }, 60000); // Every minute
+      }, 60000);
 
       return () => clearInterval(heartbeat);
     }
@@ -79,11 +87,9 @@ const App = () => {
 
   const startScenario = async (scenario) => {
     try {
-      // Fetch full scenario details
       const detailResponse = await fetch(`${API_URL}/scenarios/${scenario.id}`);
       const fullScenario = await detailResponse.json();
 
-      // Start the scenario
       const response = await fetch(`${API_URL}/scenarios/${scenario.id}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,9 +99,8 @@ const App = () => {
       const data = await response.json();
       
       if (data.success) {
-        // Set VNC URL with container info
         const vncPort = data.container?.novncPort || 6080;
-        const vncHost = VNC_BASE_URL.replace(/:\d+$/, ''); // Remove port if exists
+        const vncHost = VNC_BASE_URL.replace(/:\d+$/, '');
         const finalVncUrl = `${vncHost}:${vncPort}/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`;
         
         setVncUrl(finalVncUrl);
@@ -105,8 +110,15 @@ const App = () => {
         setActiveView('lab');
         setCurrentExerciseId(fullScenario.exercises?.[0]?.id || 1);
         setCompletedExercises(new Set());
+        setCompletedChallenges(new Set());
         
-        // Welcome message
+        // Reset progress
+        await fetch(`${API_URL}/progress/reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, scenarioId: scenario.id }),
+        });
+        
         setMessages([{
           role: 'system',
           content: `Welcome to **${fullScenario.name}**!\n\nThe scenario has been automatically opened in Kali Firefox.\n\n**First Exercise:** ${fullScenario.exercises?.[0]?.title}\n\n${fullScenario.exercises?.[0]?.description}`,
@@ -162,6 +174,14 @@ const App = () => {
           timestamp: new Date()
         }));
         
+        if (data.guidance.rag_sources && data.guidance.rag_sources.length > 0) {
+          newMessages.push({
+            role: 'system',
+            content: `📚 **Sources from Knowledge Base:**\n${data.guidance.rag_sources.map(s => `• ${s}`).join('\n')}`,
+            timestamp: new Date()
+          });
+        }
+        
         setMessages(prev => [...prev, ...newMessages]);
       }
     } catch (error) {
@@ -176,7 +196,7 @@ const App = () => {
     }
   };
 
-  const selectExercise = (exerciseId) => {
+  const selectExercise = async (exerciseId) => {
     setCurrentExerciseId(exerciseId);
     const exercise = exercises.find(e => e.id === exerciseId);
     
@@ -187,26 +207,53 @@ const App = () => {
         timestamp: new Date()
       }]);
     }
+    
+    await loadCompletedChallenges(currentScenario.id);
+    await loadExerciseValidationStatus(currentScenario.id, exerciseId);
+  };
+
+  const loadCompletedChallenges = async (scenarioId) => {
+    try {
+      const response = await fetch(`${API_URL}/challenges/completed/${scenarioId}?userId=${userId}`);
+      const data = await response.json();
+      
+      if (data.success && data.challenges) {
+        const challengeIds = new Set(data.challenges.map(c => c.challenge_id));
+        setCompletedChallenges(challengeIds);
+      }
+    } catch (error) {
+      console.error('Failed to load completed challenges:', error);
+    }
+  };
+
+  const loadExerciseValidationStatus = async (scenarioId, exerciseId) => {
+    try {
+      const response = await fetch(`${API_URL}/exercise/${scenarioId}/${exerciseId}/status?userId=${userId}`);
+      const status = await response.json();
+      setValidationStatus(status);
+    } catch (error) {
+      console.error('Failed to load validation status:', error);
+      setValidationStatus({
+        challenges: { valid: false, count: 0, completed: 0, required: 3 },
+        mitigation: { valid: false, submitted: false },
+        reflection: { valid: false, submitted: false },
+        canComplete: false,
+      });
+    }
   };
 
   const markExerciseComplete = async (exerciseId) => {
-    try {
-      // Check validation status first
-      const statusResponse = await fetch(
-        `${API_URL}/exercise/${currentScenario.id}/${exerciseId}/status?userId=${userId}`
+    if (!validationStatus?.canComplete) {
+      alert(
+        'Please complete all validation requirements:\n' +
+        `- Complete ${validationStatus?.challenges.required || 3} challenges (${validationStatus?.challenges.completed || 0} done)\n` +
+        '- Submit validated mitigation note\n' +
+        '- Submit 3-bullet reflection'
       );
-      const status = await statusResponse.json();
+      return;
+    }
 
-      if (!status.canComplete) {
-        alert(
-          'Please complete all validation requirements:\n' +
-          `- Complete ${status.challenges.required} challenges (${status.challenges.completed} done)\n` +
-          '- Submit validated mitigation note\n' +
-          '- Submit 3-bullet reflection'
-        );
-        return;
-      }
-
+    try {
       const response = await fetch(`${API_URL}/progress/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -227,7 +274,6 @@ const App = () => {
           timestamp: new Date()
         }]);
 
-        // Move to next exercise if available
         const currentIndex = exercises.findIndex(e => e.id === exerciseId);
         if (currentIndex < exercises.length - 1) {
           const nextExercise = exercises[currentIndex + 1];
@@ -242,7 +288,39 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-green-900">
-      {/* Matrix background */}
+      <style>{`
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+          width: 12px;
+          height: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: #1f2937;
+          border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #22c55e, #15803d);
+          border-radius: 10px;
+          border: 2px solid #1f2937;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #16a34a, #14532d);
+        }
+        
+        ::-webkit-scrollbar-corner {
+          background: #1f2937;
+        }
+        
+        /* Firefox scrollbar */
+        * {
+          scrollbar-width: thin;
+          scrollbar-color: #22c55e #1f2937;
+        }
+      `}</style>
+
       <div className="fixed inset-0 opacity-5 pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(34, 197, 94, 0.3) 2px, rgba(34, 197, 94, 0.3) 4px)',
@@ -271,13 +349,22 @@ const App = () => {
             setActiveView('scenarios');
             setCurrentScenario(null);
             setMessages([]);
+            setCompletedChallenges(new Set());
+            setValidationStatus(null);
           }}
           completedExercises={completedExercises}
+          completedChallenges={completedChallenges}
           onSelectExercise={selectExercise}
           onMarkComplete={markExerciseComplete}
           vncUrl={vncUrl}
           userId={userId}
           apiUrl={API_URL}
+          validationStatus={validationStatus}
+          onValidationUpdate={() => loadExerciseValidationStatus(currentScenario.id, currentExerciseId)}
+          onChallengeComplete={(challengeId) => {
+            setCompletedChallenges(prev => new Set([...prev, challengeId]));
+            loadExerciseValidationStatus(currentScenario.id, currentExerciseId);
+          }}
         />
       )}
     </div>
@@ -417,36 +504,21 @@ const LabEnvironment = ({
   isTyping, 
   onClose, 
   completedExercises,
+  completedChallenges,
   onSelectExercise,
   onMarkComplete,
   vncUrl,
   userId,
-  apiUrl
+  apiUrl,
+  validationStatus,
+  onValidationUpdate,
+  onChallengeComplete
 }) => {
   const messagesEndRef = useRef(null);
-  const [validationStatus, setValidationStatus] = useState(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    if (scenario && currentExerciseId) {
-      loadValidationStatus();
-    }
-  }, [currentExerciseId, scenario]);
-
-  const loadValidationStatus = async () => {
-    try {
-      const response = await fetch(
-        `${apiUrl}/exercise/${scenario.id}/${currentExerciseId}/status?userId=${userId}`
-      );
-      const status = await response.json();
-      setValidationStatus(status);
-    } catch (error) {
-      console.error('Failed to load validation status:', error);
-    }
-  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -456,7 +528,6 @@ const LabEnvironment = ({
   };
 
   const progressPercentage = (completedExercises.size / exercises.length) * 100;
-  const currentExercise = exercises.find(e => e.id === currentExerciseId);
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col">
@@ -476,7 +547,6 @@ const LabEnvironment = ({
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 overflow-hidden">
-        {/* VNC Container */}
         <div className="lg:col-span-2 bg-black rounded-lg border-2 border-green-500/50 overflow-hidden flex flex-col">
           <div className="bg-gray-900 p-3 flex items-center justify-between border-b-2 border-green-500/50">
             <span className="text-green-400 font-mono text-sm flex items-center gap-2">
@@ -494,9 +564,7 @@ const LabEnvironment = ({
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="flex flex-col gap-4 overflow-y-auto">
-          {/* Progress */}
           <div className="bg-gray-900 border-2 border-blue-500/50 rounded-lg p-4">
             <h3 className="text-blue-400 font-mono font-bold mb-3 flex items-center gap-2">
               <Trophy className="w-5 h-5" />
@@ -516,17 +584,21 @@ const LabEnvironment = ({
             </div>
           </div>
 
-          {/* Exercises */}
-          <ExerciseList
+          <ExerciseSidebar
+            scenario={scenario}
             exercises={exercises}
             currentExerciseId={currentExerciseId}
             completedExercises={completedExercises}
+            completedChallenges={completedChallenges}
             onSelectExercise={onSelectExercise}
             onMarkComplete={onMarkComplete}
             validationStatus={validationStatus}
+            userId={userId}
+            apiUrl={apiUrl}
+            onValidationUpdate={onValidationUpdate}
+            onChallengeComplete={onChallengeComplete}
           />
 
-          {/* AI Chat */}
           <div className="flex-1 bg-gray-900 border-2 border-green-500/50 rounded-lg flex flex-col overflow-hidden min-h-[400px]">
             <div className="bg-gray-950 p-3 border-b-2 border-green-500/50">
               <h3 className="text-green-400 font-mono font-bold flex items-center gap-2">
@@ -570,49 +642,86 @@ const LabEnvironment = ({
   );
 };
 
-const ExerciseList = ({ exercises, currentExerciseId, completedExercises, onSelectExercise, onMarkComplete, validationStatus }) => (
-  <div className="bg-gray-900 border-2 border-purple-500/50 rounded-lg p-4">
-    <h3 className="text-purple-400 font-mono font-bold mb-3">EXERCISES</h3>
-    <div className="space-y-2">
-      {exercises.map((exercise, idx) => {
-        const isCompleted = completedExercises.has(exercise.id);
-        const isCurrent = exercise.id === currentExerciseId;
-        const isPreviousCompleted = idx === 0 || completedExercises.has(exercises[idx - 1].id);
-        
-        return (
-          <div
-            key={exercise.id}
-            className={`p-3 rounded border-2 cursor-pointer transition-all ${
-              isCurrent 
-                ? 'bg-purple-900/50 border-purple-400' 
-                : isCompleted
-                ? 'bg-green-900/30 border-green-500/50'
-                : 'bg-gray-800 border-gray-700 hover:border-gray-600'
-            }`}
-            onClick={() => onSelectExercise(exercise.id)}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-white font-mono text-sm font-bold">
-                {idx + 1}. {exercise.title}
-              </span>
-              {isCompleted && <CheckCircle className="w-4 h-4 text-green-400" />}
-            </div>
+const ExerciseSidebar = ({ 
+  scenario, 
+  exercises, 
+  currentExerciseId, 
+  completedExercises, 
+  completedChallenges,
+  onSelectExercise, 
+  onMarkComplete, 
+  validationStatus,
+  userId,
+  apiUrl,
+  onValidationUpdate,
+  onChallengeComplete
+}) => {
+  const currentExercise = exercises.find(e => e.id === currentExerciseId);
+
+  return (
+    <div className="space-y-4">
+      {validationStatus && (
+        <ValidationStatusBar validationStatus={validationStatus} />
+      )}
+      
+      {currentExercise && (
+        <>
+          <ChallengeTracker
+            exercise={currentExercise}
+            scenario={scenario}
+            completedChallenges={completedChallenges}
+            userId={userId}
+            apiUrl={apiUrl}
+            onChallengeComplete={onChallengeComplete}
+            onValidationUpdate={onValidationUpdate}
+          />
+          
+          <MitigationSection
+            scenario={scenario}
+            exercise={currentExercise}
+            validationStatus={validationStatus}
+            userId={userId}
+            apiUrl={apiUrl}
+            onValidationUpdate={onValidationUpdate}
+          />
+          
+          <ReflectionSection
+            scenario={scenario}
+            exercise={currentExercise}
+            validationStatus={validationStatus}
+            userId={userId}
+            apiUrl={apiUrl}
+            onValidationUpdate={onValidationUpdate}
+          />
+        </>
+      )}
+
+      <div className="bg-gray-900 border-2 border-purple-500/50 rounded-lg p-4">
+        <h3 className="text-purple-400 font-mono font-bold mb-3">EXERCISES</h3>
+        <div className="space-y-2">
+          {exercises.map((exercise, idx) => {
+            const isCompleted = completedExercises.has(exercise.id);
+            const isCurrent = exercise.id === currentExerciseId;
+            const isPreviousCompleted = idx === 0 || completedExercises.has(exercises[idx - 1].id);
             
-            {isCurrent && validationStatus && (
-              <div className="mt-2 space-y-1">
-                <ValidationStatusItem
-                  label="Challenges"
-                  status={validationStatus.challenges.valid}
-                  detail={`${validationStatus.challenges.completed}/${validationStatus.challenges.required}`}
-                />
-                <ValidationStatusItem
-                  label="Mitigation"
-                  status={validationStatus.mitigation.valid}
-                />
-                <ValidationStatusItem
-                  label="Reflection"
-                  status={validationStatus.reflection.valid}
-                />
+            return (
+              <div
+                key={exercise.id}
+                className={`p-3 rounded border-2 cursor-pointer transition-all ${
+                  isCurrent 
+                    ? 'bg-purple-900/50 border-purple-400' 
+                    : isCompleted
+                    ? 'bg-green-900/30 border-green-500/50'
+                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                }`}
+                onClick={() => onSelectExercise(exercise.id)}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-white font-mono text-sm font-bold">
+                    {idx + 1}. {exercise.title}
+                  </span>
+                  {isCompleted && <CheckCircle className="w-4 h-4 text-green-400" />}
+                </div>
                 
                 {isCurrent && (
                   <button
@@ -620,17 +729,50 @@ const ExerciseList = ({ exercises, currentExerciseId, completedExercises, onSele
                       e.stopPropagation();
                       onMarkComplete(exercise.id);
                     }}
-                    disabled={!validationStatus.canComplete || !isPreviousCompleted}
+                    disabled={!validationStatus?.canComplete || !isPreviousCompleted}
                     className="w-full mt-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded font-mono text-xs font-bold transition-colors"
                   >
-                    {!isPreviousCompleted ? '🔒 Complete Previous' : 'Mark Complete'}
+                    {!isPreviousCompleted ? '🔒 Complete Previous' : validationStatus?.canComplete ? 'Mark Complete ✅' : '⏳ Complete Requirements'}
                   </button>
                 )}
               </div>
-            )}
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ValidationStatusBar = ({ validationStatus }) => (
+  <div className="bg-gray-900 border-2 border-yellow-500/50 rounded-lg p-4">
+    <h3 className="text-yellow-400 font-mono font-bold mb-3 flex items-center gap-2">
+      <AlertCircle className="w-5 h-5" />
+      COMPLETION STATUS
+    </h3>
+    <div className="space-y-2">
+      <ValidationStatusItem
+        label="Challenges"
+        status={validationStatus.challenges.valid}
+        detail={`${validationStatus.challenges.completed}/${validationStatus.challenges.required}`}
+      />
+      <ValidationStatusItem
+        label="Mitigation"
+        status={validationStatus.mitigation.valid}
+      />
+      <ValidationStatusItem
+        label="Reflection"
+        status={validationStatus.reflection.valid}
+      />
+      
+      {!validationStatus.canComplete && (
+        <div className="mt-3 p-3 bg-yellow-900/30 border-2 border-yellow-500/50 rounded text-center">
+          <div className="text-2xl mb-2">🔒</div>
+          <div className="text-yellow-400 font-mono text-xs font-bold">
+            Complete all sections to proceed
           </div>
-        );
-      })}
+        </div>
+      )}
     </div>
   </div>
 );
@@ -648,6 +790,389 @@ const ValidationStatusItem = ({ label, status, detail }) => (
     </div>
   </div>
 );
+
+const ChallengeTracker = ({ 
+  exercise, 
+  scenario, 
+  completedChallenges, 
+  userId, 
+  apiUrl, 
+  onChallengeComplete,
+  onValidationUpdate 
+}) => {
+  const challenges = exercise?.challenges || [];
+  const completedCount = Array.from(completedChallenges).filter(id => 
+    challenges.some(c => c.id === id) || id.startsWith(`manual-${scenario.id}-${exercise.id}`)
+  ).length;
+
+  const handleChallengeToggle = async (challengeId, challengeName, isChecked) => {
+    if (!isChecked) return;
+    
+    if (completedChallenges.has(challengeId)) return;
+
+    try {
+      const response = await fetch(`${apiUrl}/challenges/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          scenarioId: scenario.id,
+          challengeId,
+          evidence: {
+            name: challengeName,
+            timestamp: new Date().toISOString(),
+            exerciseId: exercise.id,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        onChallengeComplete(challengeId);
+      }
+    } catch (error) {
+      console.error('Error marking challenge complete:', error);
+    }
+  };
+
+  const handleManualComplete = async () => {
+    const timestamp = Date.now();
+    const challengeId = `manual-${scenario.id}-${exercise.id}-${timestamp}`;
+    const challengeName = `Manual Task ${completedCount + 1}`;
+    
+    await handleChallengeToggle(challengeId, challengeName, true);
+  };
+
+  return (
+    <div className="bg-gray-900 border-2 border-blue-500/50 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-blue-400 font-mono font-bold flex items-center gap-2">
+          <Target className="w-5 h-5" />
+          CHALLENGES
+        </h3>
+        <span className="text-blue-400 font-mono font-bold text-lg">
+          {completedCount}/{Math.max(challenges.length, 3)}
+        </span>
+      </div>
+      
+      <p className="text-gray-400 text-xs font-mono mb-3">
+        Complete at least 3 challenges to unlock mitigation
+      </p>
+
+      {challenges.length === 0 ? (
+        <div className="p-3 bg-yellow-900/30 border-2 border-yellow-500/50 rounded mb-3">
+          <div className="font-mono font-bold text-yellow-400 text-sm mb-2">
+            ℹ️ Manual Challenge Tracking
+          </div>
+          <p className="text-gray-400 text-xs mb-3">
+            Mark your progress as you complete tasks
+          </p>
+          <button
+            onClick={handleManualComplete}
+            className="w-full bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded font-mono text-xs font-bold transition-colors"
+          >
+            ✅ Mark Challenge Complete (+1)
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {challenges.map((challenge) => {
+            const isCompleted = completedChallenges.has(challenge.id);
+            return (
+              <div key={challenge.id} className="flex items-center gap-2 p-2 bg-gray-800 rounded">
+                <input
+                  type="checkbox"
+                  checked={isCompleted}
+                  onChange={(e) => handleChallengeToggle(challenge.id, challenge.name, e.target.checked)}
+                  className="w-4 h-4 accent-green-500"
+                />
+                <label className="flex-1 text-gray-300 text-sm font-mono cursor-pointer">
+                  {challenge.name}
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-3 p-2 bg-blue-900/30 rounded">
+        <p className="text-blue-400 text-xs font-mono">
+          💡 Tip: Check boxes as you complete each challenge
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const MitigationSection = ({ 
+  scenario, 
+  exercise, 
+  validationStatus, 
+  userId, 
+  apiUrl, 
+  onValidationUpdate 
+}) => {
+  const [note, setNote] = useState('');
+  const [feedback, setFeedback] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (validationStatus?.mitigation?.note) {
+      setNote(validationStatus.mitigation.note);
+    }
+  }, [validationStatus]);
+
+  const handleSubmit = async () => {
+    if (!note.trim()) {
+      setFeedback({
+        valid: false,
+        message: 'Please write a mitigation note'
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFeedback({ loading: true, message: 'AI is reviewing your mitigation...' });
+
+    try {
+      const response = await fetch(`${apiUrl}/mitigation/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          scenarioId: scenario.id,
+          exerciseId: exercise.id,
+          note,
+        }),
+      });
+
+      const data = await response.json();
+      setFeedback(data.validation);
+      onValidationUpdate();
+    } catch (error) {
+      setFeedback({
+        valid: false,
+        message: 'Error validating mitigation. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isEnabled = validationStatus?.challenges?.valid;
+
+  return (
+    <div className="bg-gray-900 border-2 border-orange-500/50 rounded-lg p-4">
+      <h3 className="text-orange-400 font-mono font-bold mb-3 flex items-center gap-2">
+        <Shield className="w-5 h-5" />
+        MITIGATION / DEFENSE
+      </h3>
+      <p className="text-gray-400 text-xs font-mono mb-3">
+        How would you defend against this vulnerability? (min 50 chars)
+      </p>
+      
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        disabled={!isEnabled}
+        placeholder="Explain defensive measures: input validation, parameterized queries, CSP, principle of least privilege, etc."
+        className="w-full bg-gray-800 border-2 border-gray-700 text-gray-300 px-3 py-2 rounded font-mono text-sm min-h-[100px] focus:outline-none focus:border-orange-400 disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-600"
+      />
+
+      {feedback && !feedback.loading && (
+        <div className={`mt-3 p-3 rounded border-2 ${feedback.valid ? 'bg-green-900/30 border-green-500/50' : 'bg-red-900/30 border-red-500/50'}`}>
+          <div className="font-mono font-bold text-sm mb-2">
+            {feedback.valid ? '✅' : '❌'} {feedback.valid ? `Validated! (${feedback.score}/100)` : `Needs Improvement (${feedback.score}/100)`}
+          </div>
+          <p className="text-gray-300 text-xs mb-2">{feedback.message}</p>
+          {feedback.suggestions && feedback.suggestions.length > 0 && (
+            <ul className="text-gray-400 text-xs space-y-1 ml-4">
+              {feedback.suggestions.map((s, i) => (
+                <li key={i}>• {s}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {feedback?.loading && (
+        <div className="mt-3 p-3 bg-blue-900/30 border-2 border-blue-500/50 rounded text-center">
+          <div className="text-blue-400 font-mono text-xs">
+            Professor Cedrik is analyzing your defensive strategy...
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={handleSubmit}
+        disabled={!isEnabled || isSubmitting}
+        className="w-full mt-3 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-mono font-bold transition-colors"
+      >
+        {isSubmitting ? '⏳ Validating...' : 'Validate Mitigation'}
+      </button>
+    </div>
+  );
+};
+
+const ReflectionSection = ({ 
+  scenario, 
+  exercise, 
+  validationStatus, 
+  userId, 
+  apiUrl, 
+  onValidationUpdate 
+}) => {
+  const [evidence, setEvidence] = useState('');
+  const [prevention, setPrevention] = useState('');
+  const [detection, setDetection] = useState('');
+  const [feedback, setFeedback] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (validationStatus?.reflection?.bullets) {
+      setEvidence(validationStatus.reflection.bullets.evidence || '');
+      setPrevention(validationStatus.reflection.bullets.prevention || '');
+      setDetection(validationStatus.reflection.bullets.detection || '');
+    }
+  }, [validationStatus]);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setFeedback({ loading: true, message: 'AI is reviewing your reflection...' });
+
+    try {
+      const response = await fetch(`${apiUrl}/reflection/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          scenarioId: scenario.id,
+          exerciseId: exercise.id,
+          reflection: {
+            bullets: [
+              { type: 'evidence', content: evidence },
+              { type: 'prevention', content: prevention },
+              { type: 'detection', content: detection },
+            ],
+          },
+        }),
+      });
+
+      const data = await response.json();
+      setFeedback(data.validation);
+      onValidationUpdate();
+    } catch (error) {
+      setFeedback({
+        valid: false,
+        message: 'Error submitting reflection. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isEnabled = validationStatus?.mitigation?.valid;
+
+  return (
+    <div className="bg-gray-900 border-2 border-purple-500/50 rounded-lg p-4">
+      <h3 className="text-purple-400 font-mono font-bold mb-3 flex items-center gap-2">
+        <Lightbulb className="w-5 h-5" />
+        3-BULLET REFLECTION
+      </h3>
+
+      <div className="space-y-3">
+        <div>
+          <label className="block text-gray-400 font-mono text-xs mb-1">
+            🔍 Evidence: What did you find/exploit?
+          </label>
+          <input
+            type="text"
+            value={evidence}
+            onChange={(e) => setEvidence(e.target.value)}
+            disabled={!isEnabled}
+            placeholder="Describe what vulnerability you exploited..."
+            className="w-full bg-gray-800 border-2 border-gray-700 text-gray-300 px-3 py-2 rounded font-mono text-sm focus:outline-none focus:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-600"
+          />
+          <div className="text-right text-xs text-gray-500 mt-1">
+            {evidence.length}/20 min chars
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-gray-400 font-mono text-xs mb-1">
+            🛡️ Prevention: How to prevent this?
+          </label>
+          <input
+            type="text"
+            value={prevention}
+            onChange={(e) => setPrevention(e.target.value)}
+            disabled={!isEnabled}
+            placeholder="What security controls would prevent this..."
+            className="w-full bg-gray-800 border-2 border-gray-700 text-gray-300 px-3 py-2 rounded font-mono text-sm focus:outline-none focus:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-600"
+          />
+          <div className="text-right text-xs text-gray-500 mt-1">
+            {prevention.length}/20 min chars
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-gray-400 font-mono text-xs mb-1">
+            🔔 Detection: How to detect this attack?
+          </label>
+          <input
+            type="text"
+            value={detection}
+            onChange={(e) => setDetection(e.target.value)}
+            disabled={!isEnabled}
+            placeholder="What monitoring/logging would detect this..."
+            className="w-full bg-gray-800 border-2 border-gray-700 text-gray-300 px-3 py-2 rounded font-mono text-sm focus:outline-none focus:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-600"
+          />
+          <div className="text-right text-xs text-gray-500 mt-1">
+            {detection.length}/20 min chars
+          </div>
+        </div>
+      </div>
+
+      {feedback && !feedback.loading && (
+        <div className={`mt-3 p-3 rounded border-2 ${feedback.valid ? 'bg-green-900/30 border-green-500/50' : 'bg-red-900/30 border-red-500/50'}`}>
+          <div className="font-mono font-bold text-sm mb-2">
+            {feedback.valid ? '✅' : '❌'} {feedback.valid ? `Complete! (${feedback.score}/100)` : `Needs Work (${feedback.score}/100)`}
+          </div>
+          <p className="text-gray-300 text-xs mb-2">{feedback.message}</p>
+          {feedback.componentFeedback && (
+            <div className="text-xs space-y-1">
+              <div className={feedback.evidenceValid ? 'text-green-400' : 'text-red-400'}>
+                Evidence: {feedback.componentFeedback.evidence} {feedback.evidenceValid ? '✅' : '❌'}
+              </div>
+              <div className={feedback.preventionValid ? 'text-green-400' : 'text-red-400'}>
+                Prevention: {feedback.componentFeedback.prevention} {feedback.preventionValid ? '✅' : '❌'}
+              </div>
+              <div className={feedback.detectionValid ? 'text-green-400' : 'text-red-400'}>
+                Detection: {feedback.componentFeedback.detection} {feedback.detectionValid ? '✅' : '❌'}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {feedback?.loading && (
+        <div className="mt-3 p-3 bg-blue-900/30 border-2 border-blue-500/50 rounded text-center">
+          <div className="text-blue-400 font-mono text-xs">
+            Professor Cedrik is analyzing your reflection...
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={handleSubmit}
+        disabled={!isEnabled || isSubmitting}
+        className="w-full mt-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-mono font-bold transition-colors"
+      >
+        {isSubmitting ? '⏳ Submitting...' : 'Submit Reflection'}
+      </button>
+    </div>
+  );
+};
 
 const MessageBubble = ({ message }) => {
   const agentStyles = {
