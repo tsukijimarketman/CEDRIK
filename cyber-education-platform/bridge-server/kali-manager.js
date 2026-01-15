@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const serverurl = process.env.SERVERURL;
 
 class KaliManager {
   constructor() {
@@ -191,8 +192,8 @@ class KaliManager {
       return {
         ...existing,
         reused: true,
-        vncUrl: `http://localhost:${existing.vnc_port}`,
-        novncUrl: `http://localhost:${existing.novnc_port}/vnc.html?password=kali123`
+        vncUrl: `${serverurl}:${existing.vnc_port}`,
+        novncUrl: `${serverurl}:${existing.novnc_port}/vnc.html?password=kali123`
       };
     }
 
@@ -219,8 +220,8 @@ class KaliManager {
         user_id: userId,
         reused: false,
         fromPool: true,
-        vncUrl: `http://localhost:${container.vnc_port}`,
-        novncUrl: `http://localhost:${container.novnc_port}/vnc.html?password=kali123`
+        vncUrl: `${serverurl}:${container.vnc_port}`,
+        novncUrl: `${serverurl}:${container.novnc_port}/vnc.html?password=kali123`
       };
     }
 
@@ -318,8 +319,8 @@ class KaliManager {
         vnc_port: vncPort,
         novnc_port: novncPort,
         user_id: userId,
-        vncUrl: `http://localhost:${vncPort}`,
-        novncUrl: `http://localhost:${novncPort}/vnc.html?password=kali123`,
+        vncUrl: `${serverurl}:${vncPort}`,
+        novncUrl: `${serverurl}:${novncPort}/vnc.html?password=kali123`,
         reused: false
       };
 
