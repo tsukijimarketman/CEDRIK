@@ -130,7 +130,7 @@ services:
       - hack-lab-network
       - cedrik-internal  # ✅ Connect to cedrik's network
     environment:
-      - BACKEND_MAIN_API_URL=http://cedrik-main-1:5000/api
+      - BACKEND_MAIN_API_URL=http://main:5000/api
       - DOCKER_HOST=unix:///var/run/docker.sock
       - DATABASE_URL=postgresql://cyber_admin:secure_pass_123@postgres:5432/cyber_education
       - OPENAI_API_KEY=${OPENAI_API_KEY}
