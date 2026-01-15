@@ -83,14 +83,15 @@ CREATE TABLE IF NOT EXISTS artifacts (
 );
 
 -- User container assignments
+-- ✅ FIXED: Removed UNIQUE constraints on vnc_port and novnc_port
 CREATE TABLE IF NOT EXISTS user_containers (
     id SERIAL PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL UNIQUE,
     username VARCHAR(255),
     container_id VARCHAR(100) NOT NULL UNIQUE,
     container_name VARCHAR(255) NOT NULL,
-    vnc_port INTEGER NOT NULL UNIQUE,
-    novnc_port INTEGER NOT NULL UNIQUE,
+    vnc_port INTEGER NOT NULL,         -- Host port (e.g., 15901, 15902)
+    novnc_port INTEGER NOT NULL,       -- Host port (e.g., 16080, 16081)
     status VARCHAR(50) DEFAULT 'running',
     current_scenario_id VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -139,6 +140,7 @@ ON reflections(user_id, scenario_id, exercise_id, score);
 CREATE INDEX IF NOT EXISTS idx_user_progress_completed 
 ON user_progress(user_id, scenario_id, completed);
 
+-- Function to update user progress
 CREATE OR REPLACE FUNCTION update_user_progress(
     p_user_id user_progress.user_id%TYPE,
     p_scenario_id user_progress.scenario_id%TYPE,
@@ -170,25 +172,34 @@ BEGIN
 END;
 $$;
 
--- Pre-populate VNC ports (5901-5920)
--- Modified: Check if table is empty first to avoid unnecessary inserts
+-- ✅ CRITICAL: Use HOST port ranges that don't conflict with container internal ports
+-- Container uses internally: 5901 (VNC), 6080 (noVNC)
+-- Host will map to: 15901+ (VNC), 16080+ (noVNC)
+
+-- Pre-populate VNC HOST ports (15901-15920)
 DO $$
 DECLARE
     port_count INTEGER;
 BEGIN
     SELECT COUNT(*) INTO port_count FROM port_allocations;
     
+    -- Only populate if table is empty
     IF port_count = 0 THEN
-        FOR i IN 5901..5920 LOOP
+        -- VNC HOST ports: 15901-15920 (maps to container's 5901)
+        FOR i IN 15901..15920 LOOP
             INSERT INTO port_allocations (port, port_type, is_available)
             VALUES (i, 'vnc', TRUE);
         END LOOP;
         
-        -- NoVNC ports (6080-6099)
-        FOR i IN 6080..6099 LOOP
+        -- NoVNC HOST ports: 16080-16099 (maps to container's 6080)
+        FOR i IN 16080..16099 LOOP
             INSERT INTO port_allocations (port, port_type, is_available)
             VALUES (i, 'novnc', TRUE);
         END LOOP;
+        
+        RAISE NOTICE 'Port allocations initialized: VNC (15901-15920), noVNC (16080-16099)';
+    ELSE
+        RAISE NOTICE 'Port allocations already exist, skipping initialization';
     END IF;
 END
 $$;

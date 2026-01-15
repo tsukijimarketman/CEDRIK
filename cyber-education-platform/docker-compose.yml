@@ -14,14 +14,14 @@ services:
 
   # ===== NOVNC PROXY (Keep for now, though each user will get their own) =====
    # ===== NOVNC PROXY =====
-  novnc:
-    build: ./novnc-custom
-    container_name: novnc
-    ports:
-      - "127.0.0.1:6080:6080"
-    networks:
-      - hack-lab-network
-    restart: unless-stopped
+  # novnc:
+  #   build: ./novnc-custom
+  #   container_name: novnc
+  #   ports:
+  #     - "127.0.0.1:6080:6080"
+  #   networks:
+  #     - hack-lab-network
+  #   restart: unless-stopped
 
   # ===== SCENARIO CONTAINERS =====
   scenario-webapp:

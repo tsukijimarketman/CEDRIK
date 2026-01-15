@@ -20,13 +20,8 @@ class KaliManager {
     try {
       console.log('🔧 Initializing KaliManager...');
       
-      // ✅ STEP 1: Ensure network exists
       await this.ensureNetwork();
-      
-      // ✅ STEP 2: Clean up any old pool containers from previous runs
       await this.cleanupOldPoolContainers();
-      
-      // ✅ STEP 3: Initialize fresh pool
       await this.initializePool();
       
       console.log('✅ KaliManager initialization complete');
@@ -36,32 +31,30 @@ class KaliManager {
   }
 
   async ensureNetwork() {
-  try {
-    console.log(`🔍 Checking for network: ${this.networkName}`);
-    
-    const networks = await docker.listNetworks({
-      filters: { name: [this.networkName] }
-    });
+    try {
+      console.log(`🔍 Checking for network: ${this.networkName}`);
+      
+      const networks = await docker.listNetworks({
+        filters: { name: [this.networkName] }
+      });
 
-    if (networks.length === 0) {
-      console.error(`❌ Network ${this.networkName} not found!`);
-      console.error(`Make sure docker-compose has created the network.`);
-      throw new Error(`Network ${this.networkName} does not exist. Start docker-compose first.`);
+      if (networks.length === 0) {
+        console.error(`❌ Network ${this.networkName} not found!`);
+        throw new Error(`Network ${this.networkName} does not exist. Start docker-compose first.`);
+      }
+      
+      console.log(`✅ Network ${this.networkName} found`);
+      return networks[0];
+    } catch (error) {
+      console.error(`❌ Network check failed:`, error.message);
+      throw error;
     }
-    
-    console.log(`✅ Network ${this.networkName} found`);
-    return networks[0];
-  } catch (error) {
-    console.error(`❌ Network check failed:`, error.message);
-    throw error;
   }
-}
 
   async cleanupOldPoolContainers() {
     console.log('🧹 Cleaning up old pool containers...');
     
     try {
-      // Find all containers with pool- prefix
       const containers = await docker.listContainers({ all: true });
       const poolContainers = containers.filter(c => 
         c.Names.some(name => name.includes('kali-pool-'))
@@ -73,17 +66,14 @@ class KaliManager {
         try {
           const container = docker.getContainer(containerInfo.Id);
           
-          // Stop if running
           if (containerInfo.State === 'running') {
             console.log(`  ⏹️  Stopping ${containerInfo.Names[0]}`);
             await container.stop({ t: 5 });
           }
           
-          // Remove container
           console.log(`  🗑️  Removing ${containerInfo.Names[0]}`);
           await container.remove({ force: true });
           
-          // Clean up database records
           await this.cleanupContainer(containerInfo.Id);
           
         } catch (err) {
@@ -91,7 +81,7 @@ class KaliManager {
         }
       }
 
-      // Also reset port allocations in database
+      // Reset port allocations
       await pool.query(
         `UPDATE port_allocations SET is_available = TRUE, allocated_to = NULL`
       );
@@ -107,11 +97,13 @@ class KaliManager {
     
     for (let i = 0; i < this.poolSize; i++) {
       try {
-        await this.createKaliContainer(`pool-${i}`, 'pool-user');
+        await this.createKaliContainer(`pool-${Date.now()}-${i}`, 'pool');
         console.log(`✅ Pool container ${i + 1}/${this.poolSize} ready`);
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
       } catch (error) {
         console.error(`❌ Failed to create pool container ${i}:`, error.message);
-        // Don't throw - continue trying to create other containers
       }
     }
     
@@ -119,20 +111,41 @@ class KaliManager {
   }
 
   async allocatePort(type = 'vnc') {
-    const result = await pool.query(
-      `UPDATE port_allocations 
-       SET is_available = FALSE, allocated_at = CURRENT_TIMESTAMP
-       WHERE port = (
-         SELECT port FROM port_allocations 
-         WHERE port_type = $1 AND is_available = TRUE 
-         ORDER BY port LIMIT 1
-       )
-       RETURNING port`,
-      [type]
-    );
+    const client = await pool.connect();
     
-    if (result.rows.length === 0) throw new Error(`No ${type} ports available`);
-    return result.rows[0].port;
+    try {
+      console.log(`🔍 Attempting to allocate ${type} port...`);
+      
+      const result = await client.query(
+        `UPDATE port_allocations 
+         SET is_available = FALSE, 
+             allocated_at = CURRENT_TIMESTAMP,
+             allocated_to = 'allocating'
+         WHERE port = (
+           SELECT port FROM port_allocations 
+           WHERE port_type = $1 AND is_available = TRUE 
+           ORDER BY port 
+           LIMIT 1
+           FOR UPDATE SKIP LOCKED
+         )
+         RETURNING port`,
+        [type]
+      );
+      
+      if (result.rows.length === 0) {
+        throw new Error(`No ${type} ports available`);
+      }
+      
+      const allocatedPort = result.rows[0].port;
+      console.log(`✅ Allocated ${type} port: ${allocatedPort}`);
+      return allocatedPort;
+      
+    } catch (error) {
+      console.error(`❌ Port allocation error:`, error.message);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async releasePort(port) {
@@ -155,7 +168,6 @@ class KaliManager {
 
     const container = result.rows[0];
     
-    // Verify container still exists in Docker
     try {
       const dockerContainer = docker.getContainer(container.container_id);
       const inspect = await dockerContainer.inspect();
@@ -173,7 +185,6 @@ class KaliManager {
   }
 
   async assignContainer(userId, scenarioId) {
-    // Check if user already has one
     let existing = await this.getUserContainer(userId);
     if (existing) {
       await this.updateActivity(userId);
@@ -185,7 +196,6 @@ class KaliManager {
       };
     }
 
-    // Try to get from pool
     const poolContainer = await pool.query(
       `SELECT * FROM user_containers 
        WHERE user_id LIKE 'pool-%' AND status = 'running' 
@@ -193,7 +203,6 @@ class KaliManager {
     );
 
     if (poolContainer.rows.length > 0) {
-      // Reassign pool container to user
       const container = poolContainer.rows[0];
       
       await pool.query(
@@ -203,7 +212,6 @@ class KaliManager {
         [userId, scenarioId, container.container_id]
       );
 
-      // Refill pool in background
       this.refillPool();
 
       return {
@@ -216,7 +224,6 @@ class KaliManager {
       };
     }
 
-    // Create new container
     const activeCount = await this.getActiveCount();
     if (activeCount >= this.maxContainers) {
       throw new Error(`Server at capacity (${activeCount}/${this.maxContainers} containers)`);
@@ -226,99 +233,128 @@ class KaliManager {
   }
 
   async createKaliContainer(userId, scenarioId) {
-  const vncPort = await this.allocatePort('vnc');
-  const novncPort = await this.allocatePort('novnc');
-  const containerName = `kali-${userId}-${Date.now()}`;
-
-  try {
-    console.log(`🐳 Creating container: ${containerName}`);
-    console.log(`   VNC Port: ${vncPort}, NoVNC Port: ${novncPort}`);
+    let vncPort = null;
+    let novncPort = null;
     
-    const container = await docker.createContainer({
-      Image: this.kaliImage,
-      name: containerName,
-      Hostname: containerName,
-      Env: [
-        `USER_ID=${userId}`,
-        `SCENARIO_ID=${scenarioId}`,
-        `DISPLAY=:1`,
-        `VNC_PASSWORD=kali123`
-      ],
-      ExposedPorts: { '5901/tcp': {} },
-      HostConfig: {
-        PortBindings: {
-          '5901/tcp': [{ HostPort: vncPort.toString(), HostIp: '127.0.0.1' }]
-        },
-        NetworkMode: this.networkName,
-        Memory: 2 * 1024 * 1024 * 1024,
-        MemorySwap: 2 * 1024 * 1024 * 1024,
-        CpuQuota: 50000,
-        CpuPeriod: 100000,
-        CapAdd: ['NET_RAW', 'NET_ADMIN'],
-        SecurityOpt: ['no-new-privileges:true']
-      },
-      Labels: {
-        'cedrik.user': userId,
-        'cedrik.scenario': scenarioId
-      }
-    });
-
-    await container.start();
-    console.log(`✅ Container started: ${containerName}`);
-    
-    const info = await container.inspect();
-
-    // Save to database with conflict handling
-await pool.query(
-  `INSERT INTO user_containers 
-   (user_id, container_id, container_name, vnc_port, novnc_port, status, current_scenario_id, created_at)
-   VALUES ($1, $2, $3, $4, $5, 'running', $6, CURRENT_TIMESTAMP)
-   ON CONFLICT (user_id) DO UPDATE SET
-   container_id = $2,
-   container_name = $3,
-   vnc_port = $4,
-   novnc_port = $5,
-   status = 'running',
-   current_scenario_id = $6,
-   created_at = CURRENT_TIMESTAMP`,
-  [userId, info.Id, containerName, vncPort, novncPort, scenarioId]
-);
-
-    console.log(`✅ Created container for ${userId}: ${containerName}`);
-
-    return {
-      container_id: info.Id,
-      container_name: containerName,
-      vnc_port: vncPort,
-      novnc_port: novncPort,
-      user_id: userId,
-      vncUrl: `http://localhost:${vncPort}`,
-      novncUrl: `http://localhost:${novncPort}/vnc.html?password=kali123`,
-      reused: false
-    };
-
-  } catch (error) {
-    console.error(`❌ Container creation failed for ${containerName}:`, error.message);
-    
-    // ✅ IMPORTANT: Release ports on failure
-    await this.releasePort(vncPort);
-    await this.releasePort(novncPort);
-    
-    // ✅ Try to remove partial container if it exists
     try {
-      const containers = await docker.listContainers({ all: true });
-      const orphan = containers.find(c => c.Names.some(n => n.includes(containerName)));
-      if (orphan) {
-        console.log(`🧹 Cleaning up failed container: ${containerName}`);
-        await docker.getContainer(orphan.Id).remove({ force: true });
+      // ✅ ALLOCATE UNIQUE HOST PORTS
+      vncPort = await this.allocatePort('vnc');
+      novncPort = await this.allocatePort('novnc');
+      const containerName = `kali-${userId}-${Date.now()}`;
+
+      console.log(`🐳 Creating container: ${containerName}`);
+      console.log(`   VNC Port: ${vncPort}, NoVNC Port: ${novncPort}`);
+      
+      // ✅ CRITICAL FIX: Use allocated ports for HOST binding
+      // Container ALWAYS uses internal ports 5901 and 6080
+      // But HOST ports are dynamically allocated from the pool
+      const container = await docker.createContainer({
+        Image: this.kaliImage,
+        name: containerName,
+        Hostname: containerName,
+        Env: [
+          `USER_ID=${userId}`,
+          `SCENARIO_ID=${scenarioId}`,
+          `DISPLAY=:1`,
+          `VNC_PASSWORD=kali123`
+        ],
+        ExposedPorts: { 
+          '5901/tcp': {},  // VNC - container internal port (always 5901)
+          '6080/tcp': {}   // noVNC - container internal port (always 6080)
+        },
+        HostConfig: {
+          PortBindings: {
+            // Map container's internal 5901 to allocated HOST port
+            '5901/tcp': [{ HostPort: vncPort.toString(), HostIp: '127.0.0.1' }],
+            // Map container's internal 6080 to allocated HOST port
+            '6080/tcp': [{ HostPort: novncPort.toString(), HostIp: '127.0.0.1' }]
+          },
+          NetworkMode: this.networkName,
+          Memory: 2 * 1024 * 1024 * 1024,
+          MemorySwap: 2 * 1024 * 1024 * 1024,
+          CpuQuota: 50000,
+          CpuPeriod: 100000,
+          CapAdd: ['NET_RAW', 'NET_ADMIN'],
+          SecurityOpt: ['no-new-privileges:true']
+        },
+        Labels: {
+          'cedrik.user': userId,
+          'cedrik.scenario': scenarioId
+        }
+      });
+
+      await container.start();
+      console.log(`✅ Container started: ${containerName}`);
+      
+      const info = await container.inspect();
+
+      // ✅ Save with allocated ports (not hardcoded 5901/6080)
+      await pool.query(
+        `INSERT INTO user_containers 
+         (user_id, container_id, container_name, vnc_port, novnc_port, status, current_scenario_id, created_at)
+         VALUES ($1, $2, $3, $4, $5, 'running', $6, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET
+         container_id = $2,
+         container_name = $3,
+         vnc_port = $4,
+         novnc_port = $5,
+         status = 'running',
+         current_scenario_id = $6,
+         created_at = CURRENT_TIMESTAMP`,
+        [userId, info.Id, containerName, vncPort, novncPort, scenarioId]
+      );
+
+      // Mark ports as allocated
+      await pool.query(
+        `UPDATE port_allocations SET allocated_to = $1 WHERE port IN ($2, $3)`,
+        [userId, vncPort, novncPort]
+      );
+
+      console.log(`✅ Created container for ${userId}: ${containerName}`);
+
+      return {
+        container_id: info.Id,
+        container_name: containerName,
+        vnc_port: vncPort,
+        novnc_port: novncPort,
+        user_id: userId,
+        vncUrl: `http://localhost:${vncPort}`,
+        novncUrl: `http://localhost:${novncPort}/vnc.html?password=kali123`,
+        reused: false
+      };
+
+    } catch (error) {
+      console.error(`❌ Container creation failed:`, error.message);
+      
+      // Release ports on failure
+      if (vncPort) {
+        await this.releasePort(vncPort).catch(err => 
+          console.error(`Failed to release VNC port ${vncPort}:`, err.message)
+        );
       }
-    } catch (cleanupErr) {
-      console.error('Cleanup error:', cleanupErr.message);
+      if (novncPort) {
+        await this.releasePort(novncPort).catch(err => 
+          console.error(`Failed to release noVNC port ${novncPort}:`, err.message)
+        );
+      }
+      
+      // Clean up failed container
+      try {
+        const containers = await docker.listContainers({ all: true });
+        const orphan = containers.find(c => 
+          c.Names.some(n => n.includes(`kali-${userId}`))
+        );
+        if (orphan) {
+          console.log(`🧹 Cleaning up failed container`);
+          await docker.getContainer(orphan.Id).remove({ force: true });
+        }
+      } catch (cleanupErr) {
+        console.error('Cleanup error:', cleanupErr.message);
+      }
+      
+      throw error;
     }
-    
-    throw error;
   }
-}
 
   async refillPool() {
     const poolCount = await pool.query(
