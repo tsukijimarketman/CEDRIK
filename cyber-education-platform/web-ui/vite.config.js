@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  // do change this configuration is for the server
+  // do not change this configuration is for the server
   // for local do not push the changes
   base: "/cyber-education/",
   // base: '/',
