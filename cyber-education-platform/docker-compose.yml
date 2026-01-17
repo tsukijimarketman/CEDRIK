@@ -130,8 +130,8 @@ services:
       - hack-lab-network
       - cedrik-internal  # ✅ Connect to cedrik's network
     environment:
-      - BACKEND_MAIN_API_URL=http://main:5000/api
-      - SERVERURL=https://139.162.47.27
+      - BACKEND_MAIN_API_URL=${BACKEND_MAIN_API_URL}
+      - SERVERURL=${SERVERURL}
       # - SERVERURL=https://localhost
       - DOCKER_HOST=unix:///var/run/docker.sock
       - DATABASE_URL=postgresql://cyber_admin:secure_pass_123@postgres:5432/cyber_education
@@ -166,11 +166,6 @@ services:
     networks:
       - hack-lab-network
       - cedrik-internal  # ✅ Also connect to cedrik network for main backend access
-    environment:
-      - VITE_CYBER_EDUCATION_API_BASE_URL=http://localhost:3000
-      - VITE_CYBER_EDUCATION_VNC_BASE_URL=http://localhost:6080
-      - API_URL=http://bridge-server:3000
-      - VNC_URL=http://novnc:8080
     depends_on:
       - bridge-server
     restart: unless-stopped

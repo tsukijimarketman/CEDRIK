@@ -4,6 +4,7 @@ import { Terminal, Trophy, Target, Clock, BookOpen, Brain, CheckCircle, XCircle,
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const VNC_BASE_URL = import.meta.env.VITE_VNC_URL || 'http://localhost:6080';
+const IS_PROD = import.meta.env.VITE_PRODUCTION_ENV == '1' || false;
 const API_URL = `${API_BASE_URL}/api`;
 
 // Get session ID from URL
@@ -101,7 +102,13 @@ const App = () => {
       if (data.success) {
         const vncPort = data.container?.novncPort || 6080;
         const vncHost = VNC_BASE_URL.replace(/:\d+$/, '');
-        const finalVncUrl = `${vncHost}:${vncPort}/vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123`;
+        let finalVncUrl = "vnc.html?autoconnect=1&resize=scale&quality=9&compression=2&password=kali123";
+        if (IS_PROD) {
+            finalVncUrl = `${vncHost}/${vncPort}/${finalVncUrl}`;
+        }
+        else {
+            finalVncUrl = `${vncHost}:${vncPort}/${finalVncUrl}`;
+        }
         
         setVncUrl(finalVncUrl);
         setContainerInfo(data.container);
