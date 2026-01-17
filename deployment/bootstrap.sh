@@ -112,7 +112,7 @@ echo "Please copy the nginx.conf to /etc/nginx/nginx.conf"
 echo ""
 
 echo "CEDRIK Docker Images"
-echo "Before building the images. Please copy the .env files into:"
+echo "Before building the images. Please copy/hardlink the .env files into:"
 echo "    CEDRIK/"
 echo "    cyber-education-platform/"
 echo "    web-ui/"
