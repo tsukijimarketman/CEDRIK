@@ -10,11 +10,13 @@ is_down=0
 is_build=0
 action=""
 service=$serv_all
+declare -a docker_args
+docker_args=()
 
 
 function usage() {
     echo "Usage:"
-    echo "    $command_name [Options] [ <Action> [Service] ]"
+    echo "    $command_name [Options] [ <Action> [Service] ] [ -- [Docker-Args] ]"
     echo ""
     echo "Script to start, restart, and stop the docker instances of CEDRIK service"
     echo ""
@@ -22,6 +24,7 @@ function usage() {
     echo " -h, --help            Print this help message and exit"
     echo " -d, --down            Only for 'stop': uses 'docker compose down' instead of 'docker compose stop'"
     echo " -b, --build           Only for 'start' and 'restart': uses '--build' in 'docker compose up'"
+    echo " --                    Values after this are appended to docker"
     echo ""
     echo "Actions:"
     echo " start <service>       Default. Starts a tmux session and runs 'docker compose up' to <service>. See Services below."
@@ -41,6 +44,7 @@ function usage() {
     echo " $0 start main -b"
     echo " $0 restart"
     echo " $0 restart kali -b"
+    echo " $0 restart kali -b -- web-ui bridge-server"
     echo " $0 stop -d"
 }
 
@@ -72,6 +76,11 @@ while [[ $# -gt 0 ]]; do
             esac
             shift
             ;;
+        "--")
+            shift
+            docker_args=( "$@" )
+            break
+            ;;
         *)
             echo "Unknown option $1"
             exit 0
@@ -87,6 +96,8 @@ fi
 # echo "down $is_down"
 # echo "build $is_build"
 # echo "service $service"
+# echo "docker_args ${docker_args[@]}"
+# ls ${docker_args[@]}
 # exit 0
 
 cd "$(dirname $0)/../"
@@ -113,11 +124,11 @@ function stop_service() {
 
     if [[ $service == "$serv_all" || $service == "$serv_main" ]]; then
         echo "Stopping '$serv_main' service"
-        cd "${cwd}" && docker compose $stop_cmd
+        cd "${cwd}" && docker compose $stop_cmd ${docker_args[@]}
     fi
     if [[ $service == "$serv_all" || $service == "$serv_kali" ]]; then
         echo "Stopping '$serv_kali' service"
-        cd "${cwd}/${d_cyber_education_platform}" && docker compose $stop_cmd
+        cd "${cwd}/${d_cyber_education_platform}" && docker compose $stop_cmd ${docker_args[@]}
     fi
 
     if [[ -z $session_exists ]]; then
@@ -127,9 +138,9 @@ function stop_service() {
 }
 
 function h_restart_service() {
-    docker compose restart
+    docker compose restart ${docker_args[@]}
     if [[ $is_build -eq 1 ]]; then
-        docker compose up --build -d
+        docker compose up --build -d ${docker_args[@]}
     fi
 }
 
@@ -170,6 +181,7 @@ function start_service() {
     if [[ $is_build -eq 1 ]]; then
         cmd="$cmd --build"
     fi
+    cmd="$cmd ${docker_args[@]}"
 
     if [[ $service == "$serv_all" || $service == "$serv_main" ]]; then
         echo "Starting $serv_main service"
