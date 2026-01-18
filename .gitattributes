@@ -1,1 +1,1 @@
-text eol=crlf
+deployment/*.sh text eol=lf
