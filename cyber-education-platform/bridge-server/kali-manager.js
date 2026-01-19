@@ -3,7 +3,7 @@ const { Pool } = require('pg');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const serverurl = process.env.SERVERURL;
+const serverUrl = process.env.SERVERURL || 'http://localhost';
 
 class KaliManager {
   constructor() {
@@ -22,6 +22,7 @@ class KaliManager {
       console.log('🔧 Initializing KaliManager...');
       
       await this.ensureNetwork();
+      await this.syncPortAllocations();
       await this.cleanupOldPoolContainers();
       await this.initializePool();
       
@@ -30,6 +31,45 @@ class KaliManager {
       console.error('❌ KaliManager initialization failed:', error.message);
     }
   }
+
+  // Sync port allocations with reality
+async syncPortAllocations() {
+  console.log('🔄 Syncing port allocations with Docker reality...');
+  
+  try {
+    // Get all running containers with our ports
+    const containers = await docker.listContainers();
+    const usedPorts = new Set();
+    
+    for (const container of containers) {
+      const ports = container.Ports || [];
+      for (const portMapping of ports) {
+        if (portMapping.PublicPort >= 15901 && portMapping.PublicPort <= 16099) {
+          usedPorts.add(portMapping.PublicPort);
+        }
+      }
+    }
+    
+    // Reset all ports first
+    await pool.query(`UPDATE port_allocations SET is_available = TRUE, allocated_to = NULL`);
+    
+    // Mark used ports as unavailable
+    if (usedPorts.size > 0) {
+      const portArray = Array.from(usedPorts);
+      await pool.query(
+        `UPDATE port_allocations 
+         SET is_available = FALSE, allocated_to = 'existing-container'
+         WHERE port = ANY($1::int[])`,
+        [portArray]
+      );
+      console.log(`   ⚠️  Found ${usedPorts.size} ports in use: ${portArray.join(', ')}`);
+    }
+    
+    console.log('✅ Port allocations synced');
+  } catch (error) {
+    console.error('❌ Port sync failed:', error.message);
+  }
+}
 
   async ensureNetwork() {
     try {
@@ -192,8 +232,8 @@ class KaliManager {
       return {
         ...existing,
         reused: true,
-        vncUrl: `${serverurl}:${existing.vnc_port}`,
-        novncUrl: `${serverurl}:${existing.novnc_port}/vnc.html?password=kali123`
+        vncUrl: `${this.serverUrl}:${existing.vnc_port}`,
+        novncUrl: `${this.serverUrl}:${existing.novnc_port}/vnc.html?password=kali123`
       };
     }
 
@@ -220,8 +260,8 @@ class KaliManager {
         user_id: userId,
         reused: false,
         fromPool: true,
-        vncUrl: `${serverurl}:${container.vnc_port}`,
-        novncUrl: `${serverurl}:${container.novnc_port}/vnc.html?password=kali123`
+        vncUrl: `${this.serverUrl}:${container.vnc_port}`,
+        novncUrl: `${this.serverUrl}:${container.novnc_port}/vnc.html?password=kali123`
       };
     }
 
@@ -266,9 +306,9 @@ class KaliManager {
         HostConfig: {
           PortBindings: {
             // Map container's internal 5901 to allocated HOST port
-            '5901/tcp': [{ HostPort: vncPort.toString(), HostIp: '127.0.0.1' }],
+            '5901/tcp': [{ HostPort: vncPort.toString(), HostIp: '0.0.0.0' }],
             // Map container's internal 6080 to allocated HOST port
-            '6080/tcp': [{ HostPort: novncPort.toString(), HostIp: '127.0.0.1' }]
+            '6080/tcp': [{ HostPort: novncPort.toString(), HostIp: '0.0.0.0' }]
           },
           NetworkMode: this.networkName,
           Memory: 2 * 1024 * 1024 * 1024,
@@ -319,8 +359,8 @@ class KaliManager {
         vnc_port: vncPort,
         novnc_port: novncPort,
         user_id: userId,
-        vncUrl: `${serverurl}:${vncPort}`,
-        novncUrl: `${serverurl}:${novncPort}/vnc.html?password=kali123`,
+        vncUrl: `${this.serverUrl}:${vncPort}`,
+        novncUrl: `${this.serverUrl}:${novncPort}/vnc.html?password=kali123`,
         reused: false
       };
 
