@@ -132,6 +132,7 @@ services:
     environment:
       - BACKEND_MAIN_API_URL=${BACKEND_MAIN_API_URL}
       - SERVERURL=${SERVERURL}
+      - IS_PROD=${VITE_PRODUCTION_ENV}
       # - SERVERURL=https://localhost
       - DOCKER_HOST=unix:///var/run/docker.sock
       - DATABASE_URL=postgresql://cyber_admin:secure_pass_123@postgres:5432/cyber_education

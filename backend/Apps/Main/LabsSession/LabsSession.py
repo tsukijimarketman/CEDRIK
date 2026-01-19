@@ -38,7 +38,7 @@ def get_session(sid: str, refresh: bool = False) -> LabsSessionData | None:
     exp_refresh_threshold = int(LABS_SESSION_EXPIRE_SEC * .1)
     diff = exp-now
     is_refresh = False
-    if refresh and (diff.seconds < exp_refresh_threshold):
+    if refresh and (diff.total_seconds() < exp_refresh_threshold):
       is_refresh = True
       Logger.log.info(f"expiry is less than {exp_refresh_threshold} refreshing session")
       session_info =  service.set(sid, {

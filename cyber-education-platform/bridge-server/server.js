@@ -11,6 +11,7 @@ const Docker = require('dockerode');
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 const BACKEND_MAIN_API_URL = process.env.BACKEND_MAIN_API_URL;
+const IS_PROD = process.env.IS_PROD == '1' || false;
 
 const app = express()
 const PORT = 3000
@@ -696,7 +697,15 @@ async function get_uid_from_session(sid) {
   catch (error) {
     console.error("Real session fetch exploded:", error.message);
     // Still give a fallback instead of hard 401 crash in dev
-    return { uid: "dev-emergency-fallback" };
+    if (IS_PROD) {
+      return {
+        status: 401,
+        error: "Invalid Session. Please create another session to access the scenarios."
+      }
+    }
+    else {
+      return { uid: "dev-emergency-fallback" };
+    }
   }
 }
 

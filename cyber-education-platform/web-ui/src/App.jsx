@@ -39,11 +39,16 @@ const App = () => {
     if (activeView === 'lab' && currentScenario) {
       const heartbeat = setInterval(async () => {
         try {
-          await fetch(`${API_URL}/container/heartbeat`, {
+          const response = await fetch(`${API_URL}/container/heartbeat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId })
           });
+          if (!response.ok) {
+            let json = await response.json();
+            if (json.error)
+                alert(json.error)
+          }
         } catch (error) {
           console.warn('Heartbeat failed:', error);
         }
@@ -96,8 +101,15 @@ const App = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
-      
+
       const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error) {
+            alert(data.error)
+            return;
+        }
+      }
       
       if (data.success) {
         const vncPort = data.container?.novncPort || 6080;
@@ -171,6 +183,13 @@ const App = () => {
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error) {
+            alert(data.error)
+            return;
+        }
+      }
       
       if (data.guidance && data.guidance.agents) {
         const newMessages = data.guidance.agents.map(agentResp => ({
@@ -223,6 +242,13 @@ const App = () => {
     try {
       const response = await fetch(`${API_URL}/challenges/completed/${scenarioId}?userId=${userId}`);
       const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error) {
+            alert(data.error)
+            return;
+        }
+      }
       
       if (data.success && data.challenges) {
         const challengeIds = new Set(data.challenges.map(c => c.challenge_id));
@@ -237,6 +263,13 @@ const App = () => {
     try {
       const response = await fetch(`${API_URL}/exercise/${scenarioId}/${exerciseId}/status?userId=${userId}`);
       const status = await response.json();
+
+      if (!response.ok) {
+        if (status.error) {
+            alert(status.error)
+            return;
+        }
+      }
       setValidationStatus(status);
     } catch (error) {
       console.error('Failed to load validation status:', error);
@@ -272,6 +305,12 @@ const App = () => {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        if (data.error) {
+            alert(data.error)
+            return;
+        }
+      }
       if (data.success) {
         setCompletedExercises(prev => new Set([...prev, exerciseId]));
         
@@ -834,6 +873,13 @@ const ChallengeTracker = ({
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error) {
+            alert(data.error)
+            return;
+        }
+      }
       if (data.success) {
         onChallengeComplete(challengeId);
       }
@@ -954,6 +1000,12 @@ const MitigationSection = ({
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        if (data.error) {
+            alert(data.error)
+            return;
+        }
+      }
       setFeedback(data.validation);
       onValidationUpdate();
     } catch (error) {
@@ -1066,6 +1118,12 @@ const ReflectionSection = ({
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        if (data.error) {
+            alert(data.error)
+            return;
+        }
+      }
       setFeedback(data.validation);
       onValidationUpdate();
     } catch (error) {
