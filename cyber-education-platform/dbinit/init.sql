@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
 -- ✅ FIXED: Removed UNIQUE constraints on vnc_port and novnc_port
 CREATE TABLE IF NOT EXISTS user_containers (
     id SERIAL PRIMARY KEY,
-    user_id VARCHAR(100) NOT NULL UNIQUE,
+    user_id VARCHAR(100) NOT NULL,
     username VARCHAR(255),
     container_id VARCHAR(100) NOT NULL UNIQUE,
     container_name VARCHAR(255) NOT NULL,

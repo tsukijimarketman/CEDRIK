@@ -388,8 +388,8 @@ async syncPortAllocations() {
         vnc_port: vncPort,
         novnc_port: novncPort,
         user_id: userId,
-        vncUrl: `${this.serverUrl}:${vncPort}`,
-        novncUrl: `${this.serverUrl}:${novncPort}/vnc.html?password=kali123`,
+        vncUrl: `${serverUrl}:${vncPort}`,
+        novncUrl: `${serverUrl}:${novncPort}/vnc.html?password=kali123`,
         reused: false
       };
 
