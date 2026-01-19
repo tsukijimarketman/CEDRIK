@@ -233,8 +233,8 @@ async syncPortAllocations() {
     return {
       ...existing,
       reused: true,
-      vncUrl: `${serverurl}:${existing.vnc_port}`,
-      novncUrl: `${serverurl}:${existing.novnc_port}/vnc.html?password=kali123`
+      vncUrl: `${serverUrl}:${existing.vnc_port}`,
+      novncUrl: `${serverUrl}:${existing.novnc_port}/vnc.html?password=kali123`
     };
   }
 
@@ -263,7 +263,16 @@ async syncPortAllocations() {
       await client.query(
         `INSERT INTO user_containers 
          (user_id, container_id, container_name, vnc_port, novnc_port, status, current_scenario_id, created_at, last_activity)
-         VALUES ($1, $2, $3, $4, $5, 'running', $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+         VALUES ($1, $2, $3, $4, $5, 'running', $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET
+         container_id = $2,
+         container_name = $3,
+         vnc_port = $4,
+         novnc_port = $5,
+         status = 'running',
+         current_scenario_id = $6,
+         created_at = CURRENT_TIMESTAMP,
+         last_activity = CURRENT_TIMESTAMP`,
         [userId, container.container_id, container.container_name, 
          container.vnc_port, container.novnc_port, scenarioId]
       );
@@ -287,8 +296,8 @@ async syncPortAllocations() {
       user_id: userId,
       reused: false,
       fromPool: true,
-      vncUrl: `${serverurl}:${container.vnc_port}`,
-      novncUrl: `${serverurl}:${container.novnc_port}/vnc.html?password=kali123`
+      vncUrl: `${serverUrl}:${container.vnc_port}`,
+      novncUrl: `${serverUrl}:${container.novnc_port}/vnc.html?password=kali123`
     };
   }
 
