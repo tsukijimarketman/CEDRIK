@@ -226,52 +226,81 @@ async syncPortAllocations() {
   }
 
   async assignContainer(userId, scenarioId) {
-    let existing = await this.getUserContainer(userId);
-    if (existing) {
-      await this.updateActivity(userId);
-      return {
-        ...existing,
-        reused: true,
-        vncUrl: `${this.serverUrl}:${existing.vnc_port}`,
-        novncUrl: `${this.serverUrl}:${existing.novnc_port}/vnc.html?password=kali123`
-      };
-    }
-
-    const poolContainer = await pool.query(
-      `SELECT * FROM user_containers 
-       WHERE user_id LIKE 'pool-%' AND status = 'running' 
-       LIMIT 1`
-    );
-
-    if (poolContainer.rows.length > 0) {
-      const container = poolContainer.rows[0];
-      
-      await pool.query(
-        `UPDATE user_containers 
-         SET user_id = $1, current_scenario_id = $2, last_activity = CURRENT_TIMESTAMP
-         WHERE container_id = $3`,
-        [userId, scenarioId, container.container_id]
-      );
-
-      this.refillPool();
-
-      return {
-        ...container,
-        user_id: userId,
-        reused: false,
-        fromPool: true,
-        vncUrl: `${this.serverUrl}:${container.vnc_port}`,
-        novncUrl: `${this.serverUrl}:${container.novnc_port}/vnc.html?password=kali123`
-      };
-    }
-
-    const activeCount = await this.getActiveCount();
-    if (activeCount >= this.maxContainers) {
-      throw new Error(`Server at capacity (${activeCount}/${this.maxContainers} containers)`);
-    }
-
-    return await this.createKaliContainer(userId, scenarioId);
+  // Check if user already has a container
+  let existing = await this.getUserContainer(userId);
+  if (existing) {
+    await this.updateActivity(userId);
+    return {
+      ...existing,
+      reused: true,
+      vncUrl: `${serverurl}:${existing.vnc_port}`,
+      novncUrl: `${serverurl}:${existing.novnc_port}/vnc.html?password=kali123`
+    };
   }
+
+  // Try to get a container from the pool
+  const poolContainer = await pool.query(
+    `SELECT * FROM user_containers 
+     WHERE user_id LIKE 'pool-%' AND status = 'running' 
+     LIMIT 1`
+  );
+
+  if (poolContainer.rows.length > 0) {
+    const container = poolContainer.rows[0];
+    
+    // ✅ DELETE old pool record, INSERT new user record in a transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      // Delete the pool container record
+      await client.query(
+        `DELETE FROM user_containers WHERE container_id = $1`,
+        [container.container_id]
+      );
+      
+      // Insert new record for the actual user
+      await client.query(
+        `INSERT INTO user_containers 
+         (user_id, container_id, container_name, vnc_port, novnc_port, status, current_scenario_id, created_at, last_activity)
+         VALUES ($1, $2, $3, $4, $5, 'running', $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [userId, container.container_id, container.container_name, 
+         container.vnc_port, container.novnc_port, scenarioId]
+      );
+      
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    // Refill the pool in the background
+    this.refillPool();
+
+    return {
+      container_id: container.container_id,
+      container_name: container.container_name,
+      vnc_port: container.vnc_port,
+      novnc_port: container.novnc_port,
+      user_id: userId,
+      reused: false,
+      fromPool: true,
+      vncUrl: `${serverurl}:${container.vnc_port}`,
+      novncUrl: `${serverurl}:${container.novnc_port}/vnc.html?password=kali123`
+    };
+  }
+
+  // No pool containers available, check capacity
+  const activeCount = await this.getActiveCount();
+  if (activeCount >= this.maxContainers) {
+    throw new Error(`Server at capacity (${activeCount}/${this.maxContainers} containers)`);
+  }
+
+  // Create a new container
+  return await this.createKaliContainer(userId, scenarioId);
+}
 
   async createKaliContainer(userId, scenarioId) {
     let vncPort = null;
