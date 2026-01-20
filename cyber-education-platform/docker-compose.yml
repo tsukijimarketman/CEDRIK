@@ -40,7 +40,8 @@ services:
     restart: unless-stopped
 
   scenario-sqli:
-    image: acgpiano/sqli-labs
+    # image: acgpiano/sqli-labs
+    build: ./sqli-labs-custom
     container_name: scenario-sqli
     hostname: sqli.lab
     networks:

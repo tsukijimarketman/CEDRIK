@@ -185,8 +185,8 @@ const SCENARIOS = {
     description: "Master SQL injection techniques with 75+ levels",
     difficulty: "Intermediate",
     container: "scenario-sqli",
-    target: "http://sqli.lab",
-    external_url: "http://localhost:8082",
+    target: "http://sqli.lab/sqli-labs",
+    external_url: "http://localhost:8082/sqli-labs",
     port: 8082,
     estimated_time: "5-8 hours",
     skills: ["SQL Injection", "Database Enumeration", "Blind SQLi"],
@@ -202,10 +202,10 @@ const SCENARIOS = {
         "Time-based blind": "Use delays to confirm injection",
       },
       sqlmap_usage: {
-        basic: "sqlmap -u 'http://sqli.lab/Less-1/?id=1' --dbs",
+        basic: "sqlmap -u 'http://sqli.lab/sqli-labs/Less-1/?id=1' --dbs",
         enumerate:
-          "sqlmap -u 'http://sqli.lab/Less-1/?id=1' -D database_name --tables",
-        dump: "sqlmap -u 'http://sqli.lab/Less-1/?id=1' -D database_name -T table_name --dump",
+          "sqlmap -u 'http://sqli.lab/sqli-labs/Less-1/?id=1' -D database_name --tables",
+        dump: "sqlmap -u 'http://sqli.lab/sqli-labs/Less-1/?id=1' -D database_name -T table_name --dump",
       },
     },
     exercises: [
@@ -214,7 +214,7 @@ const SCENARIOS = {
         title: "Error-Based SQL Injection (Less-1)",
         description: "Exploit error messages to extract database information",
         objectives: [
-          "Access http://sqli.lab/Less-1/",
+          "Access http://sqli.lab/sqli-labs/Less-1/",
           "Add a single quote to trigger error",
           "Use ORDER BY to find column count",
           "Use UNION SELECT to extract data",
@@ -232,7 +232,7 @@ const SCENARIOS = {
         { id: "sqli-less1-extract", name: "Extract database name or version" }
       ],
         validation_command:
-          "curl -s 'http://sqli.lab/Less-1/?id=1%27' | grep -i error",
+          "curl -s 'http://sqli.lab/sqli-labs/Less-1/?id=1%27' | grep -i error",
         success_indicators: ["SQL error visible", "Data extracted via UNION"],
       },
     ],
