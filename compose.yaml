@@ -141,6 +141,8 @@ services:
     environment:
       REDIS_HOST: 0.0.0.0
       REDIS_PORT: 5004
+    ports:
+      - "127.0.0.1:5004:5004"
     networks:
       - internal
     healthcheck:
