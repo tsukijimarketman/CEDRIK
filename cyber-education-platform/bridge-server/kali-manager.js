@@ -344,9 +344,10 @@ async syncPortAllocations() {
         HostConfig: {
           PortBindings: {
             // Map container's internal 5901 to allocated HOST port
-            '5901/tcp': [{ HostPort: vncPort.toString(), HostIp: '0.0.0.0' }],
+            // revert to localhost nginx will map to each port
+            '5901/tcp': [{ HostPort: vncPort.toString(), HostIp: '127.0.0.1' }],
             // Map container's internal 6080 to allocated HOST port
-            '6080/tcp': [{ HostPort: novncPort.toString(), HostIp: '0.0.0.0' }]
+            '6080/tcp': [{ HostPort: novncPort.toString(), HostIp: '127.0.0.1' }]
           },
           NetworkMode: this.networkName,
           Memory: 2 * 1024 * 1024 * 1024,
