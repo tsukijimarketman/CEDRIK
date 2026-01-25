@@ -8,6 +8,8 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+cd ~
+
 echo "Installing Packages:"
 echo "    nginx"
 echo "    git"
@@ -17,8 +19,28 @@ echo "    curl"
 echo "    docker"
 echo "    btop"
 
-apt install -y nginx git tmux ufw curl btop
-./insdocker.sh
+apt update && apt install -y nginx git tmux ufw curl btop
+
+function install_docker() {
+    apt install -y ca-certificates curl
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+
+    # Add the repository to Apt sources:
+    tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+    apt update
+    apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+}
+
+install_docker
 
 cd ~
 
@@ -39,7 +61,6 @@ echo "Adding 'cedrik' user"
 adduser --disabled-password \
     --comment "cedrik app" \
     --shell /bin/bash \
-    --group \
     cedrik
 
 echo "Adding groupd docker to cedrik"
@@ -48,15 +69,16 @@ usermod -aG docker cedrik
 echo "Creating tools folder"
 if [[ ! -d "~/tools/" ]]; then
     mkdir ~/tools/
-if
+fi
 
 echo "Installing bkp.sh"
 cd ~/tools/
 curl -O https://raw.githubusercontent.com/Mark-Asuncion/dotfiles/refs/heads/main/tools/bkp.sh
+chmod +x ./bkp.sh
 
 echo "Creating crontab entries"
 tmp_file=$(mktemp)
-crontab -l 2>/dev/null > $tmp_file
+crontab -l 2>/dev/null > $tmp_file || true
 tee -a $tmp_file <<EOF
 0 12  * * 1   /root/tools/bkp.sh -m /root/logs/access.log
 0 12  * * 1   /root/tools/bkp.sh -m /root/logs/error.log
@@ -79,6 +101,7 @@ bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel
 bind-key -T copy-mode-vi Y send-keys -X copy-pipe-end-of-line-and-cancel
 bind-key -T copy-mode-vi v send-keys -X begin-selection
 EOF
+
 chown cedrik:cedrik "/home/cedrik/.tmux.conf"
 
 echo "Cloning the repo"
@@ -91,7 +114,7 @@ cd ~
 
 echo "Installing cedrik service"
 if [[ ! -f "/etc/systemd/system/cedrik.service" ]]; then
-    cp /home/cedrik/deployment/cedrik.service /etc/systemd/system/
+    cp /home/cedrik/CEDRIK/deployment/cedrik.service /etc/systemd/system/
     chown root:root /etc/systemd/system/cedrik.service
 fi
 systemctl daemon-reload
