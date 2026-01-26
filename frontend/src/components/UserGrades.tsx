@@ -68,11 +68,18 @@ export function UserGrades() {
       mainUsers.forEach((mu: any) => {
         const id = String(mu.id);
         const lab = labsMap.get(id);
+        const scenarios = lab?.scenarios || [];
+        let calculatedAverage = 0;
+        if (scenarios.length > 0) {
+          calculatedAverage = Math.min(100, scenarios.reduce((sum: number, scenario: any) => sum + (scenario.averageScore || 0), 0) / scenarios.length);
+        } else if (lab?.overallAverage) {
+          calculatedAverage = Math.min(100, typeof lab.overallAverage === "number" ? lab.overallAverage : Number(lab.overallAverage) || 0);
+        }
         merged.push({
           userId: mu.id,
           username: mu.username || mu.email,
-          scenarios: lab?.scenarios || [],
-          overallAverage: Math.min(100, typeof lab?.overallAverage === "number" ? lab.overallAverage : (lab?.overallAverage ? Number(lab.overallAverage) : 0)),
+          scenarios: scenarios,
+          overallAverage: calculatedAverage,
           totalExercisesCompleted: lab?.totalCompleted || lab?.totalExercisesCompleted || 0,
           totalExercisesAvailable: lab?.totalAvailable || lab?.totalExercisesAvailable || 0,
         });
@@ -81,11 +88,18 @@ export function UserGrades() {
       });
 
       for (const [, lu] of labsMap) {
+        const scenarios = lu.scenarios || [];
+        let calculatedAverage = 0;
+        if (scenarios.length > 0) {
+          calculatedAverage = Math.min(100, scenarios.reduce((sum: number, scenario: any) => sum + (scenario.averageScore || 0), 0) / scenarios.length);
+        } else if (lu?.overallAverage) {
+          calculatedAverage = Math.min(100, typeof lu.overallAverage === "number" ? lu.overallAverage : Number(lu.overallAverage) || 0);
+        }
         merged.push({
           userId: lu.userId || String(lu.userId ?? ""),
           username: lu.username || String(lu.userId ?? "Unknown"),
-          scenarios: lu.scenarios || [],
-          overallAverage: Math.min(100, typeof lu.overallAverage === "number" ? lu.overallAverage : (lu.overallAverage ? Number(lu.overallAverage) : 0)),
+          scenarios: scenarios,
+          overallAverage: calculatedAverage,
           totalExercisesCompleted: lu.totalCompleted || lu.totalExercisesCompleted || 0,
           totalExercisesAvailable: lu.totalAvailable || lu.totalExercisesAvailable || 0,
         });
@@ -124,12 +138,12 @@ export function UserGrades() {
     }
   };
 
-  const fetchUserDetails = async (userId: string, username: string) => {
+  const fetchUserDetails = async (user: UserAllGrades) => {
     setLoading(true);
     try {
-      console.log(`Fetching details for user: ${userId} (${username})`);
+      console.log(`Fetching details for user: ${user.userId} (${user.username})`);
 
-      const resp = await cedrikLabsApi.getUserGrades(userId, username);
+      const resp = await cedrikLabsApi.getUserGrades(user.userId, user.username);
       const data = resp?.data;
 
       if (!data) throw new Error("No data returned from Labs API");
@@ -148,21 +162,38 @@ export function UserGrades() {
           ? (data as any).totalAvailable
           : 0;
 
+      // Calculate overall average from scenario average scores - same logic as fetchAllUsersGrades
+      const scenarios = data.scenarios || [];
+      let calculatedOverallAverage = 0;
+      if (scenarios.length > 0) {
+        calculatedOverallAverage = Math.min(100, scenarios.reduce((sum: number, scenario: any) => sum + (scenario.averageScore || 0), 0) / scenarios.length);
+      } else if (data?.overallAverage) {
+        calculatedOverallAverage = Math.min(100, typeof data.overallAverage === "number" ? data.overallAverage : Number(data.overallAverage) || 0);
+      }
+
       const userData: UserAllGrades = {
-        userId: data.userId || userId,
-        username: data.username || username || String(data.userId || userId),
-        scenarios: data.scenarios || [],
-        overallAverage:
-          typeof data.overallAverage === "number"
-            ? data.overallAverage
-            : data.overallAverage
-            ? Number(data.overallAverage)
-            : 0,
+        userId: user.userId,
+        username: user.username,
+        scenarios: scenarios,
+        overallAverage: calculatedOverallAverage,
         totalExercisesCompleted: normalizedTotalCompleted,
         totalExercisesAvailable: normalizedTotalAvailable,
       };
 
       setSelectedUser(userData);
+      
+      // Update the user in allUsers with the newly calculated average
+      setAllUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.userId === user.userId ? { ...u, overallAverage: calculatedOverallAverage, scenarios: scenarios } : u
+        )
+      );
+      setFilteredUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.userId === user.userId ? { ...u, overallAverage: calculatedOverallAverage, scenarios: scenarios } : u
+        )
+      );
+
       setDetailsOpen(true);
     } catch (error: unknown) {
       let errorMessage = "Failed to fetch user details";
@@ -528,7 +559,7 @@ export function UserGrades() {
                             variant="ghost"
                             size="sm"
                             onClick={() =>
-                              fetchUserDetails(user.userId, user.username)
+                              fetchUserDetails(user)
                             }
                           >
                             View Details
