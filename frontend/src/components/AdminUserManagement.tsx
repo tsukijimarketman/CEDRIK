@@ -12,6 +12,7 @@ import { AdminEditUserDialog } from "@/components/dialogs/AdminEditUserDialog";
 import { ViewUserDialog } from "@/components/dialogs/ViewUserDialog";
 import { authApi, type UserRecord } from "@/api/api";
 import { useToast } from "@/hooks/use-toast";
+import { sanitize } from "@/helper/sanitize";
 
 interface User {
   id: string;
@@ -61,8 +62,8 @@ export function AdminUserManagement() {
 
           return {
             id: user.id,
-            username: user.username,
-            email: user.email,
+            username: sanitize(user.username),
+            email: sanitize(user.email),
             role: normalizedRole,
             status: user.is_active ? "active" : "inactive",
             createdAt: user.created_at ? user.created_at.split("T")[0] : "—",

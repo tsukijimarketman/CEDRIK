@@ -10,6 +10,7 @@ from backend.Lib.Error import InvalidId
 from backend.Apps.Main.Database import Conversation, Message
 from backend.Apps.Main.Utils.UserToken import get_token
 from backend.Lib.Logger import Logger
+from backend.Lib.Sanitizer import raise_on_bad_input
 
 b_conversation = Blueprint("Conversation", __name__)
 
@@ -130,6 +131,7 @@ def update_title(id: str):
       return jsonify({"error": "Title is required"}), 400
 
     new_title = data['title']
+    raise_on_bad_input(new_title)
     if not new_title or len(new_title.strip()) == 0:
       return jsonify({"error": "Title cannot be empty"}), 400
 

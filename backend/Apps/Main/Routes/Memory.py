@@ -23,6 +23,7 @@ from backend.Apps.Main.Service.Memory import create_memory, DCreateMemory # type
 from backend.Apps.Main.Utils import get_schema_of_dataclass, Collections, generate_embeddings, AuditType # type: ignore
 from backend.Apps.Main.Utils.Enum import MemoryType, Role
 from backend.Apps.Main.Utils.Audit import audit_collection
+from backend.Lib.Sanitizer import raise_on_bad_input
 
 memory = Blueprint("Memory", __name__)
 
@@ -223,6 +224,8 @@ def update(memory_id):
       if tags:
         update_data["tags"] = tags
 
+    raise_on_bad_input(update_data)
+
     # Handle file replacement
     file = request.files.get("file")
     if file and file.filename:
@@ -330,6 +333,7 @@ def create():
     json["text"] = request.form.get("text")
     json["tags"] = request.form.getlist("tags")
     json["file"] = request.files.get("file")
+    raise_on_bad_input(json)
 
     body = DCreateMemory(**json) # type: ignore
 

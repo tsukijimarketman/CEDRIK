@@ -16,6 +16,7 @@ from backend.Apps.Main.Utils.Audit import audit_message
 from backend.Apps.Main.Utils.Enum import AuditType
 from backend.Lib.Error import BadBody, HttpInvalidId, HttpValidationError, InvalidId, TooManyFiles
 from backend.Apps.Main.Database import Transaction
+from backend.Lib.Sanitizer import contains_html
 from backend.Lib.Logger import Logger
 # ✅ FIXED: Import both generate_reply and generate_reply_stream
 from backend.Apps.Main.Service.Chat.CreateChat import generate_reply, generate_reply_stream
@@ -82,7 +83,10 @@ def chat_stream():
         
         try:
             audit_message(f"user: {user_token.username}\nquery: \"{body.prompt.content}\"").save()
-            
+            if contains_html(body.prompt.content):
+                yield f"data: {json.dumps({'type': 'error', 'content': "BadBody"})}\n\n"
+                return
+
             # Filter check
             filter_result = m_filter(body.prompt.content)
             Logger.log.warning(f"FilterResult {filter_result}")

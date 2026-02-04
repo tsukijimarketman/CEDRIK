@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { sanitize } from "@/helper/sanitize";
 import {
   oneDark,
   oneLight,
@@ -202,7 +203,7 @@ useEffect(() => {
     className?: string;
   }) => {
     const isCodeBlock = className && className.startsWith("language-");
-    const codeString = String(children).replace(/\n$/, "");
+    const codeString = sanitize(String(children).replace(/\n$/, ""));
     const language = className?.replace("language-", "") || "text";
 
     if (isCodeBlock) {

@@ -14,6 +14,7 @@ import { ViewUserDialog } from "@/components/dialogs/ViewUserDialog";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { authApi, type UserRecord } from "@/api/api";
 import { useToast } from "@/hooks/use-toast";
+import { sanitize } from "@/helper/sanitize";
 
 interface User {
   id: string;
@@ -299,8 +300,8 @@ export function UserManagement() {
                   </TableRow>
                 ) : displayedUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.username}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="font-medium">{sanitize(user.username)}</TableCell>
+                    <TableCell>{sanitize(user.email)}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>{getStatusBadge(user.status)}</TableCell>
                     <TableCell>{user.createdAt}</TableCell>

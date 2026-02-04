@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '@/api/api';
+import { sanitize } from '@/helper/sanitize';
 
 export interface User {
   id: string;
@@ -56,8 +57,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const userRole = userData.aud as 'user' | 'admin' | 'superadmin';
       setUser({
         id: userData.id,
-        email: userData.email,
-        username: userData.username,
+        email: sanitize(userData.email),
+        username: sanitize(userData.username),
         role: userRole,
       });
 

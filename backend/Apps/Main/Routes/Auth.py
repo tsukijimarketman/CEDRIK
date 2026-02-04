@@ -11,6 +11,7 @@ from backend.Apps.Main.Utils.Audit import audit_collection, audit_message
 from backend.Lib.Error import BadBody, UserAlreadyExist, UserDoesNotExist, HttpValidationError
 from backend.Apps.Main.Hasher import verify_password, hash as hash_password
 from backend.Lib.Logger import Logger
+from backend.Lib.Sanitizer import raise_on_bad_input
 from backend.Apps.Main.Database import Transaction, Audit, User, Otp
 from backend.Apps.Main.Utils import UserToken, get_token, Role, AuditType, Collections, get_object_id
 from backend.Apps.Main.Validation import validate_username, validate_password
@@ -242,6 +243,7 @@ def me():
 def update_me():
     try:
         json = request.get_json() or {}
+        raise_on_bad_input(json)
         req_update = ReqUpdateProfile(**json)
     except Exception as _:
         raise BadBody()
@@ -357,6 +359,7 @@ def update_me():
 def register():
     try:
         json = request.get_json()
+        raise_on_bad_input(json)
         req_register = ReqRegister(**json)
     except Exception as _:
         raise BadBody()
