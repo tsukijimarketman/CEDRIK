@@ -157,7 +157,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
           {/* Footer text */}
           <div className="mt-3">
             <div className="text-sm text-muted-foreground text-center leading-relaxed">
-              {disabled
+              {disabled && user == null
                 ? "Please log in to start chatting"
                 : "CEDRIK can make mistakes. Consider checking important information."}
             </div>
