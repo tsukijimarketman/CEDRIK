@@ -44,7 +44,19 @@ export function UserGrades() {
   const [selectedUser, setSelectedUser] = useState<UserAllGrades | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<"username" | "userId" | "overallAverage" | "totalExercisesCompleted">("username");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const PAGE_SIZE = 10;
+
+  const calculateOverallAverage = (scenarios: any[] | undefined, fallbackOverall?: unknown) => {
+    if (Array.isArray(scenarios) && scenarios.length > 0) {
+      const sum = scenarios.reduce((acc: number, scenario: any) => acc + (scenario.averageScore || 0), 0);
+      return Math.min(100, sum / scenarios.length);
+    }
+    if (typeof fallbackOverall === "number") return Math.min(100, fallbackOverall);
+    const num = Number(fallbackOverall);
+    return Math.min(100, Number.isFinite(num) ? num : 0);
+  };
 
   const fetchAllUsersGrades = async () => {
     setLoading(true);
@@ -69,12 +81,7 @@ export function UserGrades() {
         const id = String(mu.id);
         const lab = labsMap.get(id);
         const scenarios = lab?.scenarios || [];
-        let calculatedAverage = 0;
-        if (scenarios.length > 0) {
-          calculatedAverage = Math.min(100, scenarios.reduce((sum: number, scenario: any) => sum + (scenario.averageScore || 0), 0) / scenarios.length);
-        } else if (lab?.overallAverage) {
-          calculatedAverage = Math.min(100, typeof lab.overallAverage === "number" ? lab.overallAverage : Number(lab.overallAverage) || 0);
-        }
+        const calculatedAverage = calculateOverallAverage(scenarios, lab?.overallAverage);
         merged.push({
           userId: mu.id,
           username: mu.username || mu.email,
@@ -89,12 +96,7 @@ export function UserGrades() {
 
       for (const [, lu] of labsMap) {
         const scenarios = lu.scenarios || [];
-        let calculatedAverage = 0;
-        if (scenarios.length > 0) {
-          calculatedAverage = Math.min(100, scenarios.reduce((sum: number, scenario: any) => sum + (scenario.averageScore || 0), 0) / scenarios.length);
-        } else if (lu?.overallAverage) {
-          calculatedAverage = Math.min(100, typeof lu.overallAverage === "number" ? lu.overallAverage : Number(lu.overallAverage) || 0);
-        }
+        const calculatedAverage = calculateOverallAverage(scenarios, lu?.overallAverage);
         merged.push({
           userId: lu.userId || String(lu.userId ?? ""),
           username: lu.username || String(lu.userId ?? "Unknown"),
@@ -107,6 +109,40 @@ export function UserGrades() {
 
       setAllUsers(merged);
       setFilteredUsers(merged);
+      // Enrich overall averages with per-user details in the background
+      void Promise.all(
+        merged.map(async (u) => {
+          try {
+            const detailResp = await cedrikLabsApi.getUserGrades(u.userId, u.username);
+            const detail = detailResp?.data;
+            if (!detail) return null;
+            const scenarios = detail.scenarios || [];
+            const updatedAverage = calculateOverallAverage(scenarios, detail.overallAverage);
+            return {
+              userId: u.userId,
+              overallAverage: updatedAverage,
+              scenarios,
+            };
+          } catch {
+            return null;
+          }
+        })
+      ).then((updates) => {
+        const validUpdates = updates.filter(Boolean) as Array<{ userId: string; overallAverage: number; scenarios: any[] }>;
+        if (validUpdates.length === 0) return;
+        setAllUsers((prev) =>
+          prev.map((u) => {
+            const match = validUpdates.find((v) => v.userId === u.userId);
+            return match ? { ...u, overallAverage: match.overallAverage, scenarios: match.scenarios } : u;
+          })
+        );
+        setFilteredUsers((prev) =>
+          prev.map((u) => {
+            const match = validUpdates.find((v) => v.userId === u.userId);
+            return match ? { ...u, overallAverage: match.overallAverage, scenarios: match.scenarios } : u;
+          })
+        );
+      });
       if (merged.length === 0) {
         toast({ title: "No users found", description: "No users available in Labs or main backend.", variant: "default" });
       }
@@ -164,12 +200,7 @@ export function UserGrades() {
 
       // Calculate overall average from scenario average scores - same logic as fetchAllUsersGrades
       const scenarios = data.scenarios || [];
-      let calculatedOverallAverage = 0;
-      if (scenarios.length > 0) {
-        calculatedOverallAverage = Math.min(100, scenarios.reduce((sum: number, scenario: any) => sum + (scenario.averageScore || 0), 0) / scenarios.length);
-      } else if (data?.overallAverage) {
-        calculatedOverallAverage = Math.min(100, typeof data.overallAverage === "number" ? data.overallAverage : Number(data.overallAverage) || 0);
-      }
+      const calculatedOverallAverage = calculateOverallAverage(scenarios, data?.overallAverage);
 
       const userData: UserAllGrades = {
         userId: user.userId,
@@ -181,8 +212,8 @@ export function UserGrades() {
       };
 
       setSelectedUser(userData);
-      
-      // Update the user in allUsers with the newly calculated average
+
+      // Keep table in sync with latest calculated averages
       setAllUsers((prevUsers) =>
         prevUsers.map((u) =>
           u.userId === user.userId ? { ...u, overallAverage: calculatedOverallAverage, scenarios: scenarios } : u
@@ -239,12 +270,36 @@ export function UserGrades() {
     setCurrentPage(1);
   }, [searchTerm, allUsers]);
 
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const vala = a[sortField] ?? "";
+    const valb = b[sortField] ?? "";
+
+    if (sortField === "overallAverage" || sortField === "totalExercisesCompleted") {
+      const numA = typeof vala === "number" ? vala : Number(vala) || 0;
+      const numB = typeof valb === "number" ? valb : Number(valb) || 0;
+      return sortOrder === "asc" ? numA - numB : numB - numA;
+    }
+
+    return sortOrder === "asc"
+      ? String(vala).localeCompare(String(valb))
+      : String(valb).localeCompare(String(vala));
+  });
+
+  const handleSort = (field: "username" | "userId" | "overallAverage" | "totalExercisesCompleted") => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
   // Pagination calculations
-  const totalFiltered = filteredUsers.length;
+  const totalFiltered = sortedUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
   const page = Math.min(Math.max(1, currentPage), totalPages);
   const startIndex = (page - 1) * PAGE_SIZE;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + PAGE_SIZE);
+  const paginatedUsers = sortedUsers.slice(startIndex, startIndex + PAGE_SIZE);
   const showingFrom = totalFiltered === 0 ? 0 : startIndex + 1;
   const showingTo = Math.min(startIndex + PAGE_SIZE, totalFiltered);
 
@@ -521,13 +576,29 @@ export function UserGrades() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-medium">Username</th>
-                    <th className="text-left py-3 px-4 font-medium">User ID</th>
-                    <th className="text-right py-3 px-4 font-medium">
-                      Overall Average
+                    <th
+                      onClick={() => handleSort("username")}
+                      className="text-left py-3 px-4 font-medium cursor-pointer select-none"
+                    >
+                      Username ↑↓ {sortField === "username" && (sortOrder === "asc" ? "↑" : "↓")}
                     </th>
-                    <th className="text-right py-3 px-4 font-medium">
-                      Exercises Completed
+                    <th
+                      onClick={() => handleSort("userId")}
+                      className="text-left py-3 px-4 font-medium cursor-pointer select-none"
+                    >
+                      User ID ↑↓ {sortField === "userId" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("overallAverage")}
+                      className="text-right py-3 px-4 font-medium cursor-pointer select-none"
+                    >
+                      Overall Average ↑↓ {sortField === "overallAverage" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("totalExercisesCompleted")}
+                      className="text-right py-3 px-4 font-medium cursor-pointer select-none"
+                    >
+                      Exercises Completed ↑↓ {sortField === "totalExercisesCompleted" && (sortOrder === "asc" ? "↑" : "↓")}
                     </th>
                     <th className="text-center py-3 px-4 font-medium">Action</th>
                   </tr>
