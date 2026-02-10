@@ -628,6 +628,7 @@ export function UserGrades() {
                           <Button
                             variant="ghost"
                             size="sm"
+                           className="border border-neutral-300 hover:border-neutral-900"
                             onClick={() =>
                               fetchUserDetails(user)
                             }
